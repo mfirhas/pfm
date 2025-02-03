@@ -2,12 +2,11 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
-use accounting::Accounting;
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
-use iso_currency::{Country, Currency, IntoEnumIterator};
+use iso_currency::Currency;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -183,7 +182,7 @@ pub struct Rates {
     #[serde(alias = "date")]
     pub date: DateTime<Utc>,
 
-    #[serde(alias = "idr", alias = "usd")]
+    #[serde(alias = "rates")]
     pub rates: Currencies,
 }
 
@@ -227,12 +226,16 @@ pub struct Currencies {
 }
 
 pub struct Conversion {
+    /// latest update of the currency of conversion target.
     pub last_update: DateTime<Utc>,
+
+    /// conversion result.
     pub money: Money,
 }
 
 pub type ForexResult<T> = Result<T, anyhow::Error>;
 
+/////////////// INVOKED FROM CRON JOB
 #[async_trait]
 pub trait ForexConverter {
     /// convert from Money into to Currency using latest rates
@@ -250,7 +253,9 @@ pub trait ForexHistoricalRates {
     /// get historical daily rates
     async fn historical_rates(&self, date: DateTime<Utc>, base: Currency) -> ForexResult<Rates>;
 }
+///////////////
 
+/////////////// INVOKED FROM SERVER
 #[async_trait]
 pub trait ForexStorage {
     /// insert latest rate fetched from API
@@ -261,11 +266,14 @@ pub trait ForexStorage {
     /// get the latest data fetched from API
     async fn get_latest(&self) -> ForexResult<Rates>;
 }
+///////////////
 
 //////////
 // APIs //
 //////////
 
+/// Convert Money into another currency.
+/// This only call storage to get latest rates and do the calculations.
 pub async fn convert<FS>(forex: &FS, from: Money, to: Currency) -> ForexResult<Conversion>
 where
     FS: ForexStorage,
@@ -279,6 +287,8 @@ where
     Ok(ret)
 }
 
+/// Get rates from 3rd API.
+/// Invoked from Cron service.
 pub async fn get_rates<FX>(forex: &FX, base: Currency, to: &[Currency]) -> ForexResult<Rates>
 where
     FX: ForexRates,
@@ -288,6 +298,8 @@ where
     Ok(ret)
 }
 
+/// Get historical rates from 3rd API.
+/// Invoked from Cron service.
 pub async fn get_historical_rates<FX>(
     forex: &FX,
     date: DateTime<Utc>,
