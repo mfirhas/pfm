@@ -1,0 +1,33 @@
+[package]
+name = "pfm-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7" }
+reqwest = { version = "0.12", features = ["json"] }
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+uuid = { version = "1", features = ["v4", "serde", "fast-rng"] }
+lazy_static = "1"
+configrs = "0.1"
+anyhow = "1"
+thiserror = "1"
+regex = "1"
+
+async-trait = "0.1"
+
+# rust_decimal = { version = "1.36", features = ["serde-arbitrary-precision"] }
+rust_decimal = "1.36"
+rust_decimal_macros = "1.36"
+accounting = { version = "0.2.0", features = ["decimal"] }
+iso_currency = { version = "0.5.1", features = ["iterator"]}
+rusty-money = { version = "0.4", features = ["iso"] }
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+

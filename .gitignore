@@ -1,0 +1,10 @@
+*.swp
+
+debug/
+target/
+
+.vscode/
+.idea/
+.DS_Store
+
+
