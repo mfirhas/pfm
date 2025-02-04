@@ -58,23 +58,46 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     let decimal = Decimal::from_str(&amount)
         .map_err(|err| anyhow!("failed converting amount into decimal type: {}", err))?;
 
-    Ok(Money {
-        currency,
-        amount: decimal,
-    })
+    match currency {
+        Currency::IDR => Ok(Money::IDR(decimal)),
+        Currency::USD => Ok(Money::USD(decimal)),
+        Currency::EUR => Ok(Money::EUR(decimal)),
+        Currency::GBP => Ok(Money::GBP(decimal)),
+        Currency::JPY => Ok(Money::JPY(decimal)),
+        Currency::CHF => Ok(Money::CHF(decimal)),
+        Currency::SGD => Ok(Money::SGD(decimal)),
+        Currency::CNY => Ok(Money::CNY(decimal)),
+        Currency::SAR => Ok(Money::SAR(decimal)),
+        _ => Err(anyhow!(
+            "forex_impl: failed parsing Money from string, currency {} not supported.",
+            currency.code()
+        )),
+    }
 }
 
-pub(crate) fn to_string(use_symbol: bool, money: &Money) -> String {
-    let currency_code: &str = if use_symbol {
-        &money.currency.symbol().to_string()
+pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
+    let currency_code: String = if use_symbol {
+        money.symbol()
     } else {
-        money.currency.code()
+        money.code()
     };
 
-    let mut ac = if COMMA_SEPARATED_CURRENCIES.contains(&money.currency) {
-        Accounting::new_from_seperator(currency_code, 2, ",", ".")
+    let curr = match money {
+        Money::IDR(_) => Currency::IDR,
+        Money::USD(_) => Currency::USD,
+        Money::EUR(_) => Currency::EUR,
+        Money::GBP(_) => Currency::GBP,
+        Money::JPY(_) => Currency::JPY,
+        Money::CHF(_) => Currency::CHF,
+        Money::SGD(_) => Currency::SGD,
+        Money::CNY(_) => Currency::CNY,
+        Money::SAR(_) => Currency::SAR,
+    };
+
+    let mut ac = if COMMA_SEPARATED_CURRENCIES.contains(&curr) {
+        Accounting::new_from_seperator(currency_code.as_str(), 2, ",", ".")
     } else {
-        Accounting::new_from_seperator(currency_code, 2, ".", ",")
+        Accounting::new_from_seperator(currency_code.as_str(), 2, ".", ",")
     };
 
     if use_symbol {
@@ -83,7 +106,7 @@ pub(crate) fn to_string(use_symbol: bool, money: &Money) -> String {
         ac.set_format("{s} {v}");
     }
 
-    let money_display = ac.format_money(money.amount);
+    let money_display = ac.format_money(money.amount());
 
     money_display
 }

@@ -76,6 +76,8 @@ pub(crate) const ERROR_CURRENCY_PARTS: &str = "The money must be written in ISO 
 
 pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains thousands separator or not, if it contains use the appropriate ones for the currency. If minor unit exists use the correct separator.";
 
+const ERROR_PREFIX: &str = "[FOREX]";
+
 enum Operations {
     Add,
     Substract,
@@ -83,102 +85,101 @@ enum Operations {
     Divide,
 }
 
-#[derive(Debug)]
-pub struct Money {
-    pub currency: Currency,
-    pub amount: Decimal,
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum Money {
+    IDR(Decimal),
+    USD(Decimal),
+    EUR(Decimal),
+    GBP(Decimal),
+    JPY(Decimal),
+    CHF(Decimal),
+    SGD(Decimal),
+    CNY(Decimal),
+    SAR(Decimal),
 }
 
 impl Money {
-    /// Create new Money from Currency in form of ISO 4217(e.g. USD, IDR) and amount(no thousands separator, dot is allowed for fraction separator.)
-    /// Example: currency: "USD" & amount: "12000" or "12000.00" or "12000.000"
-    /// Example: currency: "LOL" & amount: "12,000" -> currency not recognized and amount contain thousand separator.
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
-        let curr =
-            Currency::from_str(currency).map_err(|err| anyhow!("invalid currency: {}", err))?;
-        let val = Decimal::from_str(amount).map_err(|err| anyhow!("invalid amount: {}", err))?;
+        let curr = Currency::from_str(currency)
+            .map_err(|err| anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))?;
+        let val = Decimal::from_str(amount)
+            .map_err(|err| anyhow!("{} invalid amount: {}", ERROR_PREFIX, err))?;
 
-        Ok(Self {
-            currency: curr,
-            amount: val,
-        })
-    }
-
-    pub async fn add<FX>(&self, forex: &FX, rhs: Money) -> ForexResult<Money>
-    where
-        FX: ForexConverter,
-    {
-        Self::operate(forex, Operations::Add, self, &rhs).await
-    }
-
-    pub async fn substract<FX>(&self, forex: &FX, rhs: Money) -> ForexResult<Money>
-    where
-        FX: ForexConverter,
-    {
-        Self::operate(forex, Operations::Substract, self, &rhs).await
-    }
-
-    pub async fn multiply<FX>(&self, forex: &FX, rhs: Money) -> ForexResult<Money>
-    where
-        FX: ForexConverter,
-    {
-        Self::operate(forex, Operations::Multiply, self, &rhs).await
-    }
-
-    pub async fn divide<FX>(&self, forex: &FX, rhs: Money) -> ForexResult<Money>
-    where
-        FX: ForexConverter,
-    {
-        Self::operate(forex, Operations::Divide, self, &rhs).await
-    }
-
-    async fn operate<FX>(
-        forex: &FX,
-        operation: Operations,
-        lhs: &Money,
-        rhs: &Money,
-    ) -> ForexResult<Money>
-    where
-        FX: ForexConverter,
-    {
-        let mut _rhs: Money;
-        if lhs.currency != rhs.currency {
-            let ret = forex.convert(rhs, lhs.currency).await?;
-            let money = ret.money;
-            _rhs = money;
-        } else {
-            _rhs = Money {
-                currency: rhs.currency,
-                amount: rhs.amount,
-            }
+        match curr {
+            Currency::IDR => Ok(Self::IDR(val)),
+            Currency::USD => Ok(Self::USD(val)),
+            Currency::EUR => Ok(Self::EUR(val)),
+            Currency::GBP => Ok(Self::GBP(val)),
+            Currency::JPY => Ok(Self::JPY(val)),
+            Currency::CHF => Ok(Self::CHF(val)),
+            Currency::SGD => Ok(Self::SGD(val)),
+            Currency::CNY => Ok(Self::CNY(val)),
+            Currency::SAR => Ok(Self::SAR(val)),
+            _ => Err(anyhow!(
+                "{} Currency {} not supported",
+                ERROR_PREFIX,
+                curr.code()
+            )),
         }
+    }
 
-        let (currency, amount) = match operation {
-            Operations::Add => (lhs.currency, lhs.amount + _rhs.amount),
-            Operations::Substract => (lhs.currency, lhs.amount - _rhs.amount),
-            Operations::Multiply => (lhs.currency, lhs.amount * _rhs.amount),
-            Operations::Divide => (lhs.currency, lhs.amount / _rhs.amount),
-        };
+    pub fn amount(&self) -> Decimal {
+        match self {
+            Self::IDR(val) => *val,
+            Self::USD(val) => *val,
+            Self::EUR(val) => *val,
+            Self::GBP(val) => *val,
+            Self::JPY(val) => *val,
+            Self::CHF(val) => *val,
+            Self::SGD(val) => *val,
+            Self::CNY(val) => *val,
+            Self::SAR(val) => *val,
+        }
+    }
 
-        Ok(Money { currency, amount })
+    pub fn code(&self) -> String {
+        match self {
+            Self::IDR(_) => Currency::IDR.code().to_string(),
+            Self::USD(_) => Currency::USD.code().to_string(),
+            Self::EUR(_) => Currency::EUR.code().to_string(),
+            Self::GBP(_) => Currency::GBP.code().to_string(),
+            Self::JPY(_) => Currency::JPY.code().to_string(),
+            Self::CHF(_) => Currency::CHF.code().to_string(),
+            Self::SGD(_) => Currency::SGD.code().to_string(),
+            Self::CNY(_) => Currency::CNY.code().to_string(),
+            Self::SAR(_) => Currency::SAR.code().to_string(),
+        }
+    }
+
+    pub fn symbol(&self) -> String {
+        match self {
+            Self::IDR(_) => Currency::IDR.symbol().to_string(),
+            Self::USD(_) => Currency::USD.symbol().to_string(),
+            Self::EUR(_) => Currency::EUR.symbol().to_string(),
+            Self::GBP(_) => Currency::GBP.symbol().to_string(),
+            Self::JPY(_) => Currency::JPY.symbol().to_string(),
+            Self::CHF(_) => Currency::CHF.symbol().to_string(),
+            Self::SGD(_) => Currency::SGD.symbol().to_string(),
+            Self::CNY(_) => Currency::CNY.symbol().to_string(),
+            Self::SAR(_) => Currency::SAR.symbol().to_string(),
+        }
     }
 }
 
-/// Instantiate Money from string.
-/// Thousand separator is optional.
-/// Fraction separator is optional.
 impl FromStr for Money {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(parse_str(s)?)
+        let ret = parse_str(s)
+            .map_err(|err| anyhow!("{} Failed parsing money from str: {}", ERROR_PREFIX, err))?;
+        Ok(ret)
     }
 }
 
 impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let money_display = to_string(false, self);
-        write!(f, "{}", money_display)
+        let ret = to_string(false, *self);
+        write!(f, "{}", ret)
     }
 }
 
@@ -244,7 +245,7 @@ pub type ForexResult<T> = Result<T, anyhow::Error>;
 #[async_trait]
 pub trait ForexConverter {
     /// convert from Money into to Currency using latest rates
-    async fn convert(&self, from: &Money, to: Currency) -> ForexResult<Conversion>;
+    async fn convert(&self, from: Money, to: Currency) -> ForexResult<Conversion>;
 }
 
 #[async_trait]
@@ -279,13 +280,21 @@ pub trait ForexStorage {
 
 /// Convert Money into another currency.
 /// This only call storage to get latest rates and do the calculations.
-pub async fn convert<FS>(forex: &FS, from: Money, to: Currency) -> ForexResult<Conversion>
+pub async fn convert<FS>(forex: &FS, from: Money, to: &str) -> ForexResult<Conversion>
 where
     FS: ForexStorage,
 {
-    if from.amount == dec!(0) {
+    if from.amount() == dec!(0) {
         return Err(anyhow!("[FOREX] amount conversion must be greater than 0"));
     }
+
+    Money::new(to, "1").map_err(|err| {
+        anyhow!(
+            "{} Failed doing conversion: target currency is invalid: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
 
     let ret = todo!("do conversion by reading latest data, and do the calculation");
 
