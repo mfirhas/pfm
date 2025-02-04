@@ -90,6 +90,9 @@ pub struct Money {
 }
 
 impl Money {
+    /// Create new Money from Currency in form of ISO 4217(e.g. USD, IDR) and amount(no thousands separator, dot is allowed for fraction separator.)
+    /// Example: currency: "USD" & amount: "12000" or "12000.00" or "12000.000"
+    /// Example: currency: "LOL" & amount: "12,000" -> currency not recognized and amount contain thousand separator.
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
         let curr = Currency::from_str(currency)
             .map_err(|err| anyhow!(format!("invalid currency: {}", err)))?;
@@ -162,6 +165,9 @@ impl Money {
     }
 }
 
+/// Instantiate Money from string.
+/// Thousand separator is optional.
+/// Fraction separator is optional.
 impl FromStr for Money {
     type Err = anyhow::Error;
 

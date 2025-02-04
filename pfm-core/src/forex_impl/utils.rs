@@ -20,17 +20,23 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
         .map_err(|err| anyhow!(format!("Currency code invalid: {}", err)))?;
 
     // 3. check if the code is in comma or dot separated for thousands.
-    let is_comma_separated_code = COMMA_SEPARATED_CURRENCIES.contains(&code);
+    let mut is_comma_separated_code = COMMA_SEPARATED_CURRENCIES.contains(&code);
 
     // 4. validate format using regex
     let is_amount_validated = COMMA_SEPARATOR_REGEX.is_match(currency_parts[1]);
-    if !is_amount_validated && !is_comma_separated_code {
-        let is_amount_validated = DOT_SEPARATOR_REGEX.is_match(currency_parts[1]);
-        if !is_amount_validated {
-            return Err(anyhow!(ERROR_INVALID_AMOUNT_FORMAT));
+    if is_amount_validated {
+        if !is_comma_separated_code {
+            is_comma_separated_code = true;
         }
     } else {
-        return Err(anyhow!(ERROR_INVALID_AMOUNT_FORMAT));
+        if !is_comma_separated_code {
+            let is_dot_validated = DOT_SEPARATOR_REGEX.is_match(currency_parts[1]);
+            if !is_dot_validated {
+                return Err(anyhow!(ERROR_INVALID_AMOUNT_FORMAT));
+            }
+        } else {
+            return Err(anyhow!(ERROR_INVALID_AMOUNT_FORMAT));
+        }
     }
 
     // 5. remove thousands separator and convert decimal/minor unit separator to dot.

@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod regex_format_tests {
     use super::super::forex::{COMMA_SEPARATOR_REGEX, DOT_SEPARATOR_REGEX};
 
@@ -105,4 +104,53 @@ mod regex_format_tests {
         );
         assert!(!regex.is_match("1.00.00"), "should match 100.00");
     }
+}
+
+use std::str::FromStr;
+
+use super::forex::Money;
+#[test]
+fn test_money() {
+    let expected = "USD 23,000";
+    let money = Money::new("USD", "23000");
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    let expected = "IDR 45.000.000"; // indonesian rupiah is dot separated for thousands.
+    let money = Money::new("IDR", "45000000");
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+}
+
+#[test]
+fn test_money_from_str() {
+    let input = "USD 23,000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+
+    // comma separated currencies cannot be written in dot separated.
+    let input = "USD 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    // println!("{}", money.as_ref().unwrap());
+    assert!(money.is_err());
+
+    let input = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+
+    // dot separated currencies can be written in comma separated
+    let input = "IDR 23,000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
 }
