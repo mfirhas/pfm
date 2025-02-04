@@ -13,11 +13,11 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
         return Err(anyhow!(ERROR_CURRENCY_PARTS));
     }
     let currency = Currency::from_str(currency_parts[0])
-        .map_err(|err| anyhow!(format!("invalid currency code: {}", err)))?;
+        .map_err(|err| anyhow!("invalid currency code: {}", err))?;
 
     // 2. check if first part is in list of currency codes
     let code = Currency::from_str(currency_parts[0])
-        .map_err(|err| anyhow!(format!("Currency code invalid: {}", err)))?;
+        .map_err(|err| anyhow!("Currency code invalid: {}", err))?;
 
     // 3. check if the code is in comma or dot separated for thousands.
     let mut is_comma_separated_code = COMMA_SEPARATED_CURRENCIES.contains(&code);
@@ -55,12 +55,8 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     };
 
     // 6. convert amount into Decimal.
-    let decimal = Decimal::from_str(&amount).map_err(|err| {
-        anyhow!(format!(
-            "failed converting amount into decimal type: {}",
-            err
-        ))
-    })?;
+    let decimal = Decimal::from_str(&amount)
+        .map_err(|err| anyhow!("failed converting amount into decimal type: {}", err))?;
 
     Ok(Money {
         currency,

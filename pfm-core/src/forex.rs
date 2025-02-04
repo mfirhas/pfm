@@ -94,10 +94,9 @@ impl Money {
     /// Example: currency: "USD" & amount: "12000" or "12000.00" or "12000.000"
     /// Example: currency: "LOL" & amount: "12,000" -> currency not recognized and amount contain thousand separator.
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
-        let curr = Currency::from_str(currency)
-            .map_err(|err| anyhow!(format!("invalid currency: {}", err)))?;
-        let val =
-            Decimal::from_str(amount).map_err(|err| anyhow!(format!("invalid amount: {}", err)))?;
+        let curr =
+            Currency::from_str(currency).map_err(|err| anyhow!("invalid currency: {}", err))?;
+        let val = Decimal::from_str(amount).map_err(|err| anyhow!("invalid amount: {}", err))?;
 
         Ok(Self {
             currency: curr,
