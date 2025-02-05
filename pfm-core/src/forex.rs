@@ -78,11 +78,67 @@ pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains th
 
 const ERROR_PREFIX: &str = "[FOREX]";
 
-enum Operations {
-    Add,
-    Substract,
-    Multiply,
-    Divide,
+/// List of supported currencies.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Currencies {
+    IDR,
+    USD,
+    EUR,
+    GBP,
+    JPY,
+    CHF,
+    SGD,
+    CNY,
+    SAR,
+}
+
+impl Currencies {
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::IDR => Currency::IDR.code(),
+            Self::USD => Currency::USD.code(),
+            Self::EUR => Currency::EUR.code(),
+            Self::GBP => Currency::GBP.code(),
+            Self::JPY => Currency::JPY.code(),
+            Self::CHF => Currency::CHF.code(),
+            Self::SGD => Currency::SGD.code(),
+            Self::CNY => Currency::CNY.code(),
+            Self::SAR => Currency::SAR.code(),
+        }
+    }
+}
+
+impl From<Money> for Currencies {
+    fn from(value: Money) -> Self {
+        match value {
+            Money::IDR(_) => Self::IDR,
+            Money::USD(_) => Self::USD,
+            Money::EUR(_) => Self::EUR,
+            Money::GBP(_) => Self::GBP,
+            Money::JPY(_) => Self::JPY,
+            Money::CHF(_) => Self::CHF,
+            Money::SGD(_) => Self::SGD,
+            Money::CNY(_) => Self::CNY,
+            Money::SAR(_) => Self::SAR,
+        }
+    }
+}
+
+impl PartialEq<Currencies> for Money {
+    fn eq(&self, other: &Currencies) -> bool {
+        match (self, other) {
+            (Money::IDR(_), Currencies::IDR) => true,
+            (Money::USD(_), Currencies::USD) => true,
+            (Money::EUR(_), Currencies::EUR) => true,
+            (Money::GBP(_), Currencies::GBP) => true,
+            (Money::JPY(_), Currencies::JPY) => true,
+            (Money::CHF(_), Currencies::CHF) => true,
+            (Money::SGD(_), Currencies::SGD) => true,
+            (Money::CNY(_), Currencies::CNY) => true,
+            (Money::SAR(_), Currencies::SAR) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -189,11 +245,11 @@ pub struct Rates {
     pub date: DateTime<Utc>,
 
     #[serde(alias = "rates")]
-    pub rates: Currencies,
+    pub rates: RatesData,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Currencies {
+pub struct RatesData {
     #[serde(alias = "IDR")]
     pub idr: Decimal,
 
@@ -243,10 +299,12 @@ pub type ForexResult<T> = Result<T, anyhow::Error>;
 
 ///////////////////////////////////// INTERFACES /////////////////////////////////////
 /////////////// INVOKED FROM SERVER
+/// ForexConverter is interface for 3rd API converting amount from 1 currency into another.
+/// NOTE: for now use storage using rates fetched and calculate from there.
 #[async_trait]
 pub trait ForexConverter {
     /// convert from Money into to Currency using latest rates
-    async fn convert(&self, from: Money, to: Currency) -> ForexResult<Conversion>;
+    async fn convert(&self, from: Money, to: Currencies) -> ForexResult<Conversion>;
 }
 ///////////////
 
@@ -254,13 +312,13 @@ pub trait ForexConverter {
 #[async_trait]
 pub trait ForexRates {
     /// get latest list of rates with a base currency
-    async fn rates(&self, base: Currency) -> ForexResult<Rates>;
+    async fn rates(&self, base: Currencies) -> ForexResult<Rates>;
 }
 
 #[async_trait]
 pub trait ForexHistoricalRates {
     /// get historical daily rates
-    async fn historical_rates(&self, date: DateTime<Utc>, base: Currency) -> ForexResult<Rates>;
+    async fn historical_rates(&self, date: DateTime<Utc>, base: Currencies) -> ForexResult<Rates>;
 }
 ///////////////
 
@@ -290,7 +348,7 @@ pub trait ForexStorage {
 ///////////////////////////////////// APIs /////////////////////////////////////
 /// Convert Money into another currency.
 /// This only call storage to get latest rates and do the calculations.
-pub async fn convert<FS>(forex: &FS, from: Money, to: &str) -> ForexResult<Conversion>
+pub async fn convert<FS>(forex: &FS, from: Money, to: Currencies) -> ForexResult<Conversion>
 where
     FS: ForexStorage,
 {
@@ -298,22 +356,21 @@ where
         return Err(anyhow!("[FOREX] amount conversion must be greater than 0"));
     }
 
-    Money::new(to, "1").map_err(|err| {
-        anyhow!(
-            "{} Failed doing conversion: target currency is invalid: {}",
-            ERROR_PREFIX,
-            err
-        )
-    })?;
+    if from == to {
+        return Ok(Conversion {
+            last_update: Utc::now(),
+            money: from,
+        });
+    }
 
-    let ret = todo!("do conversion by reading latest data, and do the calculation");
+    let ret = todo!("do conversion by reading latest data from storage, and do the calculation");
 
     Ok(ret)
 }
 
 /// Get rates from 3rd API.
 /// Invoked from Cron service.
-pub async fn get_rates<FX>(forex: &FX, base: Currency, to: &[Currency]) -> ForexResult<Rates>
+pub async fn get_rates<FX>(forex: &FX, base: Currencies, to: &[Currencies]) -> ForexResult<Rates>
 where
     FX: ForexRates,
 {
@@ -327,8 +384,8 @@ where
 pub async fn get_historical_rates<FX>(
     forex: &FX,
     date: DateTime<Utc>,
-    base: Currency,
-    to: &[Currency],
+    base: Currencies,
+    to: &[Currencies],
 ) -> ForexResult<Rates>
 where
     FX: ForexHistoricalRates,

@@ -9,7 +9,7 @@ async fn test_rates() {
     let client = reqwest::Client::new();
     let api = Api::new(&client);
 
-    let ret = api.rates(iso_currency::Currency::USD).await;
+    let ret = api.rates(crate::forex::Currencies::USD).await;
 
     dbg!(&ret);
 
@@ -41,7 +41,9 @@ async fn test_historical_rates() {
     dbg!(&utc);
     println!("{}", &utc);
 
-    let ret = api.historical_rates(utc, iso_currency::Currency::USD).await;
+    let ret = api
+        .historical_rates(utc, crate::forex::Currencies::USD)
+        .await;
 
     dbg!(&ret);
 

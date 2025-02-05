@@ -16,7 +16,7 @@ async fn test_historical_rates() {
     let date = Utc.from_utc_datetime(&date);
 
     let ret = api
-        .historical_rates(date, iso_currency::Currency::USD)
+        .historical_rates(date, crate::forex::Currencies::USD)
         .await;
 
     dbg!(&ret);

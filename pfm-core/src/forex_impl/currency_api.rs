@@ -5,7 +5,7 @@
 // daily historical rates
 // 10 reqs/minute
 
-use crate::forex::{ForexHistoricalRates, Rates};
+use crate::forex::{Currencies, ForexHistoricalRates, Rates};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -103,7 +103,7 @@ impl TryFrom<Response> for crate::forex::Rates {
 
         let rates = Rates {
             date,
-            rates: crate::forex::Currencies {
+            rates: crate::forex::RatesData {
                 idr: value.rates.idr.value,
                 usd: value.rates.usd.value,
                 eur: value.rates.eur.value,
@@ -128,7 +128,7 @@ impl ForexHistoricalRates for Api<'_> {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: iso_currency::Currency,
+        base: Currencies,
     ) -> crate::forex::ForexResult<crate::forex::Rates> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 

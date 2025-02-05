@@ -3,7 +3,7 @@
 // Daily historical data
 // 1,000 API requests per month
 
-use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, ForexResult};
+use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, ForexResult, RatesData};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
@@ -84,7 +84,7 @@ impl TryFrom<Response> for crate::forex::Rates {
             .ok_or(anyhow!("Failed converting unix epoch into utc"))
             .map_err(|err| anyhow!("{} {}", ERROR_PREFIX, err))?;
 
-        let rates = Currencies {
+        let rates = RatesData {
             idr: value.rates.idr,
             usd: value.rates.usd,
             eur: value.rates.eur,
@@ -121,10 +121,7 @@ impl<'CLIENT> Api<'CLIENT> {
 
 #[async_trait]
 impl ForexRates for Api<'_> {
-    async fn rates(
-        &self,
-        base: iso_currency::Currency,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+    async fn rates(&self, base: Currencies) -> crate::forex::ForexResult<crate::forex::Rates> {
         let params = [
             ("app_id", self.key),
             ("base", base.code()),
@@ -158,7 +155,7 @@ impl ForexHistoricalRates for Api<'_> {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: iso_currency::Currency,
+        base: Currencies,
     ) -> crate::forex::ForexResult<crate::forex::Rates> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = HISTORICAL_ENDPOINT.replace(":date", yyyymmdd.as_str());

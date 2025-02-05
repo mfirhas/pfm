@@ -10,7 +10,7 @@
 // - DAILY updates at 00.00 UTC, but slower to update on time.
 // - very limited historical rates.
 
-use crate::forex::{Currencies, ForexHistoricalRates, ForexRates};
+use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, RatesData};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -44,7 +44,7 @@ impl TryFrom<Response> for crate::forex::Rates {
         })?;
         let forex_rates = crate::forex::Rates {
             date,
-            rates: Currencies {
+            rates: RatesData {
                 idr: value.rates.currencies().idr,
                 usd: value.rates.currencies().usd,
                 eur: value.rates.currencies().eur,
@@ -67,44 +67,44 @@ impl TryFrom<Response> for crate::forex::Rates {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Rates {
     #[serde(rename = "idr")]
-    IDR(Currencies),
+    IDR(RatesData),
 
     #[serde(rename = "usd")]
-    USD(Currencies),
+    USD(RatesData),
 
     #[serde(rename = "eur")]
-    EUR(Currencies),
+    EUR(RatesData),
 
     #[serde(rename = "gbp")]
-    GBP(Currencies),
+    GBP(RatesData),
 
     #[serde(rename = "jpy")]
-    JPY(Currencies),
+    JPY(RatesData),
 
     #[serde(rename = "chf")]
-    CHF(Currencies),
+    CHF(RatesData),
 
     #[serde(rename = "sgd")]
-    SGD(Currencies),
+    SGD(RatesData),
 
     #[serde(rename = "cny")]
-    CNY(Currencies),
+    CNY(RatesData),
 
     #[serde(rename = "sar")]
-    SAR(Currencies),
+    SAR(RatesData),
 
     #[serde(rename = "xau")]
-    XAU(Currencies),
+    XAU(RatesData),
 
     #[serde(rename = "xag")]
-    XAG(Currencies),
+    XAG(RatesData),
 
     #[serde(rename = "xpt")]
-    XPT(Currencies),
+    XPT(RatesData),
 }
 
 impl Rates {
-    pub fn currencies(&self) -> &Currencies {
+    pub fn currencies(&self) -> &RatesData {
         match self {
             Rates::IDR(currencies) => currencies,
             Rates::USD(currencies) => currencies,
@@ -134,10 +134,7 @@ impl<'CLIENT> Api<'CLIENT> {
 
 #[async_trait]
 impl ForexRates for Api<'_> {
-    async fn rates(
-        &self,
-        base: iso_currency::Currency,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+    async fn rates(&self, base: Currencies) -> crate::forex::ForexResult<crate::forex::Rates> {
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", "latest")
             .replace("{currency_code}", base.code().to_lowercase().as_str());
@@ -168,7 +165,7 @@ impl ForexHistoricalRates for Api<'_> {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: iso_currency::Currency,
+        base: Currencies,
     ) -> crate::forex::ForexResult<crate::forex::Rates> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = CLOUDFLARE_ENDPOINT_V1
