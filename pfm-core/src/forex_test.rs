@@ -129,10 +129,12 @@ fn test_money() {
 #[test]
 fn test_money_from_str() {
     let input = "USD 23,000";
+    let expected = "USD 23,000";
     let money = Money::from_str(input);
     dbg!(&money);
     println!("{}", money.as_ref().unwrap());
     assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
 
     // comma separated currencies cannot be written in dot separated.
     let input = "USD 23.000";
@@ -142,15 +144,45 @@ fn test_money_from_str() {
     assert!(money.is_err());
 
     let input = "IDR 23.000";
+    let expected = "IDR 23.000";
     let money = Money::from_str(input);
     dbg!(&money);
     println!("{}", money.as_ref().unwrap());
     assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
 
     // dot separated currencies can be written in comma separated
     let input = "IDR 23,000";
+    let expected = "IDR 23.000";
     let money = Money::from_str(input);
     dbg!(&money);
     println!("{}", money.as_ref().unwrap());
     assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    //// without thousands separator
+    let input = "USD 23000";
+    let expected = "USD 23,000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    let input = "IDR 23000";
+    let expected = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    // dot separated currencies can be written in comma separated
+    let input = "IDR 23000";
+    let expected = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
 }

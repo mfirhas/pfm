@@ -241,6 +241,7 @@ pub struct Conversion {
 
 pub type ForexResult<T> = Result<T, anyhow::Error>;
 
+///////////////////////////////////// INTERFACES /////////////////////////////////////
 /////////////// INVOKED FROM SERVER
 #[async_trait]
 pub trait ForexConverter {
@@ -284,11 +285,9 @@ pub trait ForexStorage {
     async fn get_historical(&self) -> ForexResult<Rates>;
 }
 ///////////////
+///////////////////////////////////// INTERFACES(END) /////////////////////////////////////
 
-//////////
-// APIs //
-//////////
-
+///////////////////////////////////// APIs /////////////////////////////////////
 /// Convert Money into another currency.
 /// This only call storage to get latest rates and do the calculations.
 pub async fn convert<FS>(forex: &FS, from: Money, to: &str) -> ForexResult<Conversion>
@@ -338,3 +337,4 @@ where
 
     Ok(ret)
 }
+///////////////////////////////////// APIs(END) /////////////////////////////////////
