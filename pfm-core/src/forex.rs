@@ -241,13 +241,15 @@ pub struct Conversion {
 
 pub type ForexResult<T> = Result<T, anyhow::Error>;
 
-/////////////// INVOKED FROM CRON JOB
+/////////////// INVOKED FROM SERVER
 #[async_trait]
 pub trait ForexConverter {
     /// convert from Money into to Currency using latest rates
     async fn convert(&self, from: Money, to: Currency) -> ForexResult<Conversion>;
 }
+///////////////
 
+/////////////// INVOKED FROM CRON JOB
 #[async_trait]
 pub trait ForexRates {
     /// get latest list of rates with a base currency
@@ -262,6 +264,7 @@ pub trait ForexHistoricalRates {
 ///////////////
 
 /////////////// INVOKED FROM SERVER
+/// Interface for storing forex data fetched from 3rd APIs.
 #[async_trait]
 pub trait ForexStorage {
     /// insert latest rate fetched from API
@@ -271,6 +274,14 @@ pub trait ForexStorage {
 
     /// get the latest data fetched from API
     async fn get_latest(&self) -> ForexResult<Rates>;
+
+    /// insert historical rates
+    /// @date: the datetime in UTC when the data fetched.
+    /// @rates: the rates to be saved.
+    async fn insert_historical(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()>;
+
+    /// get historical rates
+    async fn get_historical(&self) -> ForexResult<Rates>;
 }
 ///////////////
 
