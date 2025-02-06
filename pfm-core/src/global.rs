@@ -13,12 +13,12 @@ const ERROR_PREFIX: &str = "[GLOBAL]";
 /// path to .env file for development
 pub(super) const DEV_ENV_PATH: &str = "./src/core.env";
 
-/// Get global http client object.
+/// Get instantiated global http client object.
 pub(crate) fn http_client() -> &'static Client {
     &HTTP_CLIENT
 }
 
-/// Get global config
+/// Get instantiated global config object.
 pub(crate) fn config() -> &'static Config {
     &CONFIG
 }

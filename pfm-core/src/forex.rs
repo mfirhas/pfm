@@ -11,7 +11,10 @@ use lazy_static::lazy_static;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
-use crate::forex_impl::utils::{parse_str, to_string};
+use crate::{
+    forex_impl::utils::{parse_str, to_string},
+    global,
+};
 
 lazy_static! {
     /// List of currencies using comma to separate thousands.
@@ -234,7 +237,7 @@ impl FromStr for Money {
 
 impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ret = to_string(false, *self);
+        let ret = to_string(global::config().forex_use_symbol, *self);
         write!(f, "{}", ret)
     }
 }
