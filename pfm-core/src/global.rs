@@ -5,34 +5,13 @@ use configrs::config::Config as config_rs;
 use lazy_static::lazy_static;
 use reqwest::Client;
 use serde::Deserialize;
-use std::{fmt::Debug, fs, path::Path, time::Duration};
+use std::{fmt::Debug, time::Duration};
 
 const ENV_PREFIX: &str = "CORE_";
 const ERROR_PREFIX: &str = "[CONFIG]";
 
 /// path to .env file for development
-const DEV_ENV_PATH: &str = "./src/core.env";
-
-#[test]
-fn test_dir() {
-    let path = Path::new(DEV_ENV_PATH);
-
-    if path.is_dir() {
-        match fs::read_dir(path) {
-            Ok(entries) => {
-                for entry in entries {
-                    match entry {
-                        Ok(entry) => println!("{}", entry.path().display()),
-                        Err(err) => eprintln!("Error reading entry: {}", err),
-                    }
-                }
-            }
-            Err(err) => eprintln!("Error reading directory: {}", err),
-        }
-    } else {
-        eprintln!("Provided path is not a directory");
-    }
-}
+pub(super) const DEV_ENV_PATH: &str = "./src/core.env";
 
 /// Get global http client object.
 pub(crate) fn http_client() -> &'static Client {
@@ -87,13 +66,6 @@ where
     cfg
 }
 
-#[test]
-fn test_config() {
-    let cfg = init_config::<Config>();
-    dbg!(&cfg);
-    assert!(cfg.is_ok());
-}
-
 /// Configurations
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct Config {
@@ -108,4 +80,24 @@ pub(crate) struct Config {
     /// API key for https://openexchangerates.org
     #[serde(alias = "CORE_FOREX_OPEN_EXCHANGE_API_KEY")]
     pub forex_open_exchange_api_key: String,
+}
+
+#[cfg(test)]
+mod global_tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_dev_dir() {
+        let path = Path::new(DEV_ENV_PATH);
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_config() {
+        let cfg = init_config::<Config>();
+        dbg!(&cfg);
+        assert!(cfg.is_ok());
+    }
 }
