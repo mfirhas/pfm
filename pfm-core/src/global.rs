@@ -8,7 +8,7 @@ use serde::Deserialize;
 use std::{fmt::Debug, time::Duration};
 
 const ENV_PREFIX: &str = "CORE_";
-const ERROR_PREFIX: &str = "[CONFIG]";
+const ERROR_PREFIX: &str = "[GLOBAL]";
 
 /// path to .env file for development
 pub(super) const DEV_ENV_PATH: &str = "./src/core.env";
