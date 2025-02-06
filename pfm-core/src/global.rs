@@ -5,10 +5,21 @@ use configrs::config::Config as config_rs;
 use lazy_static::lazy_static;
 use reqwest::Client;
 use serde::Deserialize;
-use std::{fmt::Debug, time::Duration};
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
 const ENV_PREFIX: &str = "CORE_";
 const ERROR_PREFIX: &str = "[GLOBAL]";
+
+/// storage filesystem for production.
+const STORAGE_FS_PATH: &str = "TODO";
+
+/// storage filesystem for local development, inside project directory.
+const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
 
 /// path to .env file for development
 pub(super) const DEV_ENV_PATH: &str = "./src/core.env";
@@ -23,9 +34,15 @@ pub(crate) fn config() -> &'static Config {
     &CONFIG
 }
 
+/// Get instantiated global storage filesystem object.
+pub(crate) fn storage_fs() -> StorageFS {
+    STORAGE_FS.clone()
+}
+
 lazy_static! {
     static ref CONFIG: Config = init_config().expect("failed init core config");
     static ref HTTP_CLIENT: Client = init_http_client().expect("failed init core http client");
+    static ref STORAGE_FS: StorageFS = init_storage_fs().expect("failed init storage fs");
 }
 
 fn init_http_client() -> Result<reqwest::Client, anyhow::Error> {
@@ -66,6 +83,22 @@ where
     cfg
 }
 
+pub type StorageFS = Arc<RwLock<PathBuf>>;
+
+fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
+    let path = if cfg!(debug_assertions) {
+        Path::new(STORAGE_FS_PATH_DEV)
+    } else {
+        Path::new(STORAGE_FS_PATH)
+    };
+
+    let pb = path.to_path_buf();
+
+    let storage_fs = Arc::new(RwLock::new(pb));
+
+    Ok(storage_fs)
+}
+
 /// Configurations
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct Config {
@@ -99,5 +132,19 @@ mod global_tests {
         let cfg = init_config::<Config>();
         dbg!(&cfg);
         assert!(cfg.is_ok());
+    }
+
+    #[test]
+    fn test_path() {
+        let ret = init_storage_fs();
+
+        dbg!(&ret);
+
+        assert!(ret.is_ok());
+
+        let ret = ret.unwrap();
+        let is_dir = ret.read().unwrap().is_dir();
+
+        assert!(is_dir);
     }
 }
