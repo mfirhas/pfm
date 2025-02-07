@@ -19,12 +19,15 @@ use tokio::sync::mpsc::Permit;
 const ENV_PREFIX: &str = "CORE_";
 const ERROR_PREFIX: &str = "[GLOBAL]";
 
-/// storage filesystem for production.
-const STORAGE_FS_PATH: &str = "TODO";
+///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER /////////////////////////////////////
 const STORAGE_FS_PERMISSION: u32 = 0o700;
+
+/// storage filesystem for production in server.
+const STORAGE_FS_PATH: &str = "TODO";
 
 /// storage filesystem for local development, inside project directory.
 const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
+///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
 /// path to .env file for development
 pub(super) const DEV_ENV_PATH: &str = "./src/core.env";
@@ -39,7 +42,7 @@ pub(crate) fn config() -> &'static Config {
     &CONFIG
 }
 
-/// Get instantiated global storage filesystem object.
+/// Get instantiated global storage filesystem object for SERVER.
 pub(crate) fn storage_fs() -> StorageFS {
     STORAGE_FS.clone()
 }
