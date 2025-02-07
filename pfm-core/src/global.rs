@@ -90,7 +90,20 @@ where
     cfg
 }
 
-pub(crate) type StorageFS = Arc<RwLock<PathBuf>>;
+pub(crate) type StorageFS = Arc<RwLock<ServerFS>>;
+
+#[derive(Debug)]
+pub(crate) struct ServerFS {
+    root: PathBuf,
+    latest: PathBuf,
+    historical: PathBuf,
+}
+
+impl ServerFS {
+    pub(crate) fn is_dir(&self) -> bool {
+        self.root.is_dir() && self.latest.is_dir() && self.historical.is_dir()
+    }
+}
 
 fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
     let path = if cfg!(debug_assertions) {
@@ -99,9 +112,10 @@ fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
         Path::new(STORAGE_FS_PATH)
     };
 
-    let pb = path.to_path_buf();
+    // initiate Root
+    let root = path.to_path_buf();
 
-    let is_exist = pb.try_exists().map_err(|err| {
+    let is_exist = root.try_exists().map_err(|err| {
         anyhow!(
             "{} failed checking root storage directory: {}",
             ERROR_PREFIX,
@@ -111,22 +125,22 @@ fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
 
     if !is_exist {
         // create the root dir
-        fs::create_dir_all(&pb).map_err(|err| {
+        fs::create_dir_all(&root).map_err(|err| {
             anyhow!(
                 "{} failed creating root directory at {:?} for storage fs: {}",
                 ERROR_PREFIX,
-                &pb.as_path(),
+                &root.as_path(),
                 err
             )
         })?;
     }
 
     // set permissions
-    let metadata = fs::metadata(&pb).map_err(|err| {
+    let metadata = fs::metadata(&root).map_err(|err| {
         anyhow!(
             "{} failed to read metadata of {:?}: {}",
             ERROR_PREFIX,
-            &pb.as_path(),
+            &root.as_path(),
             err
         )
     })?;
@@ -135,18 +149,129 @@ fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
     // 0 = no permissions for group
     // 0 = no permissions for others
     new_permissions.set_mode(STORAGE_FS_PERMISSION);
-    fs::set_permissions(&pb, new_permissions).map_err(|err| {
+    fs::set_permissions(&root, new_permissions).map_err(|err| {
         anyhow!(
             "{} failed setting permission into {:?}: {}",
             ERROR_PREFIX,
-            &pb.as_path(),
+            &root.as_path(),
             err
         )
     })?;
 
-    let storage_fs = Arc::new(RwLock::new(pb));
+    let latest = init_storage_fs_latest(&root)
+        .map_err(|err| anyhow!("{} failed initiating latest dir: {}", ERROR_PREFIX, err))?;
+
+    let historical = init_storage_fs_historical(&root)
+        .map_err(|err| anyhow!("{} failed initiating historical dir: {}", ERROR_PREFIX, err))?;
+
+    // initiate historical
+    let storage_fs = Arc::new(RwLock::new(ServerFS {
+        root,
+        latest,
+        historical,
+    }));
 
     Ok(storage_fs)
+}
+
+fn init_storage_fs_latest(root: &PathBuf) -> Result<PathBuf, anyhow::Error> {
+    // initiate latest
+    let latest = root.join("latest");
+
+    let is_exist = latest.try_exists().map_err(|err| {
+        anyhow!(
+            "{} failed checking latest storage directory: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !is_exist {
+        // create the latest dir
+        fs::create_dir_all(&latest).map_err(|err| {
+            anyhow!(
+                "{} failed creating latest directory at {:?} for storage fs: {}",
+                ERROR_PREFIX,
+                &latest.as_path(),
+                err
+            )
+        })?;
+    }
+
+    // set permissions
+    let metadata = fs::metadata(&latest).map_err(|err| {
+        anyhow!(
+            "{} failed to read metadata of {:?}: {}",
+            ERROR_PREFIX,
+            &latest.as_path(),
+            err
+        )
+    })?;
+    let mut new_permissions = metadata.permissions();
+    // 7 = read (4) + write (2) + execute (1) for owner
+    // 0 = no permissions for group
+    // 0 = no permissions for others
+    new_permissions.set_mode(STORAGE_FS_PERMISSION);
+    fs::set_permissions(&latest, new_permissions).map_err(|err| {
+        anyhow!(
+            "{} failed setting permission into {:?}: {}",
+            ERROR_PREFIX,
+            &latest.as_path(),
+            err
+        )
+    })?;
+
+    Ok(latest)
+}
+
+fn init_storage_fs_historical(root: &PathBuf) -> Result<PathBuf, anyhow::Error> {
+    // initiate historical
+    let historical = root.join("historical");
+
+    let is_exist = historical.try_exists().map_err(|err| {
+        anyhow!(
+            "{} failed checking historical storage directory: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !is_exist {
+        // create the historical dir
+        fs::create_dir_all(&historical).map_err(|err| {
+            anyhow!(
+                "{} failed creating historical directory at {:?} for storage fs: {}",
+                ERROR_PREFIX,
+                &historical.as_path(),
+                err
+            )
+        })?;
+    }
+
+    // set permissions
+    let metadata = fs::metadata(&historical).map_err(|err| {
+        anyhow!(
+            "{} failed to read metadata of {:?}: {}",
+            ERROR_PREFIX,
+            &historical.as_path(),
+            err
+        )
+    })?;
+    let mut new_permissions = metadata.permissions();
+    // 7 = read (4) + write (2) + execute (1) for owner
+    // 0 = no permissions for group
+    // 0 = no permissions for others
+    new_permissions.set_mode(STORAGE_FS_PERMISSION);
+    fs::set_permissions(&historical, new_permissions).map_err(|err| {
+        anyhow!(
+            "{} failed setting permission into {:?}: {}",
+            ERROR_PREFIX,
+            &historical.as_path(),
+            err
+        )
+    })?;
+
+    Ok(historical)
 }
 
 /// Configurations
@@ -190,22 +315,31 @@ mod global_tests {
 
         dbg!(&ret);
 
-        assert!(ret.is_ok());
-
-        let ret = ret.unwrap();
-        let is_dir = ret.read().unwrap().is_dir();
-
+        let storage_fs = ret.unwrap();
+        let storage_fs = storage_fs.read().unwrap();
+        let is_dir = storage_fs.is_dir();
         assert!(is_dir);
 
-        let pb = &*ret.read().unwrap();
-        let metadata = fs::metadata(pb);
+        let storage_fs = &*storage_fs;
+        let storage_fs_root = &*storage_fs.root;
+        let storage_fs_latest = &storage_fs.latest;
+        let storage_fs_historical = &storage_fs.historical;
 
-        assert!(metadata.is_ok());
-
-        let md = metadata.unwrap();
+        let metadata_root = fs::metadata(storage_fs_root).unwrap();
+        let metadata_latest = fs::metadata(storage_fs_latest).unwrap();
+        let metadata_historical = fs::metadata(storage_fs_historical).unwrap();
 
         assert_eq!(
-            md.permissions().mode() & STORAGE_FS_PERMISSION,
+            metadata_root.permissions().mode() & STORAGE_FS_PERMISSION,
+            STORAGE_FS_PERMISSION
+        );
+
+        assert_eq!(
+            metadata_latest.permissions().mode() & STORAGE_FS_PERMISSION,
+            STORAGE_FS_PERMISSION
+        );
+        assert_eq!(
+            metadata_historical.permissions().mode() & STORAGE_FS_PERMISSION,
             STORAGE_FS_PERMISSION
         );
     }
