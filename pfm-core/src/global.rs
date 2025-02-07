@@ -1,22 +1,27 @@
 // global.rs contains global variables
 
+use anyhow::anyhow;
 use anyhow::Result;
 use configrs::config::Config as config_rs;
 use lazy_static::lazy_static;
 use reqwest::Client;
 use serde::Deserialize;
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
     time::Duration,
 };
+use tokio::sync::mpsc::Permit;
 
 const ENV_PREFIX: &str = "CORE_";
 const ERROR_PREFIX: &str = "[GLOBAL]";
 
 /// storage filesystem for production.
 const STORAGE_FS_PATH: &str = "TODO";
+const STORAGE_FS_PERMISSION: u32 = 0o700;
 
 /// storage filesystem for local development, inside project directory.
 const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
@@ -94,6 +99,49 @@ fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
 
     let pb = path.to_path_buf();
 
+    let is_exist = pb.try_exists().map_err(|err| {
+        anyhow!(
+            "{} failed checking root storage directory: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !is_exist {
+        // create the root dir
+        fs::create_dir_all(&pb).map_err(|err| {
+            anyhow!(
+                "{} failed creating root directory at {:?} for storage fs: {}",
+                ERROR_PREFIX,
+                &pb.as_path(),
+                err
+            )
+        })?;
+    }
+
+    // set permissions
+    let metadata = fs::metadata(&pb).map_err(|err| {
+        anyhow!(
+            "{} failed to read metadata of {:?}: {}",
+            ERROR_PREFIX,
+            &pb.as_path(),
+            err
+        )
+    })?;
+    let mut new_permissions = metadata.permissions();
+    // 7 = read (4) + write (2) + execute (1) for owner
+    // 0 = no permissions for group
+    // 0 = no permissions for others
+    new_permissions.set_mode(STORAGE_FS_PERMISSION);
+    fs::set_permissions(&pb, new_permissions).map_err(|err| {
+        anyhow!(
+            "{} failed setting permission into {:?}: {}",
+            ERROR_PREFIX,
+            &pb.as_path(),
+            err
+        )
+    })?;
+
     let storage_fs = Arc::new(RwLock::new(pb));
 
     Ok(storage_fs)
@@ -121,7 +169,7 @@ mod global_tests {
     use std::path::Path;
 
     #[test]
-    fn test_dev_dir() {
+    fn test_dev_env_path() {
         let path = Path::new(DEV_ENV_PATH);
 
         assert!(path.exists());
@@ -135,7 +183,7 @@ mod global_tests {
     }
 
     #[test]
-    fn test_path() {
+    fn test_dev_storage_fs_path() {
         let ret = init_storage_fs();
 
         dbg!(&ret);
@@ -146,5 +194,17 @@ mod global_tests {
         let is_dir = ret.read().unwrap().is_dir();
 
         assert!(is_dir);
+
+        let pb = &*ret.read().unwrap();
+        let metadata = fs::metadata(pb);
+
+        assert!(metadata.is_ok());
+
+        let md = metadata.unwrap();
+
+        assert_eq!(
+            md.permissions().mode() & STORAGE_FS_PERMISSION,
+            STORAGE_FS_PERMISSION
+        );
     }
 }
