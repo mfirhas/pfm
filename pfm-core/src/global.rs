@@ -32,8 +32,8 @@ const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
 const DEV_ENV_PATH: &str = "./src/core.env";
 
 /// Get instantiated global http client object.
-pub(crate) fn http_client() -> &'static Client {
-    &HTTP_CLIENT
+pub(crate) fn http_client() -> Client {
+    HTTP_CLIENT.clone()
 }
 
 /// Get instantiated global config object.
@@ -90,6 +90,7 @@ where
     cfg
 }
 
+/// Filesystem for storing data at server side.
 pub(crate) type StorageFS = Arc<RwLock<ServerFS>>;
 
 #[derive(Debug)]

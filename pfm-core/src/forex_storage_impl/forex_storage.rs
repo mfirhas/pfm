@@ -5,11 +5,10 @@ use crate::global::StorageFS;
 
 pub(crate) struct ForexStorageImpl {
     fs: StorageFS,
-    latest_dir: StorageFS,
 }
 
-// impl ForexStorageImpl {
-//     pub(crate) fn new(fs: StorageFS) -> Self {
-//         Self { fs }
-//     }
-// }
+impl ForexStorageImpl {
+    pub(crate) fn new(fs: StorageFS) -> Self {
+        Self { fs }
+    }
+}

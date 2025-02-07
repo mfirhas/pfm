@@ -7,7 +7,7 @@ use super::exchange_api::Api;
 #[tokio::test]
 async fn test_rates() {
     let client = reqwest::Client::new();
-    let api = Api::new(&client);
+    let api = Api::new(client.clone());
 
     let ret = api.rates(crate::forex::Currencies::USD).await;
 
@@ -19,7 +19,7 @@ async fn test_rates() {
 #[tokio::test]
 async fn test_historical_rates() {
     let client = reqwest::Client::new();
-    let api = Api::new(&client);
+    let api = Api::new(client.clone());
 
     let date = NaiveDate::from_ymd_opt(2024, 12, 20)
         .unwrap()

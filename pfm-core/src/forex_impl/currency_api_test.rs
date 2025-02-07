@@ -7,7 +7,7 @@ async fn test_historical_rates() {
     let client = reqwest::Client::new();
     let api_key = "anu";
 
-    let api = super::currency_api::Api::new(api_key, &client);
+    let api = super::currency_api::Api::new(api_key, client.clone());
 
     let date = NaiveDate::from_ymd_opt(2024, 12, 20)
         .unwrap()

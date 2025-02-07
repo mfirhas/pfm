@@ -105,13 +105,13 @@ impl TryFrom<Response> for crate::forex::Rates {
     }
 }
 
-pub(crate) struct Api<'CLIENT> {
+pub(crate) struct Api {
     key: &'static str,
-    client: &'CLIENT reqwest::Client,
+    client: reqwest::Client,
 }
 
-impl<'CLIENT> Api<'CLIENT> {
-    pub(crate) fn new(api_key: &'static str, client: &'CLIENT reqwest::Client) -> Self {
+impl Api {
+    pub(crate) fn new(api_key: &'static str, client: reqwest::Client) -> Self {
         Self {
             key: api_key,
             client,
@@ -120,7 +120,7 @@ impl<'CLIENT> Api<'CLIENT> {
 }
 
 #[async_trait]
-impl ForexRates for Api<'_> {
+impl ForexRates for Api {
     async fn rates(&self, base: Currencies) -> crate::forex::ForexResult<crate::forex::Rates> {
         let params = [
             ("app_id", self.key),
@@ -151,7 +151,7 @@ impl ForexRates for Api<'_> {
 }
 
 #[async_trait]
-impl ForexHistoricalRates for Api<'_> {
+impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,

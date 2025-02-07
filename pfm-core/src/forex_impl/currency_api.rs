@@ -16,13 +16,13 @@ const HISTORICAL_ENDPOINT: &str = "https://api.currencyapi.com/v3/historical";
 
 const ERROR_PREFIX: &str = "[FOREX][currency-api]";
 
-pub(crate) struct Api<'CLIENT> {
+pub(crate) struct Api {
     key: &'static str,
-    client: &'CLIENT reqwest::Client,
+    client: reqwest::Client,
 }
 
-impl<'CLIENT> Api<'CLIENT> {
-    pub(crate) fn new(api_key: &'static str, client: &'CLIENT reqwest::Client) -> Self {
+impl Api {
+    pub(crate) fn new(api_key: &'static str, client: reqwest::Client) -> Self {
         Self {
             key: api_key,
             client,
@@ -124,7 +124,7 @@ impl TryFrom<Response> for crate::forex::Rates {
 }
 
 #[async_trait]
-impl ForexHistoricalRates for Api<'_> {
+impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,

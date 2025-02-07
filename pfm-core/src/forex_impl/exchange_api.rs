@@ -122,18 +122,18 @@ impl Rates {
     }
 }
 
-pub(crate) struct Api<'CLIENT> {
-    client: &'CLIENT reqwest::Client,
+pub(crate) struct Api {
+    client: reqwest::Client,
 }
 
-impl<'CLIENT> Api<'CLIENT> {
-    pub fn new(client: &'CLIENT reqwest::Client) -> Self {
+impl Api {
+    pub fn new(client: reqwest::Client) -> Self {
         Api { client }
     }
 }
 
 #[async_trait]
-impl ForexRates for Api<'_> {
+impl ForexRates for Api {
     async fn rates(&self, base: Currencies) -> crate::forex::ForexResult<crate::forex::Rates> {
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", "latest")
@@ -161,7 +161,7 @@ impl ForexRates for Api<'_> {
 }
 
 #[async_trait]
-impl ForexHistoricalRates for Api<'_> {
+impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,

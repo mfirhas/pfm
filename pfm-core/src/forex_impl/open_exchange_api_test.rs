@@ -7,7 +7,7 @@ async fn test_rates() {
     let client = reqwest::Client::new();
     let api_key = "anu";
 
-    let api = super::open_exchange_api::Api::new(api_key, &client);
+    let api = super::open_exchange_api::Api::new(api_key, client.clone());
 
     let ret = api.rates(crate::forex::Currencies::USD).await;
 
@@ -21,7 +21,7 @@ async fn test_historical_rates() {
     let client = reqwest::Client::new();
     let api_key = "anu";
 
-    let api = super::open_exchange_api::Api::new(api_key, &client);
+    let api = super::open_exchange_api::Api::new(api_key, client.clone());
 
     let date = NaiveDate::from_ymd_opt(2020, 12, 20)
         .unwrap()
