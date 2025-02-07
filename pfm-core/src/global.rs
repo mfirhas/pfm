@@ -29,7 +29,7 @@ const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
 /// path to .env file for development
-pub(super) const DEV_ENV_PATH: &str = "./src/core.env";
+const DEV_ENV_PATH: &str = "./src/core.env";
 
 /// Get instantiated global http client object.
 pub(crate) fn http_client() -> &'static Client {
