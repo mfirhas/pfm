@@ -90,7 +90,7 @@ where
     cfg
 }
 
-pub type StorageFS = Arc<RwLock<PathBuf>>;
+pub(crate) type StorageFS = Arc<RwLock<PathBuf>>;
 
 fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
     let path = if cfg!(debug_assertions) {
