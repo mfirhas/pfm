@@ -251,7 +251,10 @@ pub struct RatesResponse<T> {
     source: String,
 
     #[serde(alias = "data")]
-    data: T,
+    data: Option<T>,
+
+    #[serde(alias = "error")]
+    error: Option<String>,
 }
 
 impl<T> RatesResponse<T>
@@ -259,7 +262,19 @@ where
     T: for<'a> Deserialize<'a> + Serialize + Debug,
 {
     pub(crate) fn new(source: String, data: T) -> Self {
-        Self { source, data }
+        Self {
+            source,
+            data: Some(data),
+            error: None,
+        }
+    }
+
+    pub(crate) fn err(source: String, error: String) -> Self {
+        Self {
+            source,
+            data: None,
+            error: Some(error),
+        }
     }
 }
 
