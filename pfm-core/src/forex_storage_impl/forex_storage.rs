@@ -4,7 +4,7 @@
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use crate::forex::{ForexResult, ForexStorage, Rates};
+use crate::forex::{ForexResult, ForexStorage, HistoricalRates, Rates, RatesResponse};
 use crate::global::StorageFS;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -48,7 +48,11 @@ impl ForexStorageImpl {
         Ok(())
     }
 
-    async fn insert_latest(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()> {
+    async fn insert_latest(
+        &self,
+        date: DateTime<Utc>,
+        rates: RatesResponse<Rates>,
+    ) -> ForexResult<()> {
         let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
             anyhow!(
                 "{} failed parsing Rates into json string :{}",
@@ -72,7 +76,7 @@ impl ForexStorageImpl {
         Ok(())
     }
 
-    async fn get_latest(&self) -> ForexResult<Rates> {
+    async fn get_latest(&self) -> ForexResult<RatesResponse<Rates>> {
         let latest_read = self.fs.read().await;
         let latest_read = latest_read.latest();
 
@@ -107,7 +111,7 @@ impl ForexStorageImpl {
             )
         })?;
 
-        let rates: Rates = serde_json::from_str(&content).map_err(|err| {
+        let rates: RatesResponse<Rates> = serde_json::from_str(&content).map_err(|err| {
             anyhow!(
                 "{} failed parsing file content {:?} into Rates :{}",
                 ERROR_PREFIX,
@@ -119,7 +123,11 @@ impl ForexStorageImpl {
         Ok(rates)
     }
 
-    async fn insert_historical(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()> {
+    async fn insert_historical(
+        &self,
+        date: DateTime<Utc>,
+        rates: RatesResponse<HistoricalRates>,
+    ) -> ForexResult<()> {
         let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
             anyhow!(
                 "{} failed parsing Rates into json string :{}",
@@ -149,7 +157,10 @@ impl ForexStorageImpl {
         Ok(())
     }
 
-    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<Rates> {
+    async fn get_historical(
+        &self,
+        date: DateTime<Utc>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>> {
         let historical_read = self.fs.read().await;
         let historical_read = historical_read.latest();
         let filepath = historical_read.join(&generate_historical_file_name(date));
@@ -163,14 +174,15 @@ impl ForexStorageImpl {
             )
         })?;
 
-        let rates: Rates = serde_json::from_str(&content).map_err(|err| {
-            anyhow!(
-                "{} failed parsing file content {:?} into Rates :{}",
-                ERROR_PREFIX,
-                &content,
-                err
-            )
-        })?;
+        let rates: RatesResponse<HistoricalRates> =
+            serde_json::from_str(&content).map_err(|err| {
+                anyhow!(
+                    "{} failed parsing file content {:?} into Rates :{}",
+                    ERROR_PREFIX,
+                    &content,
+                    err
+                )
+            })?;
 
         Ok(rates)
     }
@@ -262,19 +274,30 @@ mod forex_storage_impl_tests {
 
 #[async_trait]
 impl ForexStorage for ForexStorageImpl {
-    async fn insert_latest(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()> {
+    async fn insert_latest(
+        &self,
+        date: DateTime<Utc>,
+        rates: RatesResponse<Rates>,
+    ) -> ForexResult<()> {
         self.insert_latest(date, rates).await
     }
 
-    async fn get_latest(&self) -> ForexResult<Rates> {
+    async fn get_latest(&self) -> ForexResult<RatesResponse<Rates>> {
         self.get_latest().await
     }
 
-    async fn insert_historical(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()> {
+    async fn insert_historical(
+        &self,
+        date: DateTime<Utc>,
+        rates: RatesResponse<HistoricalRates>,
+    ) -> ForexResult<()> {
         self.insert_historical(date, rates).await
     }
 
-    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<Rates> {
+    async fn get_historical(
+        &self,
+        date: DateTime<Utc>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>> {
         self.get_historical(date).await
     }
 }

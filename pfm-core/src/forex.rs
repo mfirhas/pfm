@@ -2,7 +2,10 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
@@ -243,7 +246,34 @@ impl Display for Money {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct RatesResponse<T> {
+    #[serde(alias = "source")]
+    source: String,
+
+    #[serde(alias = "data")]
+    data: T,
+}
+
+impl<T> RatesResponse<T>
+where
+    T: for<'a> Deserialize<'a> + Serialize + Debug,
+{
+    pub(crate) fn new(source: String, data: T) -> Self {
+        Self { source, data }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Rates {
+    #[serde(alias = "latest_update")]
+    pub latest_update: DateTime<Utc>,
+
+    #[serde(alias = "rates")]
+    pub rates: RatesData,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoricalRates {
     #[serde(alias = "date")]
     pub date: DateTime<Utc>,
 
@@ -315,13 +345,17 @@ pub trait ForexConverter {
 #[async_trait]
 pub trait ForexRates {
     /// get latest list of rates with a base currency
-    async fn rates(&self, base: Currencies) -> ForexResult<Rates>;
+    async fn rates(&self, base: Currencies) -> ForexResult<RatesResponse<Rates>>;
 }
 
 #[async_trait]
 pub trait ForexHistoricalRates {
     /// get historical daily rates
-    async fn historical_rates(&self, date: DateTime<Utc>, base: Currencies) -> ForexResult<Rates>;
+    async fn historical_rates(
+        &self,
+        date: DateTime<Utc>,
+        base: Currencies,
+    ) -> ForexResult<RatesResponse<HistoricalRates>>;
 }
 ///////////////
 
@@ -332,18 +366,29 @@ pub trait ForexStorage {
     /// insert latest rate fetched from API
     /// @date: the datetime in UTC when the data fetched.
     /// @rates: the rates to be saved.
-    async fn insert_latest(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()>;
+    async fn insert_latest(
+        &self,
+        date: DateTime<Utc>,
+        rates: RatesResponse<Rates>,
+    ) -> ForexResult<()>;
 
     /// get the latest data fetched from API
-    async fn get_latest(&self) -> ForexResult<Rates>;
+    async fn get_latest(&self) -> ForexResult<RatesResponse<Rates>>;
 
     /// insert historical rates
     /// @date: the datetime in UTC when the data fetched.
     /// @rates: the rates to be saved.
-    async fn insert_historical(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()>;
+    async fn insert_historical(
+        &self,
+        date: DateTime<Utc>,
+        rates: RatesResponse<HistoricalRates>,
+    ) -> ForexResult<()>;
 
     /// get historical rates
-    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<Rates>;
+    async fn get_historical(
+        &self,
+        date: DateTime<Utc>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>>;
 }
 ///////////////
 ///////////////////////////////////// INTERFACES(END) /////////////////////////////////////
@@ -373,7 +418,11 @@ where
 
 /// Get rates from 3rd API.
 /// Invoked from Cron service.
-pub async fn get_rates<FX>(forex: &FX, base: Currencies, to: &[Currencies]) -> ForexResult<Rates>
+pub async fn get_rates<FX>(
+    forex: &FX,
+    base: Currencies,
+    to: &[Currencies],
+) -> ForexResult<RatesResponse<Rates>>
 where
     FX: ForexRates,
 {
@@ -389,7 +438,7 @@ pub async fn get_historical_rates<FX>(
     date: DateTime<Utc>,
     base: Currencies,
     to: &[Currencies],
-) -> ForexResult<Rates>
+) -> ForexResult<RatesResponse<HistoricalRates>>
 where
     FX: ForexHistoricalRates,
 {

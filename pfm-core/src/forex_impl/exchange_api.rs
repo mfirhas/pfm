@@ -10,11 +10,13 @@
 // - DAILY updates at 00.00 UTC, but slower to update on time.
 // - very limited historical rates.
 
-use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, RatesData};
+use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, RatesData, RatesResponse};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+
+const SOURCE: &str = "https://github.com/fawazahmed0/exchange-api/";
 
 /// Endpoint for uncached data.
 /// @date format is YYYY-MM-DD
@@ -30,7 +32,7 @@ pub struct Response {
     rates: Rates,
 }
 
-impl TryFrom<Response> for crate::forex::Rates {
+impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
     type Error = anyhow::Error;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
@@ -43,6 +45,40 @@ impl TryFrom<Response> for crate::forex::Rates {
             )
         })?;
         let forex_rates = crate::forex::Rates {
+            latest_update: date,
+            rates: RatesData {
+                idr: value.rates.currencies().idr,
+                usd: value.rates.currencies().usd,
+                eur: value.rates.currencies().eur,
+                gbp: value.rates.currencies().gbp,
+                jpy: value.rates.currencies().jpy,
+                chf: value.rates.currencies().chf,
+                sgd: value.rates.currencies().sgd,
+                cny: value.rates.currencies().cny,
+                sar: value.rates.currencies().sar,
+                xau: value.rates.currencies().xau,
+                xag: value.rates.currencies().xag,
+                xpt: value.rates.currencies().xpt,
+            },
+        };
+
+        Ok(RatesResponse::new(SOURCE.into(), forex_rates))
+    }
+}
+
+impl TryFrom<Response> for RatesResponse<crate::forex::HistoricalRates> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Response) -> Result<Self, Self::Error> {
+        let utc = format!("{}T00:00:00Z", value.date);
+        let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
+            anyhow!(
+                "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
+                ERROR_PREFIX,
+                err
+            )
+        })?;
+        let forex_rates = crate::forex::HistoricalRates {
             date,
             rates: RatesData {
                 idr: value.rates.currencies().idr,
@@ -60,7 +96,7 @@ impl TryFrom<Response> for crate::forex::Rates {
             },
         };
 
-        Ok(forex_rates)
+        Ok(RatesResponse::new(SOURCE.into(), forex_rates))
     }
 }
 
@@ -134,7 +170,10 @@ impl Api {
 
 #[async_trait]
 impl ForexRates for Api {
-    async fn rates(&self, base: Currencies) -> crate::forex::ForexResult<crate::forex::Rates> {
+    async fn rates(
+        &self,
+        base: Currencies,
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", "latest")
             .replace("{currency_code}", base.code().to_lowercase().as_str());
@@ -166,7 +205,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: chrono::DateTime<chrono::Utc>,
         base: Currencies,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", &yyyymmdd)
