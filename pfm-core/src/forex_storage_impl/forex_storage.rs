@@ -75,7 +75,7 @@ impl ForexStorageImpl {
     }
 
     async fn get_latest(&self) -> ForexResult<Rates> {
-        let latest_read = self.fs.write().await;
+        let latest_read = self.fs.read().await;
         let latest_read = latest_read.latest();
 
         let mut entries = fs::read_dir(latest_read).await.map_err(|err| {
@@ -152,7 +152,7 @@ impl ForexStorageImpl {
     }
 
     async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<Rates> {
-        let historical_read = self.fs.write().await;
+        let historical_read = self.fs.read().await;
         let historical_read = historical_read.latest();
         let filepath = historical_read.join(&generate_historical_file_name(date));
 
