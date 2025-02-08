@@ -343,7 +343,7 @@ pub trait ForexStorage {
     async fn insert_historical(&self, date: DateTime<Utc>, rates: Rates) -> ForexResult<()>;
 
     /// get historical rates
-    async fn get_historical(&self) -> ForexResult<Rates>;
+    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<Rates>;
 }
 ///////////////
 ///////////////////////////////////// INTERFACES(END) /////////////////////////////////////
