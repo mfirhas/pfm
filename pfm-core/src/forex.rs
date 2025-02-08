@@ -251,7 +251,7 @@ pub struct RatesResponse<T> {
     source: String,
 
     #[serde(alias = "data")]
-    data: Option<T>,
+    data: T,
 
     #[serde(alias = "error")]
     error: Option<String>,
@@ -264,22 +264,35 @@ where
     pub(crate) fn new(source: String, data: T) -> Self {
         Self {
             source,
-            data: Some(data),
+            data,
             error: None,
         }
     }
+}
 
+impl RatesResponse<Rates> {
     // TODO: add err handling to api calls
     pub(crate) fn err(source: String, error: String) -> Self {
         Self {
             source,
-            data: None,
+            data: Rates::default(),
             error: Some(error),
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl RatesResponse<HistoricalRates> {
+    // TODO: add err handling to api calls
+    pub(crate) fn err(source: String, error: String) -> Self {
+        Self {
+            source,
+            data: HistoricalRates::default(),
+            error: Some(error),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Rates {
     #[serde(alias = "latest_update")]
     pub latest_update: DateTime<Utc>,
@@ -288,7 +301,7 @@ pub struct Rates {
     pub rates: RatesData,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct HistoricalRates {
     #[serde(alias = "date")]
     pub date: DateTime<Utc>,
@@ -297,7 +310,7 @@ pub struct HistoricalRates {
     pub rates: RatesData,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct RatesData {
     #[serde(alias = "IDR")]
     pub idr: Decimal,
@@ -386,7 +399,7 @@ pub trait ForexStorage {
     async fn insert_latest(
         &self,
         date: DateTime<Utc>,
-        rates: RatesResponse<Rates>,
+        rates: &RatesResponse<Rates>,
     ) -> ForexResult<()>;
 
     /// get the latest data fetched from API
@@ -398,7 +411,7 @@ pub trait ForexStorage {
     async fn insert_historical(
         &self,
         date: DateTime<Utc>,
-        rates: RatesResponse<HistoricalRates>,
+        rates: &RatesResponse<HistoricalRates>,
     ) -> ForexResult<()>;
 
     /// get historical rates
@@ -413,7 +426,11 @@ pub trait ForexStorage {
 ///////////////////////////////////// APIs /////////////////////////////////////
 /// Convert Money into another currency.
 /// This only call storage to get latest rates and do the calculations.
-pub async fn convert<FS>(forex: &FS, from: Money, to: Currencies) -> ForexResult<ConversionResponse>
+pub async fn convert<FS>(
+    storage: &FS,
+    from: Money,
+    to: Currencies,
+) -> ForexResult<ConversionResponse>
 where
     FS: ForexStorage,
 {
@@ -427,6 +444,16 @@ where
             money: from,
         });
     }
+
+    let latest_rates = storage.get_latest().await.map_err(|err| {
+        anyhow!(
+            "{} failed getting latest rates from storage: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    // todo: conversion
 
     let ret = todo!("do conversion by reading latest data from storage, and do the calculation");
 
@@ -446,6 +473,8 @@ where
 {
     let ret = forex.rates(base).await?;
 
+    storage.insert_latest(ret.data.latest_update, &ret).await?;
+
     Ok(ret)
 }
 
@@ -462,6 +491,8 @@ where
     FS: ForexStorage,
 {
     let ret = forex.historical_rates(date, base).await?;
+
+    storage.insert_historical(ret.data.date, &ret).await?;
 
     Ok(ret)
 }

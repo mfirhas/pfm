@@ -51,7 +51,7 @@ impl ForexStorageImpl {
     async fn insert_latest(
         &self,
         date: DateTime<Utc>,
-        rates: RatesResponse<Rates>,
+        rates: &RatesResponse<Rates>,
     ) -> ForexResult<()> {
         let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
             anyhow!(
@@ -126,7 +126,7 @@ impl ForexStorageImpl {
     async fn insert_historical(
         &self,
         date: DateTime<Utc>,
-        rates: RatesResponse<HistoricalRates>,
+        rates: &RatesResponse<HistoricalRates>,
     ) -> ForexResult<()> {
         let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
             anyhow!(
@@ -277,7 +277,7 @@ impl ForexStorage for ForexStorageImpl {
     async fn insert_latest(
         &self,
         date: DateTime<Utc>,
-        rates: RatesResponse<Rates>,
+        rates: &RatesResponse<Rates>,
     ) -> ForexResult<()> {
         self.insert_latest(date, rates).await
     }
@@ -289,7 +289,7 @@ impl ForexStorage for ForexStorageImpl {
     async fn insert_historical(
         &self,
         date: DateTime<Utc>,
-        rates: RatesResponse<HistoricalRates>,
+        rates: &RatesResponse<HistoricalRates>,
     ) -> ForexResult<()> {
         self.insert_historical(date, rates).await
     }
