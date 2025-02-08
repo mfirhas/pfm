@@ -147,7 +147,7 @@ impl PartialEq<Currencies> for Money {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
 pub enum Money {
     IDR(Decimal),
     USD(Decimal),
@@ -320,7 +320,8 @@ pub struct RatesData {
     pub xpt: Decimal,
 }
 
-pub struct Conversion {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConversionResponse {
     /// latest update of the currency of conversion target.
     pub last_update: DateTime<Utc>,
 
@@ -337,7 +338,7 @@ pub type ForexResult<T> = Result<T, anyhow::Error>;
 #[async_trait]
 pub trait ForexConverter {
     /// convert from Money into to Currency using latest rates
-    async fn convert(&self, from: Money, to: Currencies) -> ForexResult<Conversion>;
+    async fn convert(&self, from: Money, to: Currencies) -> ForexResult<ConversionResponse>;
 }
 ///////////////
 
@@ -396,7 +397,7 @@ pub trait ForexStorage {
 ///////////////////////////////////// APIs /////////////////////////////////////
 /// Convert Money into another currency.
 /// This only call storage to get latest rates and do the calculations.
-pub async fn convert<FS>(forex: &FS, from: Money, to: Currencies) -> ForexResult<Conversion>
+pub async fn convert<FS>(forex: &FS, from: Money, to: Currencies) -> ForexResult<ConversionResponse>
 where
     FS: ForexStorage,
 {
@@ -405,7 +406,7 @@ where
     }
 
     if from == to {
-        return Ok(Conversion {
+        return Ok(ConversionResponse {
             last_update: Utc::now(),
             money: from,
         });
@@ -418,13 +419,14 @@ where
 
 /// Get rates from 3rd API.
 /// Invoked from Cron service.
-pub async fn get_rates<FX>(
+pub async fn get_rates<FX, FS>(
     forex: &FX,
+    storage: &FS,
     base: Currencies,
-    to: &[Currencies],
 ) -> ForexResult<RatesResponse<Rates>>
 where
     FX: ForexRates,
+    FS: ForexStorage,
 {
     let ret = forex.rates(base).await?;
 
@@ -433,14 +435,15 @@ where
 
 /// Get historical rates from 3rd API.
 /// Invoked from Cron service.
-pub async fn get_historical_rates<FX>(
+pub async fn get_historical_rates<FX, FS>(
     forex: &FX,
+    storage: &FS,
     date: DateTime<Utc>,
     base: Currencies,
-    to: &[Currencies],
 ) -> ForexResult<RatesResponse<HistoricalRates>>
 where
     FX: ForexHistoricalRates,
+    FS: ForexStorage,
 {
     let ret = forex.historical_rates(date, base).await?;
 
