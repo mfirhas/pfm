@@ -269,6 +269,7 @@ where
         }
     }
 
+    // TODO: add err handling to api calls
     pub(crate) fn err(source: String, error: String) -> Self {
         Self {
             source,
