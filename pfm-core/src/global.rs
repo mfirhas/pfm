@@ -11,9 +11,10 @@ use std::os::unix::fs::PermissionsExt;
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::Duration,
 };
+use tokio::sync::RwLock;
 
 const ENV_PREFIX: &str = "CORE_";
 const ERROR_PREFIX: &str = "[GLOBAL]";
@@ -90,7 +91,7 @@ where
     cfg
 }
 
-/// Filesystem for storing data at server side.
+/// Alias for ServerFS, Filesystem for storing data at server side.
 pub(crate) type StorageFS = Arc<RwLock<ServerFS>>;
 
 #[derive(Debug)]
@@ -103,6 +104,18 @@ pub(crate) struct ServerFS {
 impl ServerFS {
     pub(crate) fn is_dir(&self) -> bool {
         self.root.is_dir() && self.latest.is_dir() && self.historical.is_dir()
+    }
+
+    pub(crate) fn root(&self) -> &PathBuf {
+        &self.root
+    }
+
+    pub(crate) fn latest(&self) -> &PathBuf {
+        &self.latest
+    }
+
+    pub(crate) fn historical(&self) -> &PathBuf {
+        &self.historical
     }
 }
 
@@ -310,14 +323,14 @@ mod global_tests {
         assert!(cfg.is_ok());
     }
 
-    #[test]
-    fn test_dev_storage_fs_path() {
+    #[tokio::test]
+    async fn test_dev_storage_fs_path() {
         let ret = init_storage_fs();
 
         dbg!(&ret);
 
         let storage_fs = ret.unwrap();
-        let storage_fs = storage_fs.read().unwrap();
+        let storage_fs = storage_fs.read().await;
         let is_dir = storage_fs.is_dir();
         assert!(is_dir);
 
