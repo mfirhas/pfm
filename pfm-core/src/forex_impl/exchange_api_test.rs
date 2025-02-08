@@ -3,11 +3,12 @@ use chrono::{NaiveDate, TimeZone, Utc};
 use crate::forex::{ForexHistoricalRates, ForexRates};
 
 use super::exchange_api::Api;
+use crate::global::http_client;
 
 #[tokio::test]
 async fn test_rates() {
-    let client = reqwest::Client::new();
-    let api = Api::new(client.clone());
+    let client = http_client().clone();
+    let api = Api::new(client);
 
     let ret = api.rates(crate::forex::Currencies::USD).await;
 
@@ -18,8 +19,8 @@ async fn test_rates() {
 
 #[tokio::test]
 async fn test_historical_rates() {
-    let client = reqwest::Client::new();
-    let api = Api::new(client.clone());
+    let client = http_client().clone();
+    let api = Api::new(client);
 
     let date = NaiveDate::from_ymd_opt(2024, 12, 20)
         .unwrap()
