@@ -25,8 +25,14 @@ const CLOUDFLARE_ENDPOINT_V1: &str =
 
 const ERROR_PREFIX: &str = "[FOREX][exchange-api]";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Response {
+    base: Currencies,
+    api_response: ApiResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiResponse {
     date: String,
     #[serde(flatten)]
     rates: Rates,
@@ -36,7 +42,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
     type Error = anyhow::Error;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
-        let utc = format!("{}T00:00:00Z", value.date);
+        let utc = format!("{}T00:00:00Z", value.api_response.date);
         let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
             anyhow!(
                 "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
@@ -46,19 +52,20 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
         })?;
         let forex_rates = crate::forex::Rates {
             latest_update: date,
+            base: value.base,
             rates: RatesData {
-                idr: value.rates.currencies().idr,
-                usd: value.rates.currencies().usd,
-                eur: value.rates.currencies().eur,
-                gbp: value.rates.currencies().gbp,
-                jpy: value.rates.currencies().jpy,
-                chf: value.rates.currencies().chf,
-                sgd: value.rates.currencies().sgd,
-                cny: value.rates.currencies().cny,
-                sar: value.rates.currencies().sar,
-                xau: value.rates.currencies().xau,
-                xag: value.rates.currencies().xag,
-                xpt: value.rates.currencies().xpt,
+                idr: value.api_response.rates.currencies().idr,
+                usd: value.api_response.rates.currencies().usd,
+                eur: value.api_response.rates.currencies().eur,
+                gbp: value.api_response.rates.currencies().gbp,
+                jpy: value.api_response.rates.currencies().jpy,
+                chf: value.api_response.rates.currencies().chf,
+                sgd: value.api_response.rates.currencies().sgd,
+                cny: value.api_response.rates.currencies().cny,
+                sar: value.api_response.rates.currencies().sar,
+                xau: value.api_response.rates.currencies().xau,
+                xag: value.api_response.rates.currencies().xag,
+                xpt: value.api_response.rates.currencies().xpt,
             },
         };
 
@@ -70,7 +77,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::HistoricalRates> {
     type Error = anyhow::Error;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
-        let utc = format!("{}T00:00:00Z", value.date);
+        let utc = format!("{}T00:00:00Z", value.api_response.date);
         let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
             anyhow!(
                 "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
@@ -80,19 +87,20 @@ impl TryFrom<Response> for RatesResponse<crate::forex::HistoricalRates> {
         })?;
         let forex_rates = crate::forex::HistoricalRates {
             date,
+            base: value.base,
             rates: RatesData {
-                idr: value.rates.currencies().idr,
-                usd: value.rates.currencies().usd,
-                eur: value.rates.currencies().eur,
-                gbp: value.rates.currencies().gbp,
-                jpy: value.rates.currencies().jpy,
-                chf: value.rates.currencies().chf,
-                sgd: value.rates.currencies().sgd,
-                cny: value.rates.currencies().cny,
-                sar: value.rates.currencies().sar,
-                xau: value.rates.currencies().xau,
-                xag: value.rates.currencies().xag,
-                xpt: value.rates.currencies().xpt,
+                idr: value.api_response.rates.currencies().idr,
+                usd: value.api_response.rates.currencies().usd,
+                eur: value.api_response.rates.currencies().eur,
+                gbp: value.api_response.rates.currencies().gbp,
+                jpy: value.api_response.rates.currencies().jpy,
+                chf: value.api_response.rates.currencies().chf,
+                sgd: value.api_response.rates.currencies().sgd,
+                cny: value.api_response.rates.currencies().cny,
+                sar: value.api_response.rates.currencies().sar,
+                xau: value.api_response.rates.currencies().xau,
+                xag: value.api_response.rates.currencies().xag,
+                xpt: value.api_response.rates.currencies().xpt,
             },
         };
 
@@ -178,7 +186,7 @@ impl ForexRates for Api {
             .replace("{date}", "latest")
             .replace("{currency_code}", base.code().to_lowercase().as_str());
 
-        let ret: Response = self
+        let ret: ApiResponse = self
             .client
             .get(&endpoint)
             .send()
@@ -194,6 +202,11 @@ impl ForexRates for Api {
                     err
                 )
             })?;
+
+        let ret = Response {
+            api_response: ret,
+            base,
+        };
 
         Ok(ret.try_into()?)
     }
@@ -211,7 +224,7 @@ impl ForexHistoricalRates for Api {
             .replace("{date}", &yyyymmdd)
             .replace("{currency_code}", base.code().to_lowercase().as_str());
 
-        let ret: Response = self
+        let ret: ApiResponse = self
             .client
             .get(&endpoint)
             .send()
@@ -233,6 +246,11 @@ impl ForexHistoricalRates for Api {
                     err
                 )
             })?;
+
+        let ret = Response {
+            base,
+            api_response: ret,
+        };
 
         Ok(ret.try_into()?)
     }

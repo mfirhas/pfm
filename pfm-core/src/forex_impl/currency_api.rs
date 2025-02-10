@@ -32,8 +32,14 @@ impl Api {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Response {
+    pub base: Currencies,
+    pub api_response: ApiResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiResponse {
     #[serde(rename = "meta")]
     pub metadata: Metadata,
     #[serde(rename = "data")]
@@ -98,6 +104,7 @@ impl TryFrom<Response> for crate::forex::RatesResponse<crate::forex::HistoricalR
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let date = value
+            .api_response
             .metadata
             .last_updated_at
             .parse::<DateTime<Utc>>()
@@ -105,19 +112,20 @@ impl TryFrom<Response> for crate::forex::RatesResponse<crate::forex::HistoricalR
 
         let historical_rates = HistoricalRates {
             date,
+            base: value.base,
             rates: crate::forex::RatesData {
-                idr: value.rates.idr.value,
-                usd: value.rates.usd.value,
-                eur: value.rates.eur.value,
-                gbp: value.rates.gbp.value,
-                jpy: value.rates.jpy.value,
-                chf: value.rates.chf.value,
-                sgd: value.rates.sgd.value,
-                cny: value.rates.cny.value,
-                sar: value.rates.sar.value,
-                xau: value.rates.xau.value,
-                xag: value.rates.xag.value,
-                xpt: value.rates.xpt.value,
+                idr: value.api_response.rates.idr.value,
+                usd: value.api_response.rates.usd.value,
+                eur: value.api_response.rates.eur.value,
+                gbp: value.api_response.rates.gbp.value,
+                jpy: value.api_response.rates.jpy.value,
+                chf: value.api_response.rates.chf.value,
+                sgd: value.api_response.rates.sgd.value,
+                cny: value.api_response.rates.cny.value,
+                sar: value.api_response.rates.sar.value,
+                xau: value.api_response.rates.xau.value,
+                xag: value.api_response.rates.xag.value,
+                xpt: value.api_response.rates.xpt.value,
             },
         };
 
@@ -144,7 +152,7 @@ impl ForexHistoricalRates for Api {
             ),
         ];
 
-        let ret: Response = self
+        let ret: ApiResponse = self
             .client
             .get(HISTORICAL_ENDPOINT)
             .query(&params)
@@ -168,6 +176,11 @@ impl ForexHistoricalRates for Api {
                 )
             })?;
 
-        Ok(ret.try_into()?)
+        let resp = Response {
+            base,
+            api_response: ret,
+        };
+
+        Ok(resp.try_into()?)
     }
 }

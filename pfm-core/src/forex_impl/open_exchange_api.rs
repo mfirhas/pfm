@@ -3,6 +3,8 @@
 // Daily historical data
 // 1,000 API requests per month
 
+use std::str::FromStr;
+
 use crate::forex::{
     Currencies, ForexHistoricalRates, ForexRates, HistoricalRates, RatesData, RatesResponse,
 };
@@ -85,7 +87,10 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
         let date = Utc
             .timestamp_opt(value.timestamp, 0)
             .single()
-            .ok_or(anyhow!("Failed converting unix epoch into utc"))
+            .ok_or(anyhow!(
+                "{} Failed converting unix epoch into utc",
+                ERROR_PREFIX
+            ))
             .map_err(|err| anyhow!("{} {}", ERROR_PREFIX, err))?;
 
         let rates = RatesData {
@@ -103,8 +108,12 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
             xpt: value.rates.xpt,
         };
 
+        let base = Currencies::from_str(&value.base_currency)
+            .map_err(|err| anyhow!("{} base currency not supported :{}", ERROR_PREFIX, err))?;
+
         let ret = crate::forex::Rates {
             latest_update: date,
+            base,
             rates,
         };
 
@@ -137,7 +146,10 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             xpt: value.rates.xpt,
         };
 
-        let ret = crate::forex::HistoricalRates { date, rates };
+        let base = Currencies::from_str(&value.base_currency)
+            .map_err(|err| anyhow!("{} base currency not supported :{}", ERROR_PREFIX, err))?;
+
+        let ret = crate::forex::HistoricalRates { base, date, rates };
 
         Ok(RatesResponse::new(SOURCE.into(), ret))
     }

@@ -110,3 +110,17 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
 
     money_display
 }
+
+pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currencies) -> ForexResult<Money> {
+    // 1. find the base currency, the one with value equals to 1.
+    let base = {
+        // let base = for c in Currencies::iter() {
+        //     // if
+        // }
+    };
+
+    // 2. divide from with its rate relative to base currency.
+
+    // 3. multiply the above result with the rate of target conversion relative to base currency.
+    todo!()
+}

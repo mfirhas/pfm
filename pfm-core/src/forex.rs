@@ -15,7 +15,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 use crate::{
-    forex_impl::utils::{parse_str, to_string},
+    forex_impl::utils::{convert_currency, parse_str, to_string},
     global,
 };
 
@@ -85,7 +85,7 @@ pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains th
 const ERROR_PREFIX: &str = "[FOREX]";
 
 /// List of supported currencies.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Currencies {
     IDR,
     USD,
@@ -96,6 +96,39 @@ pub enum Currencies {
     SGD,
     CNY,
     SAR,
+}
+
+impl FromStr for Currencies {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let curr: Currency = s
+            .parse()
+            .map_err(|err| anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))?;
+
+        match curr {
+            Currency::IDR => Ok(Self::IDR),
+            Currency::USD => Ok(Self::USD),
+            Currency::EUR => Ok(Self::EUR),
+            Currency::GBP => Ok(Self::GBP),
+            Currency::JPY => Ok(Self::JPY),
+            Currency::CHF => Ok(Self::CHF),
+            Currency::SGD => Ok(Self::SGD),
+            Currency::CNY => Ok(Self::CNY),
+            Currency::SAR => Ok(Self::SAR),
+            _ => Err(anyhow!(
+                "{} Currency {} not supported",
+                ERROR_PREFIX,
+                curr.code()
+            )),
+        }
+    }
+}
+
+impl Default for Currencies {
+    fn default() -> Self {
+        Self::USD
+    }
 }
 
 impl Currencies {
@@ -127,6 +160,24 @@ impl From<Money> for Currencies {
             Money::CNY(_) => Self::CNY,
             Money::SAR(_) => Self::SAR,
         }
+    }
+}
+
+impl Display for Currencies {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let r = match self {
+            Self::IDR => Currency::IDR.code(),
+            Self::USD => Currency::USD.code(),
+            Self::EUR => Currency::EUR.code(),
+            Self::GBP => Currency::GBP.code(),
+            Self::JPY => Currency::JPY.code(),
+            Self::CHF => Currency::CHF.code(),
+            Self::SGD => Currency::SGD.code(),
+            Self::CNY => Currency::CNY.code(),
+            Self::SAR => Currency::SAR.code(),
+        };
+
+        write!(f, "{}", r)
     }
 }
 
@@ -297,6 +348,9 @@ pub struct Rates {
     #[serde(alias = "latest_update")]
     pub latest_update: DateTime<Utc>,
 
+    #[serde(alias = "base")]
+    pub base: Currencies,
+
     #[serde(alias = "rates")]
     pub rates: RatesData,
 }
@@ -305,6 +359,9 @@ pub struct Rates {
 pub struct HistoricalRates {
     #[serde(alias = "date")]
     pub date: DateTime<Utc>,
+
+    #[serde(alias = "base")]
+    pub base: Currencies,
 
     #[serde(alias = "rates")]
     pub rates: RatesData,
@@ -453,9 +510,23 @@ where
         )
     })?;
 
-    // todo: conversion
+    let ret = {
+        let res = convert_currency(&latest_rates.data, from, to).map_err(|err| {
+            anyhow!(
+                "{} failed converting currency from {} to {}: {}",
+                ERROR_PREFIX,
+                from,
+                to,
+                err
+            )
+        })?;
+        let date = latest_rates.data.latest_update;
 
-    let ret = todo!("do conversion by reading latest data from storage, and do the calculation");
+        ConversionResponse {
+            last_update: date,
+            money: res,
+        }
+    };
 
     Ok(ret)
 }
