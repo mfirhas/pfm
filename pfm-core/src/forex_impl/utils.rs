@@ -112,13 +112,11 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
 }
 
 pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currencies) -> ForexResult<Money> {
-    // 1. find the base currency, the one with value equals to 1.
-    let base = rates.base;
-    if from == base {
+    if from == to {
         return Ok(from);
     }
 
-    // 2. divide from with its rate relative to base currency.
+    // 1. divide from with its rate relative to base currency.
     let to_base = match from {
         Money::IDR(amount) => amount / rates.rates.idr,
         Money::USD(amount) => amount / rates.rates.usd,
@@ -131,7 +129,7 @@ pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currencies) -> Fo
         Money::SAR(amount) => amount / rates.rates.sar,
     };
 
-    // 3. multiply the above result with the rate of target conversion relative to base currency.
+    // 2. multiply the above result with the rate of target conversion relative to base currency.
     let to_target = match to {
         Currencies::IDR => to_base * rates.rates.idr,
         Currencies::USD => to_base * rates.rates.usd,

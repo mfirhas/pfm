@@ -108,6 +108,14 @@ mod regex_format_tests {
 
 use std::str::FromStr;
 
+use chrono::{TimeZone, Utc};
+use rust_decimal_macros::dec;
+
+use crate::{
+    forex::{convert, get_historical_rates, get_rates, Currencies},
+    forex_impl, forex_storage_impl, global,
+};
+
 use super::forex::Money;
 #[test]
 fn test_money() {
@@ -185,4 +193,51 @@ fn test_money_from_str() {
     println!("{}", money.as_ref().unwrap());
     assert!(money.is_ok());
     assert_eq!(money.unwrap().to_string().as_str(), expected);
+}
+
+// make sure to test get_rates first to populate directory before testing this
+#[tokio::test]
+async fn test_convert() {
+    let fs = global::storage_fs();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+
+    let from = Money::new_money(crate::forex::Currencies::GBP, dec!(1000));
+    let to = Currencies::SAR;
+    let ret = convert(&storage, from, to).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_rates() {
+    let cfg = global::config();
+    let fs = global::storage_fs();
+    let http_client = global::http_client();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let forex =
+        forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
+
+    let base = Currencies::USD;
+    let ret = get_rates(&forex, &storage, base).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_historical_rates() {
+    let cfg = global::config();
+    let fs = global::storage_fs();
+    let http_client = global::http_client();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let forex =
+        forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
+
+    let base = Currencies::USD;
+    let date = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
+    let ret = get_historical_rates(&forex, &storage, date, base).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
 }
