@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod regex_format_tests {
     use super::super::forex::{COMMA_SEPARATOR_REGEX, DOT_SEPARATOR_REGEX};
 
@@ -105,4 +104,140 @@ mod regex_format_tests {
         );
         assert!(!regex.is_match("1.00.00"), "should match 100.00");
     }
+}
+
+use std::str::FromStr;
+
+use chrono::{TimeZone, Utc};
+use rust_decimal_macros::dec;
+
+use crate::{
+    forex::{convert, get_historical_rates, get_rates, Currencies},
+    forex_impl, forex_storage_impl, global,
+};
+
+use super::forex::Money;
+#[test]
+fn test_money() {
+    let expected = "USD 23,000";
+    let money = Money::new("USD", "23000");
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    let expected = "IDR 45.000.000"; // indonesian rupiah is dot separated for thousands.
+    let money = Money::new("IDR", "45000000");
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+}
+
+#[test]
+fn test_money_from_str() {
+    let input = "USD 23,000";
+    let expected = "USD 23,000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    // comma separated currencies cannot be written in dot separated.
+    let input = "USD 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    // println!("{}", money.as_ref().unwrap());
+    assert!(money.is_err());
+
+    let input = "IDR 23.000";
+    let expected = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    // dot separated currencies can be written in comma separated
+    let input = "IDR 23,000";
+    let expected = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    //// without thousands separator
+    let input = "USD 23000";
+    let expected = "USD 23,000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    let input = "IDR 23000";
+    let expected = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+    // dot separated currencies can be written in comma separated
+    let input = "IDR 23000";
+    let expected = "IDR 23.000";
+    let money = Money::from_str(input);
+    dbg!(&money);
+    println!("{}", money.as_ref().unwrap());
+    assert!(money.is_ok());
+    assert_eq!(money.unwrap().to_string().as_str(), expected);
+}
+
+// make sure to test get_rates first to populate directory before testing this
+#[tokio::test]
+async fn test_convert() {
+    let fs = global::storage_fs();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+
+    let from = Money::new_money(crate::forex::Currencies::GBP, dec!(1000));
+    let to = Currencies::SAR;
+    let ret = convert(&storage, from, to).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_rates() {
+    let cfg = global::config();
+    let fs = global::storage_fs();
+    let http_client = global::http_client();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let forex =
+        forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
+
+    let base = Currencies::USD;
+    let ret = get_rates(&forex, &storage, base).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_historical_rates() {
+    let cfg = global::config();
+    let fs = global::storage_fs();
+    let http_client = global::http_client();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let forex =
+        forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
+
+    let base = Currencies::USD;
+    let date = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
+    let ret = get_historical_rates(&forex, &storage, date, base).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
 }

@@ -10,11 +10,13 @@
 // - DAILY updates at 00.00 UTC, but slower to update on time.
 // - very limited historical rates.
 
-use crate::forex::{Currencies, ForexHistoricalRates, ForexRates};
+use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, RatesData, RatesResponse};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+
+const SOURCE: &str = "https://github.com/fawazahmed0/exchange-api/";
 
 /// Endpoint for uncached data.
 /// @date format is YYYY-MM-DD
@@ -23,18 +25,24 @@ const CLOUDFLARE_ENDPOINT_V1: &str =
 
 const ERROR_PREFIX: &str = "[FOREX][exchange-api]";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Response {
+    base: Currencies,
+    api_response: ApiResponse,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiResponse {
     date: String,
     #[serde(flatten)]
     rates: Rates,
 }
 
-impl TryFrom<Response> for crate::forex::Rates {
+impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
     type Error = anyhow::Error;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
-        let utc = format!("{}T00:00:00Z", value.date);
+        let utc = format!("{}T00:00:00Z", value.api_response.date);
         let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
             anyhow!(
                 "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
@@ -43,68 +51,104 @@ impl TryFrom<Response> for crate::forex::Rates {
             )
         })?;
         let forex_rates = crate::forex::Rates {
-            date,
-            rates: Currencies {
-                idr: value.rates.currencies().idr,
-                usd: value.rates.currencies().usd,
-                eur: value.rates.currencies().eur,
-                gbp: value.rates.currencies().gbp,
-                jpy: value.rates.currencies().jpy,
-                chf: value.rates.currencies().chf,
-                sgd: value.rates.currencies().sgd,
-                cny: value.rates.currencies().cny,
-                sar: value.rates.currencies().sar,
-                xau: value.rates.currencies().xau,
-                xag: value.rates.currencies().xag,
-                xpt: value.rates.currencies().xpt,
+            latest_update: date,
+            base: value.base,
+            rates: RatesData {
+                idr: value.api_response.rates.currencies().idr,
+                usd: value.api_response.rates.currencies().usd,
+                eur: value.api_response.rates.currencies().eur,
+                gbp: value.api_response.rates.currencies().gbp,
+                jpy: value.api_response.rates.currencies().jpy,
+                chf: value.api_response.rates.currencies().chf,
+                sgd: value.api_response.rates.currencies().sgd,
+                cny: value.api_response.rates.currencies().cny,
+                sar: value.api_response.rates.currencies().sar,
+                xau: value.api_response.rates.currencies().xau,
+                xag: value.api_response.rates.currencies().xag,
+                xpt: value.api_response.rates.currencies().xpt,
             },
         };
 
-        Ok(forex_rates)
+        Ok(RatesResponse::new(SOURCE.into(), forex_rates))
+    }
+}
+
+impl TryFrom<Response> for RatesResponse<crate::forex::HistoricalRates> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Response) -> Result<Self, Self::Error> {
+        let utc = format!("{}T00:00:00Z", value.api_response.date);
+        let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
+            anyhow!(
+                "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
+                ERROR_PREFIX,
+                err
+            )
+        })?;
+        let forex_rates = crate::forex::HistoricalRates {
+            date,
+            base: value.base,
+            rates: RatesData {
+                idr: value.api_response.rates.currencies().idr,
+                usd: value.api_response.rates.currencies().usd,
+                eur: value.api_response.rates.currencies().eur,
+                gbp: value.api_response.rates.currencies().gbp,
+                jpy: value.api_response.rates.currencies().jpy,
+                chf: value.api_response.rates.currencies().chf,
+                sgd: value.api_response.rates.currencies().sgd,
+                cny: value.api_response.rates.currencies().cny,
+                sar: value.api_response.rates.currencies().sar,
+                xau: value.api_response.rates.currencies().xau,
+                xag: value.api_response.rates.currencies().xag,
+                xpt: value.api_response.rates.currencies().xpt,
+            },
+        };
+
+        Ok(RatesResponse::new(SOURCE.into(), forex_rates))
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Rates {
     #[serde(rename = "idr")]
-    IDR(Currencies),
+    IDR(RatesData),
 
     #[serde(rename = "usd")]
-    USD(Currencies),
+    USD(RatesData),
 
     #[serde(rename = "eur")]
-    EUR(Currencies),
+    EUR(RatesData),
 
     #[serde(rename = "gbp")]
-    GBP(Currencies),
+    GBP(RatesData),
 
     #[serde(rename = "jpy")]
-    JPY(Currencies),
+    JPY(RatesData),
 
     #[serde(rename = "chf")]
-    CHF(Currencies),
+    CHF(RatesData),
 
     #[serde(rename = "sgd")]
-    SGD(Currencies),
+    SGD(RatesData),
 
     #[serde(rename = "cny")]
-    CNY(Currencies),
+    CNY(RatesData),
 
     #[serde(rename = "sar")]
-    SAR(Currencies),
+    SAR(RatesData),
 
     #[serde(rename = "xau")]
-    XAU(Currencies),
+    XAU(RatesData),
 
     #[serde(rename = "xag")]
-    XAG(Currencies),
+    XAG(RatesData),
 
     #[serde(rename = "xpt")]
-    XPT(Currencies),
+    XPT(RatesData),
 }
 
 impl Rates {
-    pub fn currencies(&self) -> &Currencies {
+    pub fn currencies(&self) -> &RatesData {
         match self {
             Rates::IDR(currencies) => currencies,
             Rates::USD(currencies) => currencies,
@@ -122,27 +166,27 @@ impl Rates {
     }
 }
 
-pub(crate) struct Api<'CLIENT> {
-    client: &'CLIENT reqwest::Client,
+pub(crate) struct Api {
+    client: reqwest::Client,
 }
 
-impl<'CLIENT> Api<'CLIENT> {
-    pub fn new(client: &'CLIENT reqwest::Client) -> Self {
+impl Api {
+    pub fn new(client: reqwest::Client) -> Self {
         Api { client }
     }
 }
 
 #[async_trait]
-impl ForexRates for Api<'_> {
+impl ForexRates for Api {
     async fn rates(
         &self,
-        base: iso_currency::Currency,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+        base: Currencies,
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", "latest")
             .replace("{currency_code}", base.code().to_lowercase().as_str());
 
-        let ret: Response = self
+        let ret: ApiResponse = self
             .client
             .get(&endpoint)
             .send()
@@ -159,23 +203,28 @@ impl ForexRates for Api<'_> {
                 )
             })?;
 
+        let ret = Response {
+            api_response: ret,
+            base,
+        };
+
         Ok(ret.try_into()?)
     }
 }
 
 #[async_trait]
-impl ForexHistoricalRates for Api<'_> {
+impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: iso_currency::Currency,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+        base: Currencies,
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", &yyyymmdd)
             .replace("{currency_code}", base.code().to_lowercase().as_str());
 
-        let ret: Response = self
+        let ret: ApiResponse = self
             .client
             .get(&endpoint)
             .send()
@@ -197,6 +246,11 @@ impl ForexHistoricalRates for Api<'_> {
                     err
                 )
             })?;
+
+        let ret = Response {
+            base,
+            api_response: ret,
+        };
 
         Ok(ret.try_into()?)
     }

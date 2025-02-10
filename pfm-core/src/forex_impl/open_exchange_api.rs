@@ -3,12 +3,18 @@
 // Daily historical data
 // 1,000 API requests per month
 
-use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, ForexResult};
+use std::str::FromStr;
+
+use crate::forex::{
+    Currencies, ForexHistoricalRates, ForexRates, HistoricalRates, RatesData, RatesResponse,
+};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+
+const SOURCE: &str = "openexchangerates.org";
 
 const ERROR_PREFIX: &str = "[FOREX][open-exchange-api]";
 
@@ -74,17 +80,20 @@ pub struct Rates {
     pub xpt: Decimal,
 }
 
-impl TryFrom<Response> for crate::forex::Rates {
+impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
     type Error = anyhow::Error;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let date = Utc
             .timestamp_opt(value.timestamp, 0)
             .single()
-            .ok_or(anyhow!("Failed converting unix epoch into utc"))
+            .ok_or(anyhow!(
+                "{} Failed converting unix epoch into utc",
+                ERROR_PREFIX
+            ))
             .map_err(|err| anyhow!("{} {}", ERROR_PREFIX, err))?;
 
-        let rates = Currencies {
+        let rates = RatesData {
             idr: value.rates.idr,
             usd: value.rates.usd,
             eur: value.rates.eur,
@@ -99,19 +108,60 @@ impl TryFrom<Response> for crate::forex::Rates {
             xpt: value.rates.xpt,
         };
 
-        let ret = crate::forex::Rates { date, rates };
+        let base = Currencies::from_str(&value.base_currency)
+            .map_err(|err| anyhow!("{} base currency not supported :{}", ERROR_PREFIX, err))?;
 
-        Ok(ret)
+        let ret = crate::forex::Rates {
+            latest_update: date,
+            base,
+            rates,
+        };
+
+        Ok(RatesResponse::new(SOURCE.into(), ret))
     }
 }
 
-pub(crate) struct Api<'CLIENT> {
-    key: &'static str,
-    client: &'CLIENT reqwest::Client,
+impl TryFrom<Response> for RatesResponse<HistoricalRates> {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Response) -> Result<Self, Self::Error> {
+        let date = Utc
+            .timestamp_opt(value.timestamp, 0)
+            .single()
+            .ok_or(anyhow!("Failed converting unix epoch into utc"))
+            .map_err(|err| anyhow!("{} {}", ERROR_PREFIX, err))?;
+
+        let rates = RatesData {
+            idr: value.rates.idr,
+            usd: value.rates.usd,
+            eur: value.rates.eur,
+            gbp: value.rates.gbp,
+            jpy: value.rates.jpy,
+            chf: value.rates.chf,
+            sgd: value.rates.sgd,
+            cny: value.rates.cny,
+            sar: value.rates.sar,
+            xau: value.rates.xau,
+            xag: value.rates.xag,
+            xpt: value.rates.xpt,
+        };
+
+        let base = Currencies::from_str(&value.base_currency)
+            .map_err(|err| anyhow!("{} base currency not supported :{}", ERROR_PREFIX, err))?;
+
+        let ret = crate::forex::HistoricalRates { base, date, rates };
+
+        Ok(RatesResponse::new(SOURCE.into(), ret))
+    }
 }
 
-impl<'CLIENT> Api<'CLIENT> {
-    pub(crate) fn new(api_key: &'static str, client: &'CLIENT reqwest::Client) -> Self {
+pub(crate) struct Api {
+    key: &'static str,
+    client: reqwest::Client,
+}
+
+impl Api {
+    pub(crate) fn new(api_key: &'static str, client: reqwest::Client) -> Self {
         Self {
             key: api_key,
             client,
@@ -120,11 +170,11 @@ impl<'CLIENT> Api<'CLIENT> {
 }
 
 #[async_trait]
-impl ForexRates for Api<'_> {
+impl ForexRates for Api {
     async fn rates(
         &self,
-        base: iso_currency::Currency,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+        base: Currencies,
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
         let params = [
             ("app_id", self.key),
             ("base", base.code()),
@@ -154,12 +204,12 @@ impl ForexRates for Api<'_> {
 }
 
 #[async_trait]
-impl ForexHistoricalRates for Api<'_> {
+impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: iso_currency::Currency,
-    ) -> crate::forex::ForexResult<crate::forex::Rates> {
+        base: Currencies,
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = HISTORICAL_ENDPOINT.replace(":date", yyyymmdd.as_str());
         let params = [
