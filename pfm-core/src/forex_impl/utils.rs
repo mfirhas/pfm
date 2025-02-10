@@ -113,14 +113,38 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
 
 pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currencies) -> ForexResult<Money> {
     // 1. find the base currency, the one with value equals to 1.
-    let base = {
-        // let base = for c in Currencies::iter() {
-        //     // if
-        // }
-    };
+    let base = rates.base;
+    if from == base {
+        return Ok(from);
+    }
 
     // 2. divide from with its rate relative to base currency.
+    let to_base = match from {
+        Money::IDR(amount) => amount / rates.rates.idr,
+        Money::USD(amount) => amount / rates.rates.usd,
+        Money::EUR(amount) => amount / rates.rates.eur,
+        Money::GBP(amount) => amount / rates.rates.gbp,
+        Money::JPY(amount) => amount / rates.rates.jpy,
+        Money::CHF(amount) => amount / rates.rates.chf,
+        Money::SGD(amount) => amount / rates.rates.sgd,
+        Money::CNY(amount) => amount / rates.rates.cny,
+        Money::SAR(amount) => amount / rates.rates.sar,
+    };
 
     // 3. multiply the above result with the rate of target conversion relative to base currency.
-    todo!()
+    let to_target = match to {
+        Currencies::IDR => to_base * rates.rates.idr,
+        Currencies::USD => to_base * rates.rates.usd,
+        Currencies::EUR => to_base * rates.rates.eur,
+        Currencies::GBP => to_base * rates.rates.gbp,
+        Currencies::JPY => to_base * rates.rates.jpy,
+        Currencies::CHF => to_base * rates.rates.chf,
+        Currencies::SGD => to_base * rates.rates.sgd,
+        Currencies::CNY => to_base * rates.rates.cny,
+        Currencies::SAR => to_base * rates.rates.sar,
+    };
+
+    let result = Money::new_money(to, to_target);
+
+    Ok(result)
 }

@@ -236,6 +236,20 @@ impl Money {
         }
     }
 
+    pub fn new_money(currency: Currencies, amount: Decimal) -> Money {
+        match currency {
+            Currencies::IDR => Money::IDR(amount),
+            Currencies::USD => Money::USD(amount),
+            Currencies::EUR => Money::EUR(amount),
+            Currencies::GBP => Money::GBP(amount),
+            Currencies::JPY => Money::JPY(amount),
+            Currencies::CHF => Money::CHF(amount),
+            Currencies::SGD => Money::SGD(amount),
+            Currencies::CNY => Money::CNY(amount),
+            Currencies::SAR => Money::SAR(amount),
+        }
+    }
+
     pub fn amount(&self) -> Decimal {
         match self {
             Self::IDR(val) => *val,
