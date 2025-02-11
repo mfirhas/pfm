@@ -5,6 +5,7 @@
 // daily historical rates
 // 10 reqs/minute
 
+use crate::forex::ForexError::{self, CurrencyAPIError};
 use crate::forex::{Currencies, ForexHistoricalRates, HistoricalRates, RatesResponse};
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -100,7 +101,7 @@ pub struct Currency {
 }
 
 impl TryFrom<Response> for crate::forex::RatesResponse<crate::forex::HistoricalRates> {
-    type Error = anyhow::Error;
+    type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let date = value
@@ -108,7 +109,9 @@ impl TryFrom<Response> for crate::forex::RatesResponse<crate::forex::HistoricalR
             .metadata
             .last_updated_at
             .parse::<DateTime<Utc>>()
-            .map_err(|err| anyhow!("{} Failed parsing datetime: {}", ERROR_PREFIX, err))?;
+            .map_err(|err| {
+                CurrencyAPIError(anyhow!("{} Failed parsing datetime: {}", ERROR_PREFIX, err))
+            })?;
 
         let historical_rates = HistoricalRates {
             date,
@@ -157,23 +160,30 @@ impl ForexHistoricalRates for Api {
             .get(HISTORICAL_ENDPOINT)
             .query(&params)
             .send()
-            .await?
-            .error_for_status()
+            .await
             .map_err(|err| {
-                anyhow!(
+                CurrencyAPIError(anyhow!(
                     "{} failed calling api historical rates: {}",
                     ERROR_PREFIX,
                     err
-                )
+                ))
+            })?
+            .error_for_status()
+            .map_err(|err| {
+                CurrencyAPIError(anyhow!(
+                    "{} failed because of non 200/201 for api historical rates: {}",
+                    ERROR_PREFIX,
+                    err
+                ))
             })?
             .json()
             .await
             .map_err(|err| {
-                anyhow!(
+                CurrencyAPIError(anyhow!(
                     "{} failed parsing historical rates result into json: {}",
                     ERROR_PREFIX,
                     err
-                )
+                ))
             })?;
 
         let resp = Response {

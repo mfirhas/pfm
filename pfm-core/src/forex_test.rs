@@ -112,7 +112,7 @@ use chrono::{TimeZone, Utc};
 use rust_decimal_macros::dec;
 
 use crate::{
-    forex::{convert, get_historical_rates, get_rates, Currencies},
+    forex::{convert, poll_historical_rates, poll_rates, Currencies},
     forex_impl, forex_storage_impl, global,
 };
 
@@ -210,7 +210,7 @@ async fn test_convert() {
 }
 
 #[tokio::test]
-async fn test_get_rates() {
+async fn test_poll_rates() {
     let cfg = global::config();
     let fs = global::storage_fs();
     let http_client = global::http_client();
@@ -219,14 +219,14 @@ async fn test_get_rates() {
         forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
 
     let base = Currencies::USD;
-    let ret = get_rates(&forex, &storage, base).await;
+    let ret = poll_rates(&forex, &storage, base).await;
     dbg!(&ret);
 
     assert!(ret.is_ok());
 }
 
 #[tokio::test]
-async fn test_get_historical_rates() {
+async fn test_poll_historical_rates() {
     let cfg = global::config();
     let fs = global::storage_fs();
     let http_client = global::http_client();
@@ -236,7 +236,7 @@ async fn test_get_historical_rates() {
 
     let base = Currencies::USD;
     let date = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
-    let ret = get_historical_rates(&forex, &storage, date, base).await;
+    let ret = poll_historical_rates(&forex, &storage, date, base).await;
     dbg!(&ret);
 
     assert!(ret.is_ok());
