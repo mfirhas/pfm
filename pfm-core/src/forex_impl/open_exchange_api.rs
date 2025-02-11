@@ -5,6 +5,7 @@
 
 use std::str::FromStr;
 
+use crate::forex::ForexError::{self, OpenExchangeAPIError};
 use crate::forex::{
     Currencies, ForexHistoricalRates, ForexRates, HistoricalRates, RatesData, RatesResponse,
 };
@@ -81,17 +82,17 @@ pub struct Rates {
 }
 
 impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
-    type Error = anyhow::Error;
+    type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let date = Utc
             .timestamp_opt(value.timestamp, 0)
             .single()
-            .ok_or(anyhow!(
-                "{} Failed converting unix epoch into utc",
-                ERROR_PREFIX
-            ))
-            .map_err(|err| anyhow!("{} {}", ERROR_PREFIX, err))?;
+            .ok_or(OpenExchangeAPIError(anyhow!(
+                "{} Failed converting unix epoch {} into utc",
+                ERROR_PREFIX,
+                value.timestamp,
+            )))?;
 
         let rates = RatesData {
             idr: value.rates.idr,
@@ -108,8 +109,13 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
             xpt: value.rates.xpt,
         };
 
-        let base = Currencies::from_str(&value.base_currency)
-            .map_err(|err| anyhow!("{} base currency not supported :{}", ERROR_PREFIX, err))?;
+        let base = Currencies::from_str(&value.base_currency).map_err(|err| {
+            OpenExchangeAPIError(anyhow!(
+                "{} base currency not supported :{}",
+                ERROR_PREFIX,
+                err
+            ))
+        })?;
 
         let ret = crate::forex::Rates {
             latest_update: date,
@@ -122,14 +128,17 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
 }
 
 impl TryFrom<Response> for RatesResponse<HistoricalRates> {
-    type Error = anyhow::Error;
+    type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let date = Utc
             .timestamp_opt(value.timestamp, 0)
             .single()
-            .ok_or(anyhow!("Failed converting unix epoch into utc"))
-            .map_err(|err| anyhow!("{} {}", ERROR_PREFIX, err))?;
+            .ok_or(OpenExchangeAPIError(anyhow!(
+                "{} Failed converting unix epoch {} into utc",
+                ERROR_PREFIX,
+                value.timestamp
+            )))?;
 
         let rates = RatesData {
             idr: value.rates.idr,
@@ -146,8 +155,13 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             xpt: value.rates.xpt,
         };
 
-        let base = Currencies::from_str(&value.base_currency)
-            .map_err(|err| anyhow!("{} base currency not supported :{}", ERROR_PREFIX, err))?;
+        let base = Currencies::from_str(&value.base_currency).map_err(|err| {
+            OpenExchangeAPIError(anyhow!(
+                "{} base currency not supported :{}",
+                ERROR_PREFIX,
+                err
+            ))
+        })?;
 
         let ret = crate::forex::HistoricalRates { base, date, rates };
 
@@ -186,17 +200,30 @@ impl ForexRates for Api {
             .get(LATEST_ENDPOINT)
             .query(&params)
             .send()
-            .await?
+            .await
+            .map_err(|err| {
+                OpenExchangeAPIError(anyhow!(
+                    "{} failed calling api rates: {}",
+                    ERROR_PREFIX,
+                    err
+                ))
+            })?
             .error_for_status()
-            .map_err(|err| anyhow!("{} failed calling api rates: {}", ERROR_PREFIX, err))?
+            .map_err(|err| {
+                OpenExchangeAPIError(anyhow!(
+                    "{} failed because non 200/201 status code on api rates: {}",
+                    ERROR_PREFIX,
+                    err
+                ))
+            })?
             .json()
             .await
             .map_err(|err| {
-                anyhow!(
+                OpenExchangeAPIError(anyhow!(
                     "{} failed parsing rates result into json: {}",
                     ERROR_PREFIX,
                     err
-                )
+                ))
             })?;
 
         Ok(ret.try_into()?)
@@ -223,23 +250,30 @@ impl ForexHistoricalRates for Api {
             .get(&endpoint)
             .query(&params)
             .send()
-            .await?
-            .error_for_status()
+            .await
             .map_err(|err| {
-                anyhow!(
+                OpenExchangeAPIError(anyhow!(
                     "{} failed calling api historical rates: {}",
                     ERROR_PREFIX,
                     err
-                )
+                ))
+            })?
+            .error_for_status()
+            .map_err(|err| {
+                OpenExchangeAPIError(anyhow!(
+                    "{} failed because non 200/201 status code on api historical rates: {}",
+                    ERROR_PREFIX,
+                    err
+                ))
             })?
             .json()
             .await
             .map_err(|err| {
-                anyhow!(
+                OpenExchangeAPIError(anyhow!(
                     "{} failed parsing historical rates result into json: {}",
                     ERROR_PREFIX,
                     err
-                )
+                ))
             })?;
 
         Ok(ret.try_into()?)

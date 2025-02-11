@@ -1,14 +1,17 @@
 // implementations for database to store forex data polled from the APIs.
 // using filesystem with tokio
 
+use std::fmt::Debug;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::forex::ForexError::StorageError;
 use crate::forex::{ForexResult, ForexStorage, HistoricalRates, Rates, RatesResponse};
 use crate::global::StorageFS;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Timelike, Utc};
+use serde::{Deserialize, Serialize};
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 
@@ -34,42 +37,71 @@ impl ForexStorageImpl {
         let mut perms = fs::metadata(&pathbuf)
             .await
             .map_err(|err| {
-                anyhow!(
+                StorageError(anyhow!(
                     "{} failed setting permission into file {:?}: {}",
                     ERROR_PREFIX,
                     &pathbuf.as_path(),
                     err
-                )
+                ))
             })?
             .permissions();
         perms.set_mode(FILE_PERMISSION);
-        fs::set_permissions(&pathbuf, perms).await?;
+        fs::set_permissions(&pathbuf, perms).await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed setting permission on {:?}: {}",
+                ERROR_PREFIX,
+                pathbuf.as_path(),
+                err
+            ))
+        })?;
 
         Ok(())
     }
 
-    async fn insert_latest(
+    async fn insert_latest<T>(
         &self,
         date: DateTime<Utc>,
-        rates: &RatesResponse<Rates>,
-    ) -> ForexResult<()> {
+        rates: &RatesResponse<T>,
+    ) -> ForexResult<()>
+    where
+        T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
+    {
         let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
-            anyhow!(
+            StorageError(anyhow!(
                 "{} failed parsing Rates into json string :{}",
                 ERROR_PREFIX,
                 err
-            )
+            ))
         })?;
 
         let latest_write = self.fs.write().await;
         let latest_write = latest_write.latest();
         let latest_write = latest_write.join(generate_latest_file_name(date));
 
-        let mut file = File::create(&latest_write).await?;
+        let mut file = File::create(&latest_write).await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed creating path {:?}: {}",
+                ERROR_PREFIX,
+                &latest_write.as_path(),
+                err
+            ))
+        })?;
         file.write_all(json_string.as_bytes())
             .await
-            .map_err(|err| anyhow!("{} failed writing into latest dir: {}", ERROR_PREFIX, err))?;
-        file.flush().await?;
+            .map_err(|err| {
+                StorageError(anyhow!(
+                    "{} failed writing into latest dir: {}",
+                    ERROR_PREFIX,
+                    err
+                ))
+            })?;
+        file.flush().await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed flushing insert_latest: {}",
+                ERROR_PREFIX,
+                err
+            ))
+        })?;
 
         Self::set_permission(&latest_write).await?;
 
@@ -81,76 +113,99 @@ impl ForexStorageImpl {
         let latest_read = latest_read.latest();
 
         let mut entries = fs::read_dir(latest_read).await.map_err(|err| {
-            anyhow!(
+            StorageError(anyhow!(
                 "{} failed reading directory {:?} :{}",
                 ERROR_PREFIX,
                 &latest_read.as_path(),
                 err
-            )
+            ))
         })?;
 
         let mut files: Vec<PathBuf> = Vec::new();
-        while let Some(entry) = entries.next_entry().await? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|err| StorageError(err.into()))?
+        {
             let path = entry.path();
             files.push(path);
         }
 
         if files.is_empty() {
-            return Err(anyhow!("{} latest directory is empty", ERROR_PREFIX));
+            return Err(StorageError(anyhow!(
+                "{} latest directory is empty",
+                ERROR_PREFIX
+            )));
         }
 
         // sort descending
         files.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
 
         let content = fs::read_to_string(&files[0]).await.map_err(|err| {
-            anyhow!(
+            StorageError(anyhow!(
                 "{} failed reading the content of file {:?}: {}",
                 ERROR_PREFIX,
                 &files[0].as_path(),
                 err
-            )
+            ))
         })?;
 
         let rates: RatesResponse<Rates> = serde_json::from_str(&content).map_err(|err| {
-            anyhow!(
+            StorageError(anyhow!(
                 "{} failed parsing file content {:?} into Rates :{}",
                 ERROR_PREFIX,
                 &content,
                 err
-            )
+            ))
         })?;
 
         Ok(rates)
     }
 
-    async fn insert_historical(
+    async fn insert_historical<T>(
         &self,
         date: DateTime<Utc>,
-        rates: &RatesResponse<HistoricalRates>,
-    ) -> ForexResult<()> {
+        rates: &RatesResponse<T>,
+    ) -> ForexResult<()>
+    where
+        T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
+    {
         let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
-            anyhow!(
+            StorageError(anyhow!(
                 "{} failed parsing Rates into json string :{}",
                 ERROR_PREFIX,
                 err
-            )
+            ))
         })?;
 
         let historical_write = self.fs.write().await;
         let historical_write = historical_write.historical();
         let historical_write = historical_write.join(generate_historical_file_name(date));
 
-        let mut file = File::create(&historical_write).await?;
+        let mut file = File::create(&historical_write).await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed creating path {:?}: {}",
+                ERROR_PREFIX,
+                &historical_write.as_path(),
+                err
+            ))
+        })?;
         file.write_all(json_string.as_bytes())
             .await
             .map_err(|err| {
-                anyhow!(
+                StorageError(anyhow!(
                     "{} failed writing into historical dir: {}",
                     ERROR_PREFIX,
                     err
-                )
+                ))
             })?;
-        file.flush().await?;
+        file.flush().await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed flushing insert_latest: {}",
+                ERROR_PREFIX,
+                err
+            ))
+        })?;
 
         Self::set_permission(&historical_write).await?;
 
@@ -166,22 +221,22 @@ impl ForexStorageImpl {
         let filepath = historical_read.join(&generate_historical_file_name(date));
 
         let content = fs::read_to_string(&filepath).await.map_err(|err| {
-            anyhow!(
+            StorageError(anyhow!(
                 "{} failed reading the content of file {:?}: {}",
                 ERROR_PREFIX,
                 &filepath.as_path(),
                 err
-            )
+            ))
         })?;
 
         let rates: RatesResponse<HistoricalRates> =
             serde_json::from_str(&content).map_err(|err| {
-                anyhow!(
+                StorageError(anyhow!(
                     "{} failed parsing file content {:?} into Rates :{}",
                     ERROR_PREFIX,
                     &content,
                     err
-                )
+                ))
             })?;
 
         Ok(rates)
@@ -274,11 +329,14 @@ mod forex_storage_impl_tests {
 
 #[async_trait]
 impl ForexStorage for ForexStorageImpl {
-    async fn insert_latest(
+    async fn insert_latest<T>(
         &self,
         date: DateTime<Utc>,
-        rates: &RatesResponse<Rates>,
-    ) -> ForexResult<()> {
+        rates: &RatesResponse<T>,
+    ) -> ForexResult<()>
+    where
+        T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
+    {
         self.insert_latest(date, rates).await
     }
 
@@ -286,11 +344,14 @@ impl ForexStorage for ForexStorageImpl {
         self.get_latest().await
     }
 
-    async fn insert_historical(
+    async fn insert_historical<T>(
         &self,
         date: DateTime<Utc>,
-        rates: &RatesResponse<HistoricalRates>,
-    ) -> ForexResult<()> {
+        rates: &RatesResponse<T>,
+    ) -> ForexResult<()>
+    where
+        T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
+    {
         self.insert_historical(date, rates).await
     }
 

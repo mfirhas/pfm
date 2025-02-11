@@ -213,10 +213,12 @@ pub enum Money {
 
 impl Money {
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
-        let curr = Currency::from_str(currency)
-            .map_err(|err| anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))?;
-        let val = Decimal::from_str(amount)
-            .map_err(|err| anyhow!("{} invalid amount: {}", ERROR_PREFIX, err))?;
+        let curr = Currency::from_str(currency).map_err(|err| {
+            ForexError::Error(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
+        })?;
+        let val = Decimal::from_str(amount).map_err(|err| {
+            ForexError::Error(anyhow!("{} invalid amount: {}", ERROR_PREFIX, err))
+        })?;
 
         match curr {
             Currency::IDR => Ok(Self::IDR(val)),
@@ -228,11 +230,11 @@ impl Money {
             Currency::SGD => Ok(Self::SGD(val)),
             Currency::CNY => Ok(Self::CNY(val)),
             Currency::SAR => Ok(Self::SAR(val)),
-            _ => Err(anyhow!(
+            _ => Err(ForexError::Error(anyhow!(
                 "{} Currency {} not supported",
                 ERROR_PREFIX,
                 curr.code()
-            )),
+            ))),
         }
     }
 
@@ -294,11 +296,10 @@ impl Money {
 }
 
 impl FromStr for Money {
-    type Err = anyhow::Error;
+    type Err = ForexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let ret = parse_str(s)
-            .map_err(|err| anyhow!("{} Failed parsing money from str: {}", ERROR_PREFIX, err))?;
+        let ret = parse_str(s)?;
         Ok(ret)
     }
 }
@@ -336,22 +337,49 @@ where
 }
 
 impl RatesResponse<Rates> {
-    // TODO: add err handling to api calls
-    pub(crate) fn err(source: String, error: String) -> Self {
+    pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
+        let (source, error) = match err {
+            ForexError::Error(err) => ("forex".to_string(), err.to_string()),
+            ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
+            ForexError::ExchangeAPIError(err) => ("exchange-api".to_string(), err.to_string()),
+            ForexError::CurrencyAPIError(err) => ("currency-api".to_string(), err.to_string()),
+            ForexError::OpenExchangeAPIError(err) => {
+                ("open-exchange-api".to_string(), err.to_string())
+            }
+        };
         Self {
             source,
-            data: Rates::default(),
+            data: Rates {
+                latest_update: date,
+                base: Currencies::default(),
+                rates: RatesData::default(),
+            },
             error: Some(error),
         }
     }
 }
 
 impl RatesResponse<HistoricalRates> {
-    // TODO: add err handling to api calls
-    pub(crate) fn err(source: String, error: String) -> Self {
+    pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
+        let (source, error) = match err {
+            ForexError::Error(err) => ("forex".to_string(), err.to_string()),
+            ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
+            ForexError::ExchangeAPIError(err) => (
+                "https://github.com/fawazahmed0/exchange-api/".to_string(),
+                err.to_string(),
+            ),
+            ForexError::CurrencyAPIError(err) => ("currencyapi.com".to_string(), err.to_string()),
+            ForexError::OpenExchangeAPIError(err) => {
+                ("openexchangerates.org".to_string(), err.to_string())
+            }
+        };
         Self {
             source,
-            data: HistoricalRates::default(),
+            data: HistoricalRates {
+                date,
+                base: Currencies::default(),
+                rates: RatesData::default(),
+            },
             error: Some(error),
         }
     }
@@ -429,7 +457,29 @@ pub struct ConversionResponse {
     pub money: Money,
 }
 
-pub type ForexResult<T> = Result<T, anyhow::Error>;
+pub type ForexResult<T> = Result<T, ForexError>;
+
+#[derive(Debug)]
+pub enum ForexError {
+    Error(anyhow::Error),
+    StorageError(anyhow::Error),
+    ExchangeAPIError(anyhow::Error),
+    CurrencyAPIError(anyhow::Error),
+    OpenExchangeAPIError(anyhow::Error),
+}
+
+impl Display for ForexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let ret = match self {
+            Self::Error(val) => val.to_string(),
+            Self::StorageError(val) => val.to_string(),
+            Self::ExchangeAPIError(val) => val.to_string(),
+            Self::CurrencyAPIError(val) => val.to_string(),
+            Self::OpenExchangeAPIError(val) => val.to_string(),
+        };
+        write!(f, "{}", ret)
+    }
+}
 
 ///////////////////////////////////// INTERFACES /////////////////////////////////////
 /////////////// INVOKED FROM SERVER
@@ -467,11 +517,13 @@ pub trait ForexStorage {
     /// insert latest rate fetched from API
     /// @date: the datetime in UTC when the data fetched.
     /// @rates: the rates to be saved.
-    async fn insert_latest(
+    async fn insert_latest<T>(
         &self,
         date: DateTime<Utc>,
-        rates: &RatesResponse<Rates>,
-    ) -> ForexResult<()>;
+        rates: &RatesResponse<T>,
+    ) -> ForexResult<()>
+    where
+        T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync;
 
     /// get the latest data fetched from API
     async fn get_latest(&self) -> ForexResult<RatesResponse<Rates>>;
@@ -479,11 +531,13 @@ pub trait ForexStorage {
     /// insert historical rates
     /// @date: the datetime in UTC when the data fetched.
     /// @rates: the rates to be saved.
-    async fn insert_historical(
+    async fn insert_historical<T>(
         &self,
         date: DateTime<Utc>,
-        rates: &RatesResponse<HistoricalRates>,
-    ) -> ForexResult<()>;
+        rates: &RatesResponse<T>,
+    ) -> ForexResult<()>
+    where
+        T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync;
 
     /// get historical rates
     async fn get_historical(
@@ -506,7 +560,9 @@ where
     FS: ForexStorage,
 {
     if from.amount() == dec!(0) {
-        return Err(anyhow!("[FOREX] amount conversion must be greater than 0"));
+        return Err(ForexError::Error(anyhow!(
+            "[FOREX] amount conversion must be greater than 0"
+        )));
     }
 
     if from == to {
@@ -516,24 +572,13 @@ where
         });
     }
 
-    let latest_rates = storage.get_latest().await.map_err(|err| {
-        anyhow!(
-            "{} failed getting latest rates from storage: {}",
-            ERROR_PREFIX,
-            err
-        )
-    })?;
+    let latest_rates = storage.get_latest().await?;
+    if let Some(err) = latest_rates.error {
+        return Err(ForexError::Error(anyhow!(err)));
+    }
 
     let ret = {
-        let res = convert_currency(&latest_rates.data, from, to).map_err(|err| {
-            anyhow!(
-                "{} failed converting currency from {} to {}: {}",
-                ERROR_PREFIX,
-                from,
-                to,
-                err
-            )
-        })?;
+        let res = convert_currency(&latest_rates.data, from, to)?;
         let date = latest_rates.data.latest_update;
 
         ConversionResponse {
@@ -547,7 +592,7 @@ where
 
 /// Get rates from 3rd API.
 /// Invoked from Cron service.
-pub async fn get_rates<FX, FS>(
+pub async fn poll_rates<FX, FS>(
     forex: &FX,
     storage: &FS,
     base: Currencies,
@@ -556,7 +601,10 @@ where
     FX: ForexRates,
     FS: ForexStorage,
 {
-    let ret = forex.rates(base).await?;
+    let ret = match forex.rates(base).await {
+        Ok(val) => val,
+        Err(error) => RatesResponse::<Rates>::err(Utc::now(), error),
+    };
 
     storage.insert_latest(ret.data.latest_update, &ret).await?;
 
@@ -565,7 +613,7 @@ where
 
 /// Get historical rates from 3rd API.
 /// Invoked from Cron service.
-pub async fn get_historical_rates<FX, FS>(
+pub async fn poll_historical_rates<FX, FS>(
     forex: &FX,
     storage: &FS,
     date: DateTime<Utc>,
@@ -575,9 +623,17 @@ where
     FX: ForexHistoricalRates,
     FS: ForexStorage,
 {
-    let ret = forex.historical_rates(date, base).await?;
-
-    storage.insert_historical(ret.data.date, &ret).await?;
+    let ret = match forex.historical_rates(date, base).await {
+        Ok(val) => {
+            storage.insert_historical(val.data.date, &val).await?;
+            val
+        }
+        Err(error) => {
+            let err = RatesResponse::<HistoricalRates>::err(date, error);
+            storage.insert_historical(date, &err).await?;
+            err
+        }
+    };
 
     Ok(ret)
 }
