@@ -195,7 +195,7 @@ impl ForexRates for Api {
             ("symbols", "IDR,USD,EUR,GBP,JPY,CHF,SGD,CNY,SAR,XAU,XAG,XPT"),
         ];
 
-        let ret: Response = self
+        let ret = self
             .client
             .get(LATEST_ENDPOINT)
             .query(&params)
@@ -208,25 +208,26 @@ impl ForexRates for Api {
                     err
                 ))
             })?
-            .error_for_status()
-            .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
-                    "{} failed because non 200/201 status code on api rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
-            .json()
+            .text()
             .await
             .map_err(|err| {
                 OpenExchangeAPIError(anyhow!(
-                    "{} failed parsing rates result into json: {}",
+                    "{} failed fetching rates api response as string: {}",
                     ERROR_PREFIX,
                     err
                 ))
             })?;
 
-        Ok(ret.try_into()?)
+        let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
+            OpenExchangeAPIError(anyhow!(
+                "{} failed parsing into json. Error: {}, Response: {}",
+                ERROR_PREFIX,
+                err,
+                &ret
+            ))
+        })?;
+
+        Ok(resp.try_into()?)
     }
 }
 
@@ -245,7 +246,7 @@ impl ForexHistoricalRates for Api {
             ("symbols", "IDR,USD,EUR,GBP,JPY,CHF,SGD,CNY,SAR,XAU,XAG,XPT"),
         ];
 
-        let ret: Response = self
+        let ret = self
             .client
             .get(&endpoint)
             .query(&params)
@@ -258,24 +259,25 @@ impl ForexHistoricalRates for Api {
                     err
                 ))
             })?
-            .error_for_status()
-            .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
-                    "{} failed because non 200/201 status code on api historical rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
-            .json()
+            .text()
             .await
             .map_err(|err| {
                 OpenExchangeAPIError(anyhow!(
-                    "{} failed parsing historical rates result into json: {}",
+                    "{} failed fetching historical api as string: {}",
                     ERROR_PREFIX,
                     err
                 ))
             })?;
 
-        Ok(ret.try_into()?)
+        let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
+            OpenExchangeAPIError(anyhow!(
+                "{} failed parsing into json. Error: {}, Response: {}",
+                ERROR_PREFIX,
+                err,
+                &ret
+            ))
+        })?;
+
+        Ok(resp.try_into()?)
     }
 }

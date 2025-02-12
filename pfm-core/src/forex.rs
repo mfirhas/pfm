@@ -316,6 +316,9 @@ pub struct RatesResponse<T> {
     #[serde(alias = "source")]
     source: String,
 
+    #[serde(alias = "poll_date")]
+    poll_date: DateTime<Utc>,
+
     #[serde(alias = "data")]
     data: T,
 
@@ -330,6 +333,7 @@ where
     pub(crate) fn new(source: String, data: T) -> Self {
         Self {
             source,
+            poll_date: Utc::now(),
             data,
             error: None,
         }
@@ -349,6 +353,7 @@ impl RatesResponse<Rates> {
         };
         Self {
             source,
+            poll_date: Utc::now(),
             data: Rates {
                 latest_update: date,
                 base: Currencies::default(),
@@ -375,6 +380,7 @@ impl RatesResponse<HistoricalRates> {
         };
         Self {
             source,
+            poll_date: Utc::now(),
             data: HistoricalRates {
                 date,
                 base: Currencies::default(),
