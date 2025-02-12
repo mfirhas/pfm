@@ -88,8 +88,16 @@ pub struct Data {
     #[serde(rename = "XAG")]
     pub xag: Currency,
 
-    #[serde(rename = "XPT")]
+    #[serde(rename = "XPT", default = "xpt_currency_default")]
     pub xpt: Currency,
+}
+
+// some times in the past currencyapi.com return no XPT
+fn xpt_currency_default() -> Currency {
+    Currency {
+        code: "XPT".to_string(),
+        value: Decimal::default(),
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -155,7 +163,7 @@ impl ForexHistoricalRates for Api {
             ),
         ];
 
-        let ret: ApiResponse = self
+        let ret = self
             .client
             .get(HISTORICAL_ENDPOINT)
             .query(&params)
@@ -168,27 +176,28 @@ impl ForexHistoricalRates for Api {
                     err
                 ))
             })?
-            .error_for_status()
-            .map_err(|err| {
-                CurrencyAPIError(anyhow!(
-                    "{} failed because of non 200/201 for api historical rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
-            .json()
+            .text()
             .await
             .map_err(|err| {
                 CurrencyAPIError(anyhow!(
-                    "{} failed parsing historical rates result into json: {}",
+                    "{} failed fetching historical api response as string: {}",
                     ERROR_PREFIX,
                     err
                 ))
             })?;
 
+        let resp = serde_json::from_str::<ApiResponse>(&ret).map_err(|err| {
+            CurrencyAPIError(anyhow!(
+                "{} failed parsing into json. Error: {}, Response: {}",
+                ERROR_PREFIX,
+                err,
+                &ret
+            ))
+        })?;
+
         let resp = Response {
             base,
-            api_response: ret,
+            api_response: resp,
         };
 
         Ok(resp.try_into()?)
