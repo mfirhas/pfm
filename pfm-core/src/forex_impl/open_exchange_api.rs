@@ -169,13 +169,14 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     }
 }
 
-pub(crate) struct Api {
+#[derive(Clone)]
+pub struct Api {
     key: &'static str,
     client: reqwest::Client,
 }
 
 impl Api {
-    pub(crate) fn new(api_key: &'static str, client: reqwest::Client) -> Self {
+    pub fn new(api_key: &'static str, client: reqwest::Client) -> Self {
         Self {
             key: api_key,
             client,

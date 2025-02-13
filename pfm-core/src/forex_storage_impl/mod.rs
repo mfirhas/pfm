@@ -1,1 +1,1 @@
-pub(crate) mod forex_storage;
+pub mod forex_storage;

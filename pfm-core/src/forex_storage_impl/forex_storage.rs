@@ -23,12 +23,13 @@ const HISTORICAL_FILENAME_FORMAT: &str = "historical-{YYYY}-{MM}-{DD}Z.json";
 
 const FILE_PERMISSION: u32 = 0o600;
 
-pub(crate) struct ForexStorageImpl {
+#[derive(Clone)]
+pub struct ForexStorageImpl {
     fs: StorageFS,
 }
 
 impl ForexStorageImpl {
-    pub(crate) fn new(fs: StorageFS) -> Self {
+    pub fn new(fs: StorageFS) -> Self {
         Self { fs }
     }
 

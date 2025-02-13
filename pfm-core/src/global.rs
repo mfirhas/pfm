@@ -33,17 +33,17 @@ const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
 const DEV_ENV_PATH: &str = "./core.env";
 
 /// Get instantiated global http client object.
-pub(crate) fn http_client() -> Client {
+pub fn http_client() -> Client {
     HTTP_CLIENT.clone()
 }
 
 /// Get instantiated global config object.
-pub(crate) fn config() -> &'static Config {
+pub fn config() -> &'static Config {
     &CONFIG
 }
 
 /// Get instantiated global storage filesystem object for SERVER.
-pub(crate) fn storage_fs() -> StorageFS {
+pub fn storage_fs() -> StorageFS {
     STORAGE_FS.clone()
 }
 
@@ -92,10 +92,10 @@ where
 }
 
 /// Alias for ServerFS, Filesystem for storing data at server side.
-pub(crate) type StorageFS = Arc<RwLock<ServerFS>>;
+pub type StorageFS = Arc<RwLock<ServerFS>>;
 
 #[derive(Debug)]
-pub(crate) struct ServerFS {
+pub struct ServerFS {
     root: PathBuf,
     latest: PathBuf,
     historical: PathBuf,
@@ -290,7 +290,7 @@ fn init_storage_fs_historical(root: &PathBuf) -> Result<PathBuf, anyhow::Error> 
 
 /// Configurations
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct Config {
+pub struct Config {
     /// Using symbol or code for displaying money.
     #[serde(alias = "CORE_FOREX_USE_SYMBOL", default)]
     pub forex_use_symbol: bool,

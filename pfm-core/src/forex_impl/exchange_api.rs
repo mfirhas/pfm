@@ -167,7 +167,8 @@ impl Rates {
     }
 }
 
-pub(crate) struct Api {
+#[derive(Clone)]
+pub struct Api {
     client: reqwest::Client,
 }
 
