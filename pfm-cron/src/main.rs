@@ -77,15 +77,31 @@ async fn main() {
         })
         .expect("failed initializing poll_historical_rates_job");
 
+    let poll_rates_job_id = &poll_rates_job.guid();
     scheduler
         .add(poll_rates_job)
         .await
         .expect("failed adding job1");
 
+    let poll_historical_rates_job_id = &poll_historical_rates_job.guid();
     scheduler
         .add(poll_historical_rates_job)
         .await
         .expect("failed adding job2");
+
+    if !cfg.cron_enable_poll_rates {
+        scheduler
+            .remove(poll_rates_job_id)
+            .await
+            .expect("failed removing poll_rates_job");
+    }
+
+    if !cfg.cron_enable_poll_historical_rates {
+        scheduler
+            .remove(poll_historical_rates_job_id)
+            .await
+            .expect("failed removing poll_historical_rates_job");
+    }
 
     scheduler.start().await.expect("failed starting scheduler");
 
@@ -126,7 +142,13 @@ pub(crate) struct Config {
     #[serde(alias = "CRON_TAB_POLL_RATES")]
     pub cron_tab_poll_rates: String,
 
+    #[serde(alias = "CRON_ENABLE_POLL_RATES")]
+    pub cron_enable_poll_rates: bool,
+
     /// cron tab for poll historical rates
     #[serde(alias = "CRON_TAB_POLL_HISTORICAL_RATES")]
     pub cron_tab_poll_historical_rates: String,
+
+    #[serde(alias = "CRON_ENABLE_POLL_HISTORICAL_RATES")]
+    pub cron_enable_poll_historical_rates: bool,
 }
