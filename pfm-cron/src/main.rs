@@ -161,6 +161,7 @@ async fn register_cron_jobs<'a>(
 }
 
 //////////////////////////////////////////// HANDLERS AND JOBS ////////////////////////////////////////////
+// Job::new_async adds job using UTC offset
 async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currencies) {
     let _ = forex::poll_rates(&fx, &fs, base).await;
 }
