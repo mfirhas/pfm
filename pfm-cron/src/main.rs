@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use configrs::config::Config as configrs;
 use pfm_core::{
@@ -12,91 +12,29 @@ use tokio_cron_scheduler::{Job, JobScheduler};
 const ERROR_PREFIX: &str = "[CRON]";
 const DEV_ENV_FILE_PATH: &str = ".env";
 
-async fn poll_latest_rates(fx: impl ForexRates, fs: impl ForexStorage, base: Currencies) {
-    let _ = forex::poll_rates(&fx, &fs, base).await;
-}
-
-async fn poll_historical_rates(
-    fx: impl ForexHistoricalRates,
-    fs: impl ForexStorage,
-    date: DateTime<Utc>,
-    base: Currencies,
-) {
-    let _ = forex::poll_historical_rates(&fx, &fs, date, base).await;
-}
-
-fn dep_forex_impl() -> forex_impl::open_exchange_api::Api {
-    let core_cfg = global::config();
-    let http_client = global::http_client();
-
-    let forex_impl =
-        forex_impl::open_exchange_api::Api::new(&core_cfg.forex_open_exchange_api_key, http_client);
-
-    forex_impl
-}
-
-fn dep_storage_impl() -> forex_storage_impl::forex_storage::ForexStorageImpl {
-    let storage = global::storage_fs();
-
-    let storage_impl = forex_storage_impl::forex_storage::ForexStorageImpl::new(storage);
-
-    storage_impl
-}
-
 #[tokio::main]
 async fn main() {
     let cfg = init_config().expect("failed initializing config");
+    let core_cfg = global::config();
 
     let scheduler = JobScheduler::new()
         .await
         .expect("failed initializing JobScheduler");
 
-    let poll_rates_job = Job::new_async(&cfg.cron_tab_poll_rates, |_uuid, _lock| {
-        let forex = dep_forex_impl();
-        let storage = dep_storage_impl();
-        Box::pin(poll_latest_rates(forex, storage, Currencies::USD))
-    })
-    .expect("failed initializing poll_rates_job");
+    let poll_latest_rates_job =
+        poll_latest_rates_job(&cfg, core_cfg).expect("failed initializing poll_latest_rates_job");
 
-    let poll_historical_rates_job =
-        Job::new_async(&cfg.cron_tab_poll_historical_rates, |_uuid, _lock| {
-            let forex = dep_forex_impl();
-            let storage = dep_storage_impl();
-
-            Box::pin(poll_historical_rates(
-                forex,
-                storage,
-                Utc::now(),
-                Currencies::USD,
-            ))
-        })
+    let poll_historical_rates_job = poll_historical_rates_job(&cfg, core_cfg)
         .expect("failed initializing poll_historical_rates_job");
 
-    let poll_rates_job_id = &poll_rates_job.guid();
-    scheduler
-        .add(poll_rates_job)
-        .await
-        .expect("failed adding job1");
-
-    let poll_historical_rates_job_id = &poll_historical_rates_job.guid();
-    scheduler
-        .add(poll_historical_rates_job)
-        .await
-        .expect("failed adding job2");
-
-    if !cfg.cron_enable_poll_rates {
-        scheduler
-            .remove(poll_rates_job_id)
-            .await
-            .expect("failed removing poll_rates_job");
-    }
-
-    if !cfg.cron_enable_poll_historical_rates {
-        scheduler
-            .remove(poll_historical_rates_job_id)
-            .await
-            .expect("failed removing poll_historical_rates_job");
-    }
+    let scheduler = register_cron_jobs(
+        &scheduler,
+        &cfg,
+        poll_latest_rates_job,
+        poll_historical_rates_job,
+    )
+    .await
+    .expect("failed registering jobs");
 
     scheduler.start().await.expect("failed starting scheduler");
 
@@ -104,7 +42,7 @@ async fn main() {
         .await
         .expect("failed reading interrupting signal");
 
-    println!("[CRON] Shutting down gracefully...");
+    println!("{} Shutting down gracefully...", ERROR_PREFIX);
 }
 
 fn init_config() -> Result<Config, anyhow::Error> {
@@ -148,4 +86,137 @@ pub(crate) struct Config {
 
     #[serde(alias = "CRON_ENABLE_POLL_HISTORICAL_RATES")]
     pub cron_enable_poll_historical_rates: bool,
+}
+
+fn dep_forex_impl() -> forex_impl::open_exchange_api::Api {
+    let core_cfg = global::config();
+    let http_client = global::http_client();
+
+    let forex_impl =
+        forex_impl::open_exchange_api::Api::new(&core_cfg.forex_open_exchange_api_key, http_client);
+
+    forex_impl
+}
+
+fn dep_storage_impl() -> forex_storage_impl::forex_storage::ForexStorageImpl {
+    let storage = global::storage_fs();
+
+    let storage_impl = forex_storage_impl::forex_storage::ForexStorageImpl::new(storage);
+
+    storage_impl
+}
+
+/// register and remove cron jobs here
+async fn register_cron_jobs<'a>(
+    scheduler: &'a JobScheduler,
+    cron_cfg: &'a Config,
+    poll_latest_rates_job: Job,
+    poll_historical_rates_job: Job,
+) -> Result<&'a JobScheduler, anyhow::Error> {
+    let poll_rates_job_id = &poll_latest_rates_job.guid();
+    scheduler.add(poll_latest_rates_job).await.map_err(|err| {
+        anyhow!(
+            "{} failed adding poll_latest_rates_job: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !cron_cfg.cron_enable_poll_rates {
+        scheduler.remove(poll_rates_job_id).await.map_err(|err| {
+            anyhow!(
+                "{} failed removing poll_latest_rates_job :{}",
+                ERROR_PREFIX,
+                err
+            )
+        })?;
+    }
+
+    let poll_historical_rates_job_id = &poll_historical_rates_job.guid();
+    scheduler
+        .add(poll_historical_rates_job)
+        .await
+        .map_err(|err| {
+            anyhow!(
+                "{} failed adding poll_historical_rates_job: {}",
+                ERROR_PREFIX,
+                err
+            )
+        })?;
+
+    if !cron_cfg.cron_enable_poll_historical_rates {
+        scheduler
+            .remove(poll_historical_rates_job_id)
+            .await
+            .map_err(|err| {
+                anyhow!(
+                    "{} failed removing poll_historical_rates_job :{}",
+                    ERROR_PREFIX,
+                    err
+                )
+            })?;
+    }
+
+    Ok(scheduler)
+}
+
+//////////////////////////////////////////// HANDLERS AND JOBS ////////////////////////////////////////////
+async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currencies) {
+    let _ = forex::poll_rates(&fx, &fs, base).await;
+}
+
+fn poll_latest_rates_job(
+    cron_cfg: &Config,
+    core_cfg: &'static pfm_core::global::Config,
+) -> Result<Job, anyhow::Error> {
+    Job::new_async(&cron_cfg.cron_tab_poll_rates, |_uuid, _lock| {
+        let forex = dep_forex_impl();
+        let storage = dep_storage_impl();
+        Box::pin(poll_latest_rates_handler(
+            forex,
+            storage,
+            core_cfg.forex_base_currency,
+        ))
+    })
+    .map_err(|err| {
+        anyhow!(
+            "{} failed adding poll_latest_rates_handler: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })
+}
+
+async fn poll_historical_rates_handler(
+    fx: impl ForexHistoricalRates,
+    fs: impl ForexStorage,
+    date: DateTime<Utc>,
+    base: Currencies,
+) {
+    let _ = forex::poll_historical_rates(&fx, &fs, date, base).await;
+}
+
+fn poll_historical_rates_job(
+    cron_cfg: &Config,
+    core_cfg: &'static pfm_core::global::Config,
+) -> Result<Job, anyhow::Error> {
+    Job::new_async(&cron_cfg.cron_tab_poll_historical_rates, |_uuid, _lock| {
+        let forex = dep_forex_impl();
+        let storage = dep_storage_impl();
+        let date = Utc::now(); // it runs everytime this cron job invoked.
+
+        Box::pin(poll_historical_rates_handler(
+            forex,
+            storage,
+            date,
+            core_cfg.forex_base_currency,
+        ))
+    })
+    .map_err(|err| {
+        anyhow!(
+            "{} failed adding poll_historical_rates_handler: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })
 }
