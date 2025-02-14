@@ -203,6 +203,7 @@ fn poll_historical_rates_job(
     Job::new_async(&cron_cfg.cron_tab_poll_historical_rates, |_uuid, _lock| {
         let forex = dep_forex_impl();
         let storage = dep_storage_impl();
+        // TODO set time accordingly
         let date = Utc::now(); // it runs everytime this cron job invoked.
 
         Box::pin(poll_historical_rates_handler(
