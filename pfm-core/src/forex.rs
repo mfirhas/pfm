@@ -350,10 +350,13 @@ impl RatesResponse<Rates> {
         let (source, error) = match err {
             ForexError::Error(err) => ("forex".to_string(), err.to_string()),
             ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
-            ForexError::ExchangeAPIError(err) => ("exchange-api".to_string(), err.to_string()),
-            ForexError::CurrencyAPIError(err) => ("currency-api".to_string(), err.to_string()),
+            ForexError::ExchangeAPIError(err) => (
+                "https://github.com/fawazahmed0/exchange-api/".to_string(),
+                err.to_string(),
+            ),
+            ForexError::CurrencyAPIError(err) => ("currencyapi.com".to_string(), err.to_string()),
             ForexError::OpenExchangeAPIError(err) => {
-                ("open-exchange-api".to_string(), err.to_string())
+                ("openexchangerates.org".to_string(), err.to_string())
             }
         };
         Self {
