@@ -21,8 +21,14 @@ async fn main() {
         .await
         .expect("failed initializing JobScheduler");
 
-    let poll_latest_rates_job =
-        poll_latest_rates_job(&cfg, core_cfg).expect("failed initializing poll_latest_rates_job");
+    let poll_latest_rates_sge_job = poll_latest_rates_sge_job(&cfg, core_cfg)
+        .expect("failed initializing poll_latest_rates_sge_job");
+
+    let poll_latest_rates_lbma_am_job = poll_latest_rates_lbma_am_job(&cfg, core_cfg)
+        .expect("failed initializing poll_latest_rates_lbma_am_job");
+
+    let poll_latest_rates_lbma_pm_job = poll_latest_rates_lbma_pm_job(&cfg, core_cfg)
+        .expect("failed initializing poll_latest_rates_lbma_pm_job");
 
     let poll_historical_rates_job = poll_historical_rates_job(&cfg, core_cfg)
         .expect("failed initializing poll_historical_rates_job");
@@ -30,7 +36,9 @@ async fn main() {
     let scheduler = register_cron_jobs(
         &scheduler,
         &cfg,
-        poll_latest_rates_job,
+        poll_latest_rates_sge_job,
+        poll_latest_rates_lbma_am_job,
+        poll_latest_rates_lbma_pm_job,
         poll_historical_rates_job,
     )
     .await
@@ -74,8 +82,17 @@ fn init_config() -> Result<Config, anyhow::Error> {
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct Config {
     /// cron tab for poll latest rates
-    #[serde(alias = "CRON_TAB_POLL_RATES")]
-    pub cron_tab_poll_rates: String,
+    // #[serde(alias = "CRON_TAB_POLL_RATES")]
+    // pub cron_tab_poll_rates: String,
+
+    #[serde(alias = "CRON_TAB_POLL_RATES_SGE")]
+    pub cron_tab_poll_rates_sge: String,
+
+    #[serde(alias = "CRON_TAB_POLL_RATES_LBMA_AM")]
+    pub cron_tab_poll_rates_lbma_am: String,
+
+    #[serde(alias = "CRON_TAB_POLL_RATES_LBMA_PM")]
+    pub cron_tab_poll_rates_lbma_pm: String,
 
     #[serde(alias = "CRON_ENABLE_POLL_RATES")]
     pub cron_enable_poll_rates: bool,
@@ -110,26 +127,80 @@ fn dep_storage_impl() -> forex_storage_impl::forex_storage::ForexStorageImpl {
 async fn register_cron_jobs<'a>(
     scheduler: &'a JobScheduler,
     cron_cfg: &'a Config,
-    poll_latest_rates_job: Job,
+    poll_latest_rates_sge_job: Job,
+    poll_latest_rates_lbma_am: Job,
+    poll_latest_rates_lbma_pm: Job,
     poll_historical_rates_job: Job,
 ) -> Result<&'a JobScheduler, anyhow::Error> {
-    let poll_rates_job_id = &poll_latest_rates_job.guid();
-    scheduler.add(poll_latest_rates_job).await.map_err(|err| {
-        anyhow!(
-            "{} failed adding poll_latest_rates_job: {}",
-            ERROR_PREFIX,
-            err
-        )
-    })?;
-
-    if !cron_cfg.cron_enable_poll_rates {
-        scheduler.remove(poll_rates_job_id).await.map_err(|err| {
+    let poll_rates_sge_job_id = &poll_latest_rates_sge_job.guid();
+    scheduler
+        .add(poll_latest_rates_sge_job)
+        .await
+        .map_err(|err| {
             anyhow!(
-                "{} failed removing poll_latest_rates_job :{}",
+                "{} failed adding poll_latest_rates_sge_job: {}",
                 ERROR_PREFIX,
                 err
             )
         })?;
+
+    let poll_rates_lbma_am_job_id = &poll_latest_rates_lbma_am.guid();
+    scheduler
+        .add(poll_latest_rates_lbma_am)
+        .await
+        .map_err(|err| {
+            anyhow!(
+                "{} failed adding poll_latest_rates_lbma_am: {}",
+                ERROR_PREFIX,
+                err
+            )
+        })?;
+
+    let poll_rates_lbma_pm_job_id = &poll_latest_rates_lbma_pm.guid();
+    scheduler
+        .add(poll_latest_rates_lbma_pm)
+        .await
+        .map_err(|err| {
+            anyhow!(
+                "{} failed adding poll_latest_rates_lbma_pm: {}",
+                ERROR_PREFIX,
+                err
+            )
+        })?;
+
+    if !cron_cfg.cron_enable_poll_rates {
+        scheduler
+            .remove(poll_rates_sge_job_id)
+            .await
+            .map_err(|err| {
+                anyhow!(
+                    "{} failed removing poll_rates_sge_job_id :{}",
+                    ERROR_PREFIX,
+                    err
+                )
+            })?;
+
+        scheduler
+            .remove(poll_rates_lbma_am_job_id)
+            .await
+            .map_err(|err| {
+                anyhow!(
+                    "{} failed removing poll_rates_lbma_am_job_id :{}",
+                    ERROR_PREFIX,
+                    err
+                )
+            })?;
+
+        scheduler
+            .remove(poll_rates_lbma_pm_job_id)
+            .await
+            .map_err(|err| {
+                anyhow!(
+                    "{} failed removing poll_rates_lbma_pm_job_id :{}",
+                    ERROR_PREFIX,
+                    err
+                )
+            })?;
     }
 
     let poll_historical_rates_job_id = &poll_historical_rates_job.guid();
@@ -166,11 +237,55 @@ async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, b
     let _ = forex::poll_rates(&fx, &fs, base).await;
 }
 
-fn poll_latest_rates_job(
+fn poll_latest_rates_sge_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
 ) -> Result<Job, anyhow::Error> {
-    Job::new_async(&cron_cfg.cron_tab_poll_rates, |_uuid, _lock| {
+    Job::new_async(&cron_cfg.cron_tab_poll_rates_sge, |_uuid, _lock| {
+        let forex = dep_forex_impl();
+        let storage = dep_storage_impl();
+        Box::pin(poll_latest_rates_handler(
+            forex,
+            storage,
+            core_cfg.forex_base_currency,
+        ))
+    })
+    .map_err(|err| {
+        anyhow!(
+            "{} failed adding poll_latest_rates_handler: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })
+}
+
+fn poll_latest_rates_lbma_am_job(
+    cron_cfg: &Config,
+    core_cfg: &'static pfm_core::global::Config,
+) -> Result<Job, anyhow::Error> {
+    Job::new_async(&cron_cfg.cron_tab_poll_rates_lbma_am, |_uuid, _lock| {
+        let forex = dep_forex_impl();
+        let storage = dep_storage_impl();
+        Box::pin(poll_latest_rates_handler(
+            forex,
+            storage,
+            core_cfg.forex_base_currency,
+        ))
+    })
+    .map_err(|err| {
+        anyhow!(
+            "{} failed adding poll_latest_rates_handler: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })
+}
+
+fn poll_latest_rates_lbma_pm_job(
+    cron_cfg: &Config,
+    core_cfg: &'static pfm_core::global::Config,
+) -> Result<Job, anyhow::Error> {
+    Job::new_async(&cron_cfg.cron_tab_poll_rates_lbma_pm, |_uuid, _lock| {
         let forex = dep_forex_impl();
         let storage = dep_storage_impl();
         Box::pin(poll_latest_rates_handler(
