@@ -8,13 +8,10 @@ use reqwest::Client;
 use serde::Deserialize;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::{
-    fmt::Debug,
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Duration,
-};
+use std::{fmt::Debug, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
+
+use crate::utils;
 
 const ENV_PREFIX: &str = "CORE_";
 const ERROR_PREFIX: &str = "[GLOBAL]";
@@ -22,28 +19,30 @@ const ERROR_PREFIX: &str = "[GLOBAL]";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER /////////////////////////////////////
 const STORAGE_FS_PERMISSION: u32 = 0o700;
 
-/// storage filesystem for production in server.
-const STORAGE_FS_PATH: &str = "TODO";
+/// path to storage for server-side data.
+/// filled with absolute path to production storage location.
+const STORAGE_FS_DIR_PATH: &str = "TODO";
 
-/// storage filesystem for local development, inside project directory.
-const STORAGE_FS_PATH_DEV: &str = "./test_dir/";
+/// directory name for local development for server-side data, to be placed in workspace root
+const STORAGE_FS_DIR_PATH_DEV: &str = "test_dir";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
-/// path to .env file for development
-const DEV_ENV_PATH: &str = "./core.env";
+/// .env file for local development, to be placed in workspace root
+/// create this file in workspace root.
+const DEV_ENV_FILE_PATH: &str = ".env";
 
 /// Get instantiated global http client object.
-pub(crate) fn http_client() -> Client {
+pub fn http_client() -> Client {
     HTTP_CLIENT.clone()
 }
 
 /// Get instantiated global config object.
-pub(crate) fn config() -> &'static Config {
+pub fn config() -> &'static Config {
     &CONFIG
 }
 
 /// Get instantiated global storage filesystem object for SERVER.
-pub(crate) fn storage_fs() -> StorageFS {
+pub fn storage_fs() -> StorageFS {
     STORAGE_FS.clone()
 }
 
@@ -72,7 +71,9 @@ where
 
     // for local development config from file
     if cfg!(debug_assertions) {
-        let cfg = cfg.with_env(DEV_ENV_PATH).build::<CFG>().map_err(|err| {
+        let workspace_root = utils::find_workspace_root()?;
+        let dev_env_path = workspace_root.join(DEV_ENV_FILE_PATH);
+        let cfg = cfg.with_env(dev_env_path).build::<CFG>().map_err(|err| {
             anyhow::anyhow!(
                 "{} failed parsing dev config from file {}: {}",
                 ERROR_PREFIX,
@@ -92,10 +93,10 @@ where
 }
 
 /// Alias for ServerFS, Filesystem for storing data at server side.
-pub(crate) type StorageFS = Arc<RwLock<ServerFS>>;
+pub type StorageFS = Arc<RwLock<ServerFS>>;
 
 #[derive(Debug)]
-pub(crate) struct ServerFS {
+pub struct ServerFS {
     root: PathBuf,
     latest: PathBuf,
     historical: PathBuf,
@@ -121,9 +122,11 @@ impl ServerFS {
 
 fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
     let path = if cfg!(debug_assertions) {
-        Path::new(STORAGE_FS_PATH_DEV)
+        let workspace_dir = utils::find_workspace_root()?;
+        let path = workspace_dir.join(STORAGE_FS_DIR_PATH_DEV);
+        path
     } else {
-        Path::new(STORAGE_FS_PATH)
+        PathBuf::from(STORAGE_FS_DIR_PATH)
     };
 
     // initiate Root
@@ -290,7 +293,7 @@ fn init_storage_fs_historical(root: &PathBuf) -> Result<PathBuf, anyhow::Error> 
 
 /// Configurations
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct Config {
+pub struct Config {
     /// Using symbol or code for displaying money.
     #[serde(alias = "CORE_FOREX_USE_SYMBOL", default)]
     pub forex_use_symbol: bool,
@@ -307,14 +310,6 @@ pub(crate) struct Config {
 #[cfg(test)]
 mod global_tests {
     use super::*;
-    use std::path::Path;
-
-    #[test]
-    fn test_dev_env_path() {
-        let path = Path::new(DEV_ENV_PATH);
-
-        assert!(path.exists());
-    }
 
     #[test]
     fn test_config() {
