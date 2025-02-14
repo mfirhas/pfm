@@ -10,7 +10,7 @@ use tokio::signal;
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 const ERROR_PREFIX: &str = "[CRON]";
-const DEV_LOCAL_ENV_PATH: &str = "./pfm-cron/cron.env";
+const DEV_ENV_FILE_PATH: &str = ".env";
 
 async fn poll_latest_rates(fx: impl ForexRates, fs: impl ForexStorage, base: Currencies) {
     let _ = forex::poll_rates(&fx, &fs, base).await;
@@ -110,14 +110,16 @@ async fn main() {
 fn init_config() -> Result<Config, anyhow::Error> {
     let cfg = configrs::new().with_env_prefix("CRON_");
     if cfg!(debug_assertions) {
+        let workspace_dir = pfm_core::utils::find_workspace_root()?;
+        let dev_config_file = workspace_dir.join(DEV_ENV_FILE_PATH);
         let ret = cfg
-            .with_env(DEV_LOCAL_ENV_PATH)
+            .with_env(&dev_config_file)
             .build::<Config>()
             .map_err(|err| {
                 anyhow!(
-                    "{} failed reading local config at {}: {}",
+                    "{} failed reading local config at {:?}: {}",
                     ERROR_PREFIX,
-                    DEV_LOCAL_ENV_PATH,
+                    dev_config_file.as_path(),
                     err
                 )
             });

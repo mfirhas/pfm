@@ -6,3 +6,5 @@ pub mod forex_storage_impl;
 mod forex_test;
 
 pub mod global;
+
+pub mod utils;
