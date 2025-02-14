@@ -11,6 +11,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::{fmt::Debug, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 
+use crate::forex::Currencies;
 use crate::utils;
 
 const ENV_PREFIX: &str = "CORE_";
@@ -297,6 +298,9 @@ pub struct Config {
     /// Using symbol or code for displaying money.
     #[serde(alias = "CORE_FOREX_USE_SYMBOL", default)]
     pub forex_use_symbol: bool,
+
+    #[serde(alias = "CORE_FOREX_BASE_CURRENCY")]
+    pub forex_base_currency: Currencies,
 
     /// API key for https://currencyapi.com
     #[serde(alias = "CORE_FOREX_CURRENCY_API_KEY")]

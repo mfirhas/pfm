@@ -6,6 +6,7 @@ use std::{
     fmt::{Debug, Display},
     str::FromStr,
 };
+use uuid::Uuid;
 
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
@@ -313,6 +314,9 @@ impl Display for Money {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RatesResponse<T> {
+    #[serde(alias = "id")]
+    id: Uuid,
+
     #[serde(alias = "source")]
     source: String,
 
@@ -332,6 +336,7 @@ where
 {
     pub(crate) fn new(source: String, data: T) -> Self {
         Self {
+            id: Uuid::new_v4(),
             source,
             poll_date: Utc::now(),
             data,
@@ -345,13 +350,17 @@ impl RatesResponse<Rates> {
         let (source, error) = match err {
             ForexError::Error(err) => ("forex".to_string(), err.to_string()),
             ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
-            ForexError::ExchangeAPIError(err) => ("exchange-api".to_string(), err.to_string()),
-            ForexError::CurrencyAPIError(err) => ("currency-api".to_string(), err.to_string()),
+            ForexError::ExchangeAPIError(err) => (
+                "https://github.com/fawazahmed0/exchange-api/".to_string(),
+                err.to_string(),
+            ),
+            ForexError::CurrencyAPIError(err) => ("currencyapi.com".to_string(), err.to_string()),
             ForexError::OpenExchangeAPIError(err) => {
-                ("open-exchange-api".to_string(), err.to_string())
+                ("openexchangerates.org".to_string(), err.to_string())
             }
         };
         Self {
+            id: Uuid::new_v4(),
             source,
             poll_date: Utc::now(),
             data: Rates {
@@ -379,6 +388,7 @@ impl RatesResponse<HistoricalRates> {
             }
         };
         Self {
+            id: Uuid::new_v4(),
             source,
             poll_date: Utc::now(),
             data: HistoricalRates {
