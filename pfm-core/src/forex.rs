@@ -6,6 +6,7 @@ use std::{
     fmt::{Debug, Display},
     str::FromStr,
 };
+use uuid::Uuid;
 
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
@@ -313,6 +314,9 @@ impl Display for Money {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RatesResponse<T> {
+    #[serde(alias = "id")]
+    id: Uuid,
+
     #[serde(alias = "source")]
     source: String,
 
@@ -332,6 +336,7 @@ where
 {
     pub(crate) fn new(source: String, data: T) -> Self {
         Self {
+            id: Uuid::new_v4(),
             source,
             poll_date: Utc::now(),
             data,
@@ -352,6 +357,7 @@ impl RatesResponse<Rates> {
             }
         };
         Self {
+            id: Uuid::new_v4(),
             source,
             poll_date: Utc::now(),
             data: Rates {
@@ -379,6 +385,7 @@ impl RatesResponse<HistoricalRates> {
             }
         };
         Self {
+            id: Uuid::new_v4(),
             source,
             poll_date: Utc::now(),
             data: HistoricalRates {
