@@ -81,7 +81,7 @@ lazy_static! {
 
 pub(crate) const ERROR_CURRENCY_PARTS: &str = "The money must be written in ISO 4217 format using currency code first then major unit along with minor unit(optional). They're separated by space. For example: USD 5,000,000 or USD 5,000,000.23 or IDR 5.000.000 or IDR 5.000.000,00. Thousands separators are optional.";
 
-pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains thousands separator or not, if it contains use the appropriate ones for the currency. If minor unit exists use the correct separator.";
+pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains thousands separator or not, if it contains use the appropriate ones for the currency. If minor unit exists use the correct separator. Minor units must be 2.";
 
 const ERROR_PREFIX: &str = "[FOREX]";
 
