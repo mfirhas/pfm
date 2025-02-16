@@ -1,6 +1,43 @@
-use std::path::{Path, PathBuf};
+use configrs::config::Config as configrs;
+use serde::Deserialize;
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
 
 use anyhow::anyhow;
+
+const ERROR_PREFIX: &str = "[utils]";
+
+/// get config from env variables, or from .env file in workspace root for local dev.
+pub fn get_config<CFG>(prefix: &'static str) -> Result<CFG, anyhow::Error>
+where
+    CFG: for<'de> Deserialize<'de> + Debug + Clone,
+{
+    let cfg = configrs::new().with_env_prefix(prefix);
+    if cfg!(debug_assertions) {
+        let workspace_dir = find_workspace_root()?;
+        let dev_config_file = workspace_dir.join(".env");
+        let ret = cfg
+            .with_env(&dev_config_file)
+            .build::<CFG>()
+            .map_err(|err| {
+                anyhow!(
+                    "{} failed reading local config at {:?}: {}",
+                    ERROR_PREFIX,
+                    dev_config_file.as_path(),
+                    err
+                )
+            });
+        return ret;
+    }
+
+    let ret = cfg
+        .build::<CFG>()
+        .map_err(|err| anyhow!("{} failed parsing env: {}", ERROR_PREFIX, err));
+
+    ret
+}
 
 pub fn find_file_in_workspace(filename: &str) -> Option<PathBuf> {
     let mut current_dir = std::env::current_dir().ok()?;
