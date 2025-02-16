@@ -470,7 +470,7 @@ pub struct ConversionResponse {
     pub last_update: DateTime<Utc>,
 
     /// conversion result.
-    pub money: Money,
+    pub money: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -618,7 +618,7 @@ where
     if from == to {
         return Ok(ConversionResponse {
             last_update: Utc::now(),
-            money: from,
+            money: from.to_string(),
         });
     }
 
@@ -633,7 +633,7 @@ where
 
         ConversionResponse {
             last_update: date,
-            money: res,
+            money: res.to_string(),
         }
     };
 
