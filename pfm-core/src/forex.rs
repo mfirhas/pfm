@@ -312,22 +312,22 @@ impl Display for Money {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RatesResponse<T> {
     #[serde(alias = "id")]
-    id: Uuid,
+    pub id: Uuid,
 
     #[serde(alias = "source")]
-    source: String,
+    pub source: String,
 
     #[serde(alias = "poll_date")]
-    poll_date: DateTime<Utc>,
+    pub poll_date: DateTime<Utc>,
 
     #[serde(alias = "data")]
-    data: T,
+    pub data: T,
 
     #[serde(alias = "error")]
-    error: Option<String>,
+    pub error: Option<String>,
 }
 
 impl<T> RatesResponse<T>
@@ -401,7 +401,7 @@ impl RatesResponse<HistoricalRates> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Rates {
     #[serde(alias = "latest_update")]
     pub latest_update: DateTime<Utc>,
@@ -413,7 +413,7 @@ pub struct Rates {
     pub rates: RatesData,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HistoricalRates {
     #[serde(alias = "date")]
     pub date: DateTime<Utc>,
@@ -425,7 +425,7 @@ pub struct HistoricalRates {
     pub rates: RatesData,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RatesData {
     #[serde(alias = "IDR")]
     pub idr: Decimal,
@@ -473,6 +473,13 @@ pub struct ConversionResponse {
     pub money: Money,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RatesList<T> {
+    pub has_prev: bool,
+    pub rates_list: Vec<T>,
+    pub has_next: bool,
+}
+
 pub type ForexResult<T> = Result<T, ForexError>;
 
 #[derive(Debug)]
@@ -498,7 +505,7 @@ impl Display for ForexError {
 }
 
 ///////////////////////////////////// INTERFACES /////////////////////////////////////
-/////////////// INVOKED FROM SERVER
+/////////////// INVOKED FROM SERVER and APP
 /// ForexConverter is interface for 3rd API converting amount from 1 currency into another.
 /// NOTE: for now use storage using rates fetched and calculate from there.
 #[async_trait]
@@ -526,7 +533,7 @@ pub trait ForexHistoricalRates {
 }
 ///////////////
 
-/////////////// INVOKED FROM SERVER
+/////////////// INVOKED FROM HTTP and CRON SERVICE, and APP.
 /// Interface for storing forex data fetched from 3rd APIs.
 #[async_trait]
 pub trait ForexStorage {
@@ -562,6 +569,33 @@ pub trait ForexStorage {
     ) -> ForexResult<RatesResponse<HistoricalRates>>;
 }
 ///////////////
+
+////////////// STORAGE INFO
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Order {
+    ASC,
+    DESC,
+}
+
+#[async_trait]
+pub trait ForexStorageRatesList {
+    /// get list of latest rates returning list and has next or not
+    async fn get_latest_list(
+        &self,
+        page: u32,
+        size: u32,
+        order: Order,
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>>;
+
+    /// get list of historical rates returning list and has next or not
+    async fn get_historical_list(
+        &self,
+        page: u32,
+        size: u32,
+        order: Order,
+    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>>;
+}
+////////////// STORAGE INFO (END)
 ///////////////////////////////////// INTERFACES(END) /////////////////////////////////////
 
 ///////////////////////////////////// APIs /////////////////////////////////////

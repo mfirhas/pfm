@@ -112,7 +112,7 @@ use chrono::{TimeZone, Utc};
 use rust_decimal_macros::dec;
 
 use crate::{
-    forex::{convert, poll_historical_rates, poll_rates, Currencies},
+    forex::{convert, poll_historical_rates, poll_rates, Currencies, ForexStorageRatesList},
     forex_impl, forex_storage_impl, global,
 };
 
@@ -240,4 +240,26 @@ async fn test_poll_historical_rates() {
     dbg!(&ret);
 
     assert!(ret.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_rates_list() {
+    let fs = global::storage_fs();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+
+    let ret = storage
+        .get_latest_list(1, 5, crate::forex::Order::DESC)
+        .await;
+    dbg!(&ret);
+}
+
+#[tokio::test]
+async fn test_get_historical_list() {
+    let fs = global::storage_fs();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+
+    let ret = storage
+        .get_historical_list(1, 5, crate::forex::Order::DESC)
+        .await;
+    dbg!(&ret);
 }

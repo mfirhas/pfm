@@ -5,8 +5,11 @@ use std::fmt::Debug;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
-use crate::forex::ForexError::StorageError;
-use crate::forex::{ForexResult, ForexStorage, HistoricalRates, Rates, RatesResponse};
+use crate::forex::ForexError::{self, StorageError};
+use crate::forex::{
+    ForexResult, ForexStorage, ForexStorageRatesList, HistoricalRates, Order, Rates, RatesList,
+    RatesResponse,
+};
 use crate::global::StorageFS;
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -242,6 +245,159 @@ impl ForexStorageImpl {
 
         Ok(rates)
     }
+
+    async fn get_latest_list(
+        &self,
+        page: u32,
+        size: u32,
+        order: Order,
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>> {
+        let latest_read = self.fs.read().await;
+        let latest_read = latest_read.latest();
+
+        let mut entries = fs::read_dir(latest_read).await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed reading directory {:?} :{}",
+                ERROR_PREFIX,
+                &latest_read.as_path(),
+                err
+            ))
+        })?;
+
+        let mut files: Vec<RatesResponse<Rates>> = Vec::new();
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|err| StorageError(err.into()))?
+        {
+            let path = entry.path();
+            let content = tokio::fs::read_to_string(&path).await.map_err(|err| {
+                ForexError::StorageError(anyhow!(
+                    "{} failed getting latest list reading file content: {:?}: {}",
+                    ERROR_PREFIX,
+                    &path.as_path(),
+                    err
+                ))
+            })?;
+            let resp: RatesResponse<Rates> = serde_json::from_str(&content).map_err(|err| {
+                ForexError::StorageError(anyhow!(
+                    "{} failed getting latest list converting to RatesResponse<Rates>: {:?}: {}",
+                    ERROR_PREFIX,
+                    &path.as_path(),
+                    err
+                ))
+            })?;
+            files.push(resp);
+        }
+
+        if files.is_empty() {
+            return Err(StorageError(anyhow!(
+                "{} latest directory is empty",
+                ERROR_PREFIX
+            )));
+        }
+
+        match order {
+            Order::ASC => files.sort_by_key(|rate| rate.data.latest_update),
+            Order::DESC => files.sort_by(|a, b| b.data.latest_update.cmp(&a.data.latest_update)),
+        }
+
+        let paginated = Self::paginate_rates_list(&files, page, size);
+
+        let resp = RatesList {
+            has_prev: paginated.has_prev,
+            rates_list: paginated.rates_list,
+            has_next: paginated.has_next,
+        };
+
+        Ok(resp)
+    }
+
+    async fn get_historical_list(
+        &self,
+        page: u32,
+        size: u32,
+        order: Order,
+    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>> {
+        let historical_read = self.fs.read().await;
+        let historical_read = historical_read.historical();
+
+        let mut entries = fs::read_dir(historical_read).await.map_err(|err| {
+            StorageError(anyhow!(
+                "{} failed reading directory {:?} :{}",
+                ERROR_PREFIX,
+                &historical_read.as_path(),
+                err
+            ))
+        })?;
+
+        let mut files: Vec<RatesResponse<HistoricalRates>> = Vec::new();
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|err| StorageError(err.into()))?
+        {
+            let path = entry.path();
+            let content = tokio::fs::read_to_string(&path).await.map_err(|err| {
+                ForexError::StorageError(anyhow!(
+                    "{} failed getting latest list reading file content: {:?}: {}",
+                    ERROR_PREFIX,
+                    &path.as_path(),
+                    err
+                ))
+            })?;
+            let resp: RatesResponse<HistoricalRates> =
+                serde_json::from_str(&content).map_err(|err| {
+                    ForexError::StorageError(anyhow!(
+                    "{} failed getting latest list converting to RatesResponse<Rates>: {:?}: {}",
+                    ERROR_PREFIX,
+                    &path.as_path(),
+                    err
+                ))
+                })?;
+            files.push(resp);
+        }
+
+        if files.is_empty() {
+            return Err(StorageError(anyhow!(
+                "{} latest directory is empty",
+                ERROR_PREFIX
+            )));
+        }
+
+        match order {
+            Order::ASC => files.sort_by_key(|rate| rate.data.date),
+            Order::DESC => files.sort_by(|a, b| b.data.date.cmp(&a.data.date)),
+        }
+
+        let paginated = Self::paginate_rates_list(&files, page, size);
+
+        let resp = RatesList {
+            has_prev: paginated.has_prev,
+            rates_list: paginated.rates_list,
+            has_next: paginated.has_next,
+        };
+
+        Ok(resp)
+    }
+
+    fn paginate_rates_list<T>(rates: &[T], page: u32, size: u32) -> RatesList<T>
+    where
+        T: Clone,
+    {
+        let start = (page.saturating_sub(1) * size) as usize;
+        let end = (start + size as usize).min(rates.len());
+
+        let has_prev = start > 1;
+        let rates_list = rates[start..end].to_vec();
+        let has_next = end < rates.len(); // If there's more data beyond this page
+
+        RatesList {
+            has_prev,
+            rates_list,
+            has_next,
+        }
+    }
 }
 
 fn generate_latest_file_name(date: DateTime<Utc>) -> String {
@@ -326,6 +482,17 @@ mod forex_storage_impl_tests {
         println!("{ret}");
         assert_eq!(&ret, expected);
     }
+
+    #[test]
+    fn test_paginate_rates() {
+        let v = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let expected = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let ret = ForexStorageImpl::paginate_rates_list(&v, 1, 8);
+        dbg!(&ret);
+        assert_eq!(ret.has_prev, false);
+        assert_eq!(ret.has_next, true);
+        assert_eq!(ret.rates_list, expected);
+    }
 }
 
 #[async_trait]
@@ -361,5 +528,26 @@ impl ForexStorage for ForexStorageImpl {
         date: DateTime<Utc>,
     ) -> ForexResult<RatesResponse<HistoricalRates>> {
         self.get_historical(date).await
+    }
+}
+
+#[async_trait]
+impl ForexStorageRatesList for ForexStorageImpl {
+    async fn get_latest_list(
+        &self,
+        page: u32,
+        size: u32,
+        order: Order,
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>> {
+        self.get_latest_list(page, size, order).await
+    }
+
+    async fn get_historical_list(
+        &self,
+        page: u32,
+        size: u32,
+        order: Order,
+    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>> {
+        self.get_historical_list(page, size, order).await
     }
 }
