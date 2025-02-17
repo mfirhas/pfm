@@ -8,6 +8,7 @@ use axum::{
     routing::{delete, get, post, put},
     Json, Router,
 };
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
         ConversionResponse, Currencies, ForexHistoricalRates, ForexRates, ForexStorage, Money,
@@ -44,7 +45,8 @@ async fn main() {
             "/convert",
             get(convert_handler::<Api, Api, ForexStorageImpl>),
         )
-        .route("/latest", get(get_latest_rates_handler));
+        .route("/latest", get(get_latest_rates_handler))
+        .route("/historical", get(get_historical_rates_handler));
 
     let routes_group = Router::new()
         .nest("/", root)
@@ -170,6 +172,27 @@ async fn get_latest_rates_handler(
 ) -> impl IntoResponse {
     match ctx.forex_storage.get_latest().await {
         Ok(resp) => (StatusCode::OK, Json(Response::new(resp))),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(Response::err(err.to_string())),
+        ),
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct GetHistoricalRatesQuery {
+    date: String,
+}
+
+async fn get_historical_rates_handler(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    Query(query): Query<GetHistoricalRatesQuery>,
+) -> impl IntoResponse {
+    let date = NaiveDate::parse_from_str(&query.date, "%Y-%m-%d").unwrap();
+    let date = NaiveDateTime::new(date, NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+    let date = Utc.from_utc_datetime(&date);
+    match ctx.forex_storage.get_historical(date).await {
+        Ok(ret) => (StatusCode::OK, Json(Response::new(ret))),
         Err(err) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(Response::err(err.to_string())),
