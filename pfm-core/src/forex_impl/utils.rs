@@ -1,4 +1,4 @@
-use crate::forex::ForexError::Error;
+use crate::forex::ForexError::InputError;
 use crate::forex::*;
 use accounting::Accounting;
 use anyhow::anyhow;
@@ -11,14 +11,14 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     // currency parts <CODE> <major-unit.minor-unit>
     let currency_parts: Vec<&str> = input_money.split_whitespace().collect();
     if currency_parts.len() != 2 {
-        return Err(Error(anyhow!(ERROR_CURRENCY_PARTS)));
+        return Err(InputError(anyhow!(ERROR_CURRENCY_PARTS)));
     }
     let currency = Currency::from_str(currency_parts[0])
-        .map_err(|err| Error(anyhow!("invalid currency code: {}", err)))?;
+        .map_err(|err| InputError(anyhow!("invalid currency code: {}", err)))?;
 
     // 2. check if first part is in list of currency codes
     let code = Currency::from_str(currency_parts[0])
-        .map_err(|err| Error(anyhow!("Currency code invalid: {}", err)))?;
+        .map_err(|err| InputError(anyhow!("Currency code invalid: {}", err)))?;
 
     // 3. check if the code is in comma or dot separated for thousands.
     let mut is_comma_separated_code = COMMA_SEPARATED_CURRENCIES.contains(&code);
@@ -33,10 +33,10 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
         if !is_comma_separated_code {
             let is_dot_validated = DOT_SEPARATOR_REGEX.is_match(currency_parts[1]);
             if !is_dot_validated {
-                return Err(Error(anyhow!(ERROR_INVALID_AMOUNT_FORMAT)));
+                return Err(InputError(anyhow!(ERROR_INVALID_AMOUNT_FORMAT)));
             }
         } else {
-            return Err(Error(anyhow!(ERROR_INVALID_AMOUNT_FORMAT)));
+            return Err(InputError(anyhow!(ERROR_INVALID_AMOUNT_FORMAT)));
         }
     }
 
@@ -57,7 +57,7 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
 
     // 6. convert amount into Decimal.
     let decimal = Decimal::from_str(&amount).map_err(|err| {
-        Error(anyhow!(
+        InputError(anyhow!(
             "failed converting amount into decimal type: {}",
             err
         ))
@@ -73,7 +73,7 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
         Currency::SGD => Ok(Money::SGD(decimal)),
         Currency::CNY => Ok(Money::CNY(decimal)),
         Currency::SAR => Ok(Money::SAR(decimal)),
-        _ => Err(Error(anyhow!(
+        _ => Err(InputError(anyhow!(
             "forex_impl: failed parsing Money from string, currency {} not supported.",
             currency.code()
         ))),

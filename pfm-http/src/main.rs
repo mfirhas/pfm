@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, str::FromStr};
+use std::{error::Error, marker::PhantomData, str::FromStr};
 
 use anyhow::anyhow;
 use axum::{
@@ -11,13 +11,15 @@ use axum::{
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
-        ConversionResponse, Currencies, ForexHistoricalRates, ForexRates, ForexStorage, Money,
+        ConversionResponse, Currencies, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
+        Money,
     },
     forex_impl::open_exchange_api::Api,
     forex_storage_impl::forex_storage::ForexStorageImpl,
     utils::get_config,
 };
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 #[tokio::main]
 async fn main() {
@@ -116,6 +118,40 @@ impl<T> Response<T> {
     }
 }
 
+#[derive(Debug, Error, Serialize)]
+enum AppError {
+    #[error("Invalid input: {0}")]
+    BadRequest(String),
+
+    #[error("Internal error: {0}")]
+    InternalServerError(String),
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> axum::response::Response {
+        let (status_code, err_msg) = match self {
+            Self::BadRequest(err) => (StatusCode::BAD_REQUEST, err),
+            Self::InternalServerError(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
+        };
+
+        let resp = Response::<((), ())>::err(err_msg);
+
+        (status_code, Json(resp)).into_response()
+    }
+}
+
+impl From<ForexError> for AppError {
+    fn from(value: ForexError) -> Self {
+        match value {
+            ForexError::InputError(err) => Self::BadRequest(err.to_string()),
+            ForexError::StorageError(err) => Self::InternalServerError(err.to_string()),
+            ForexError::ExchangeAPIError(err) => Self::InternalServerError(err.to_string()),
+            ForexError::CurrencyAPIError(err) => Self::InternalServerError(err.to_string()),
+            ForexError::OpenExchangeAPIError(err) => Self::InternalServerError(err.to_string()),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConvertQuery {
     #[serde(rename = "from")]
@@ -128,55 +164,33 @@ pub struct ConvertQuery {
 async fn convert_handler<FX, FHX, FS>(
     State(ctx): State<AppContext<FX, FHX, FS>>,
     Query(params): Query<ConvertQuery>,
-) -> impl IntoResponse
+) -> Result<impl IntoResponse, AppError>
 where
     FX: ForexRates,
     FHX: ForexHistoricalRates,
     FS: ForexStorage,
 {
-    let ret = match (
-        Money::from_str(&params.from),
-        Currencies::from_str(&params.to),
-    ) {
-        (Ok(money), Ok(curr)) => {
-            let conversion_ret = pfm_core::forex::convert(&ctx.forex_storage, money, curr)
-                .await
-                .map(|ret| Response::new(ret))
-                .map_err(|err| Response::<ConversionResponse>::err(err.to_string()))
-                .unwrap_or(Response::err("failed to convert".to_string()));
-            conversion_ret
-        }
-        (Err(err), _) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(Response::err(
-                    anyhow!("bad request: from money: {}", err).to_string(),
-                )),
-            )
-        }
-        (_, Err(err)) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(Response::err(
-                    anyhow!("bad request: target currency: {}", err).to_string(),
-                )),
-            )
-        }
-    };
+    let money = Money::from_str(&params.from)?;
+    let currency = Currencies::from_str(&params.to)?;
+    let ret = pfm_core::forex::convert(&ctx.forex_storage, money, currency)
+        .await
+        .map(|ret| Response::new(ret))?;
 
-    (StatusCode::OK, Json(ret))
+    Ok((StatusCode::OK, Json(ret)))
 }
 
 async fn get_latest_rates_handler(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-) -> impl IntoResponse {
-    match ctx.forex_storage.get_latest().await {
-        Ok(resp) => (StatusCode::OK, Json(Response::new(resp))),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(Response::err(err.to_string())),
+) -> Result<impl IntoResponse, AppError> {
+    Ok((
+        StatusCode::OK,
+        Json(
+            ctx.forex_storage
+                .get_latest()
+                .await
+                .map(|ret| Response::new(ret))?,
         ),
-    }
+    ))
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -187,15 +201,18 @@ struct GetHistoricalRatesQuery {
 async fn get_historical_rates_handler(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
     Query(query): Query<GetHistoricalRatesQuery>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let date = NaiveDate::parse_from_str(&query.date, "%Y-%m-%d").unwrap();
     let date = NaiveDateTime::new(date, NaiveTime::from_hms_opt(0, 0, 0).unwrap());
     let date = Utc.from_utc_datetime(&date);
-    match ctx.forex_storage.get_historical(date).await {
-        Ok(ret) => (StatusCode::OK, Json(Response::new(ret))),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(Response::err(err.to_string())),
+
+    Ok((
+        StatusCode::OK,
+        Json(
+            ctx.forex_storage
+                .get_historical(date)
+                .await
+                .map(|ret| Response::new(ret))?,
         ),
-    }
+    ))
 }

@@ -13,4 +13,5 @@ serde = { version = "1", features = ["derive"] }
 lazy_static = "1"
 configrs = "0.1"
 anyhow = "1"
+thiserror = "1"
 

@@ -1310,6 +1310,7 @@ dependencies = [
  "lazy_static",
  "pfm-core",
  "serde",
+ "thiserror",
  "tokio",
 ]
 
