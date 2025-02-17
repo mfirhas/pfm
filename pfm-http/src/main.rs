@@ -39,10 +39,12 @@ async fn main() {
 
     let root = Router::new().route("/ping", get(ping));
 
-    let forex_routes = Router::new().route(
-        "/convert",
-        get(convert_handler::<Api, Api, ForexStorageImpl>),
-    );
+    let forex_routes = Router::new()
+        .route(
+            "/convert",
+            get(convert_handler::<Api, Api, ForexStorageImpl>),
+        )
+        .route("/latest", get(get_latest_rates_handler));
 
     let routes_group = Router::new()
         .nest("/", root)
@@ -113,7 +115,7 @@ impl<T> Response<T> {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ConvertDTO {
+pub struct ConvertQuery {
     #[serde(rename = "from")]
     pub from: String,
 
@@ -123,7 +125,7 @@ pub struct ConvertDTO {
 
 async fn convert_handler<FX, FHX, FS>(
     State(ctx): State<AppContext<FX, FHX, FS>>,
-    Query(params): Query<ConvertDTO>,
+    Query(params): Query<ConvertQuery>,
 ) -> impl IntoResponse
 where
     FX: ForexRates,
@@ -161,4 +163,16 @@ where
     };
 
     (StatusCode::OK, Json(ret))
+}
+
+async fn get_latest_rates_handler(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+) -> impl IntoResponse {
+    match ctx.forex_storage.get_latest().await {
+        Ok(resp) => (StatusCode::OK, Json(Response::new(resp))),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(Response::err(err.to_string())),
+        ),
+    }
 }
