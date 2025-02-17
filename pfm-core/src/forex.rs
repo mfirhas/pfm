@@ -79,17 +79,17 @@ lazy_static! {
         regex::Regex::new(DOT_SEPARATOR).expect("failed to compile dot separator regex");
 }
 
-pub(crate) const ERROR_CURRENCY_PARTS: &str = "The money must be written in ISO 4217 format using currency code first then major unit along with minor unit(optional). They're separated by space. For example: USD 5,000,000 or USD 5,000,000.23 or IDR 5.000.000 or IDR 5.000.000,00. Thousands separators are optional.";
+pub(crate) const ERROR_CURRENCY_PARTS: &str = "The money must be written in ISO 4217 format using currency code first then major unit along with minor unit(optional). They're separated by space. For example: USD 5,000,000 or USD 5,000,000.23 or IDR 5.000.000 or IDR 5.000.000,00. Thousands separators are optional. Minor units must be 2.";
 
-pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains thousands separator or not, if it contains use the appropriate ones for the currency. If minor unit exists use the correct separator.";
+pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains thousands separator or not, if it contains use the appropriate ones for the currency. If minor unit exists use the correct separator. Minor units must be 2.";
 
 const ERROR_PREFIX: &str = "[FOREX]";
 
 /// List of supported currencies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Currencies {
-    IDR,
     USD,
+    IDR,
     EUR,
     GBP,
     JPY,
@@ -100,12 +100,12 @@ pub enum Currencies {
 }
 
 impl FromStr for Currencies {
-    type Err = anyhow::Error;
+    type Err = ForexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let curr: Currency = s
-            .parse()
-            .map_err(|err| anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))?;
+        let curr: Currency = s.parse().map_err(|err| {
+            ForexError::InputError(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
+        })?;
 
         match curr {
             Currency::IDR => Ok(Self::IDR),
@@ -117,11 +117,11 @@ impl FromStr for Currencies {
             Currency::SGD => Ok(Self::SGD),
             Currency::CNY => Ok(Self::CNY),
             Currency::SAR => Ok(Self::SAR),
-            _ => Err(anyhow!(
+            _ => Err(ForexError::InputError(anyhow!(
                 "{} Currency {} not supported",
                 ERROR_PREFIX,
                 curr.code()
-            )),
+            ))),
         }
     }
 }
@@ -201,8 +201,8 @@ impl PartialEq<Currencies> for Money {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
 pub enum Money {
-    IDR(Decimal),
     USD(Decimal),
+    IDR(Decimal),
     EUR(Decimal),
     GBP(Decimal),
     JPY(Decimal),
@@ -215,10 +215,10 @@ pub enum Money {
 impl Money {
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
         let curr = Currency::from_str(currency).map_err(|err| {
-            ForexError::Error(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
+            ForexError::InputError(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
         })?;
         let val = Decimal::from_str(amount).map_err(|err| {
-            ForexError::Error(anyhow!("{} invalid amount: {}", ERROR_PREFIX, err))
+            ForexError::InputError(anyhow!("{} invalid amount: {}", ERROR_PREFIX, err))
         })?;
 
         match curr {
@@ -231,7 +231,7 @@ impl Money {
             Currency::SGD => Ok(Self::SGD(val)),
             Currency::CNY => Ok(Self::CNY(val)),
             Currency::SAR => Ok(Self::SAR(val)),
-            _ => Err(ForexError::Error(anyhow!(
+            _ => Err(ForexError::InputError(anyhow!(
                 "{} Currency {} not supported",
                 ERROR_PREFIX,
                 curr.code()
@@ -348,7 +348,7 @@ where
 impl RatesResponse<Rates> {
     pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
         let (source, error) = match err {
-            ForexError::Error(err) => ("forex".to_string(), err.to_string()),
+            ForexError::InputError(err) => ("forex".to_string(), err.to_string()),
             ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
             ForexError::ExchangeAPIError(err) => (
                 "https://github.com/fawazahmed0/exchange-api/".to_string(),
@@ -376,7 +376,7 @@ impl RatesResponse<Rates> {
 impl RatesResponse<HistoricalRates> {
     pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
         let (source, error) = match err {
-            ForexError::Error(err) => ("forex".to_string(), err.to_string()),
+            ForexError::InputError(err) => ("forex".to_string(), err.to_string()),
             ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
             ForexError::ExchangeAPIError(err) => (
                 "https://github.com/fawazahmed0/exchange-api/".to_string(),
@@ -427,11 +427,11 @@ pub struct HistoricalRates {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RatesData {
-    #[serde(alias = "IDR")]
-    pub idr: Decimal,
-
     #[serde(alias = "USD")]
     pub usd: Decimal,
+
+    #[serde(alias = "IDR")]
+    pub idr: Decimal,
 
     #[serde(alias = "EUR")]
     pub eur: Decimal,
@@ -470,7 +470,7 @@ pub struct ConversionResponse {
     pub last_update: DateTime<Utc>,
 
     /// conversion result.
-    pub money: Money,
+    pub money: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -484,7 +484,7 @@ pub type ForexResult<T> = Result<T, ForexError>;
 
 #[derive(Debug)]
 pub enum ForexError {
-    Error(anyhow::Error),
+    InputError(anyhow::Error),
     StorageError(anyhow::Error),
     ExchangeAPIError(anyhow::Error),
     CurrencyAPIError(anyhow::Error),
@@ -494,7 +494,7 @@ pub enum ForexError {
 impl Display for ForexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ret = match self {
-            Self::Error(val) => val.to_string(),
+            Self::InputError(val) => val.to_string(),
             Self::StorageError(val) => val.to_string(),
             Self::ExchangeAPIError(val) => val.to_string(),
             Self::CurrencyAPIError(val) => val.to_string(),
@@ -610,7 +610,7 @@ where
     FS: ForexStorage,
 {
     if from.amount() == dec!(0) {
-        return Err(ForexError::Error(anyhow!(
+        return Err(ForexError::InputError(anyhow!(
             "[FOREX] amount conversion must be greater than 0"
         )));
     }
@@ -618,13 +618,13 @@ where
     if from == to {
         return Ok(ConversionResponse {
             last_update: Utc::now(),
-            money: from,
+            money: from.to_string(),
         });
     }
 
     let latest_rates = storage.get_latest().await?;
     if let Some(err) = latest_rates.error {
-        return Err(ForexError::Error(anyhow!(err)));
+        return Err(ForexError::InputError(anyhow!(err)));
     }
 
     let ret = {
@@ -633,7 +633,7 @@ where
 
         ConversionResponse {
             last_update: date,
-            money: res,
+            money: res.to_string(),
         }
     };
 

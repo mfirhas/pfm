@@ -1269,7 +1269,6 @@ dependencies = [
  "accounting",
  "anyhow",
  "async-trait",
- "axum",
  "chrono",
  "configrs",
  "iso_currency",
@@ -1298,6 +1297,21 @@ dependencies = [
  "tokio",
  "tokio-cron-scheduler",
  "uuid",
+]
+
+[[package]]
+name = "pfm-http"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "configrs",
+ "lazy_static",
+ "pfm-core",
+ "serde",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

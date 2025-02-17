@@ -221,7 +221,7 @@ impl ForexStorageImpl {
         date: DateTime<Utc>,
     ) -> ForexResult<RatesResponse<HistoricalRates>> {
         let historical_read = self.fs.read().await;
-        let historical_read = historical_read.latest();
+        let historical_read = historical_read.historical();
         let filepath = historical_read.join(&generate_historical_file_name(date));
 
         let content = fs::read_to_string(&filepath).await.map_err(|err| {
