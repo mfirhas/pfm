@@ -12,7 +12,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
         ConversionResponse, Currencies, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
-        Money,
+        Money, Order,
     },
     forex_impl::open_exchange_api::Api,
     forex_storage_impl::forex_storage::ForexStorageImpl,
@@ -48,7 +48,9 @@ async fn main() {
             get(convert_handler::<Api, Api, ForexStorageImpl>),
         )
         .route("/latest", get(get_latest_rates_handler))
-        .route("/historical", get(get_historical_rates_handler));
+        .route("/historical", get(get_historical_rates_handler))
+        .route("/latest-list", get(get_latest_list_handler))
+        .route("/historical-list", get(get_historical_list_handler));
 
     let routes_group = Router::new()
         .nest("/", root)
@@ -211,6 +213,43 @@ async fn get_historical_rates_handler(
         Json(
             ctx.forex_storage
                 .get_historical(date)
+                .await
+                .map(|ret| Response::new(ret))?,
+        ),
+    ))
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct GetListQuery {
+    page: u32,
+    size: u32,
+    order: Order,
+}
+
+async fn get_latest_list_handler(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    Query(query): Query<GetListQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    Ok((
+        StatusCode::OK,
+        Json(
+            ctx.forex_storage
+                .get_latest_list(query.page, query.size, query.order)
+                .await
+                .map(|ret| Response::new(ret))?,
+        ),
+    ))
+}
+
+async fn get_historical_list_handler(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    Query(query): Query<GetListQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    Ok((
+        StatusCode::OK,
+        Json(
+            ctx.forex_storage
+                .get_historical_list(query.page, query.size, query.order)
                 .await
                 .map(|ret| Response::new(ret))?,
         ),
