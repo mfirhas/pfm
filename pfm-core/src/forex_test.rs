@@ -112,7 +112,8 @@ use chrono::{TimeZone, Utc};
 use rust_decimal_macros::dec;
 
 use crate::{
-    forex::{convert, poll_historical_rates, poll_rates, Currencies, ForexStorageRatesList},
+    forex::ForexStorage,
+    forex::{convert, poll_historical_rates, poll_rates, Currencies},
     forex_impl, forex_storage_impl, global,
 };
 

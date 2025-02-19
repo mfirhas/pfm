@@ -7,8 +7,7 @@ use std::path::PathBuf;
 
 use crate::forex::ForexError::{self, StorageError};
 use crate::forex::{
-    ForexResult, ForexStorage, ForexStorageRatesList, HistoricalRates, Order, Rates, RatesList,
-    RatesResponse,
+    ForexResult, ForexStorage, HistoricalRates, Order, Rates, RatesList, RatesResponse,
 };
 use crate::global::StorageFS;
 use anyhow::anyhow;
@@ -388,7 +387,7 @@ impl ForexStorageImpl {
         let start = (page.saturating_sub(1) * size) as usize;
         let end = (start + size as usize).min(rates.len());
 
-        let has_prev = start > 1;
+        let has_prev = start > 0;
         let rates_list = rates[start..end].to_vec();
         let has_next = end < rates.len(); // If there's more data beyond this page
 
@@ -529,10 +528,7 @@ impl ForexStorage for ForexStorageImpl {
     ) -> ForexResult<RatesResponse<HistoricalRates>> {
         self.get_historical(date).await
     }
-}
 
-#[async_trait]
-impl ForexStorageRatesList for ForexStorageImpl {
     async fn get_latest_list(
         &self,
         page: u32,
