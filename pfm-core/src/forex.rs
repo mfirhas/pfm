@@ -567,18 +567,7 @@ pub trait ForexStorage {
         &self,
         date: DateTime<Utc>,
     ) -> ForexResult<RatesResponse<HistoricalRates>>;
-}
-///////////////
 
-////////////// STORAGE INFO
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Order {
-    ASC,
-    DESC,
-}
-
-#[async_trait]
-pub trait ForexStorageRatesList {
     /// get list of latest rates returning list and has next or not
     async fn get_latest_list(
         &self,
@@ -594,6 +583,14 @@ pub trait ForexStorageRatesList {
         size: u32,
         order: Order,
     ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>>;
+}
+///////////////
+
+////////////// STORAGE INFO
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Order {
+    ASC,
+    DESC,
 }
 ////////////// STORAGE INFO (END)
 ///////////////////////////////////// INTERFACES(END) /////////////////////////////////////
