@@ -28,6 +28,16 @@ const STORAGE_FS_DIR_PATH: &str = "TODO";
 const STORAGE_FS_DIR_PATH_DEV: &str = "test_dir";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
+///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) /////////////////////////////////////
+const CLIENT_STORAGE_FS_PERMISSION: u32 = 0o700;
+
+/// path to storage for client-side data
+const CLIENT_STORAGE_FS_DIR_PATH: &str = "TODO";
+
+/// path to storage for client-side data for development, placed in workspace root
+const CLIENT_STORAGE_FS_DIR_PATH_DEV: &str = "client_test_dir";
+///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) (END) /////////////////////////////////////
+
 /// .env file for local development, to be placed in workspace root
 /// create this file in workspace root.
 const DEV_ENV_FILE_PATH: &str = ".env";
@@ -47,10 +57,16 @@ pub fn storage_fs() -> StorageFS {
     STORAGE_FS.clone()
 }
 
+pub fn client_storage_fs() -> ClientStorageFS {
+    CLIENT_STORAGE_FS.clone()
+}
+
 lazy_static! {
     static ref CONFIG: Config = init_config().expect("failed init core config");
     static ref HTTP_CLIENT: Client = init_http_client().expect("failed init core http client");
     static ref STORAGE_FS: StorageFS = init_storage_fs().expect("failed init storage fs");
+    static ref CLIENT_STORAGE_FS: ClientStorageFS =
+        init_client_storage_fs().expect("failed init client storage fs");
 }
 
 fn init_http_client() -> Result<reqwest::Client, anyhow::Error> {
@@ -290,6 +306,182 @@ fn init_storage_fs_historical(root: &PathBuf) -> Result<PathBuf, anyhow::Error> 
     })?;
 
     Ok(historical)
+}
+
+pub type ClientStorageFS = Arc<RwLock<ClientFS>>;
+
+#[derive(Debug)]
+pub struct ClientFS {
+    root: PathBuf,
+    forex: PathBuf,
+    pm: PathBuf,
+}
+
+fn init_client_storage_fs() -> Result<ClientStorageFS, anyhow::Error> {
+    let path = if cfg!(debug_assertions) {
+        let workspace_dir = utils::find_workspace_root()?;
+        let path = workspace_dir.join(CLIENT_STORAGE_FS_DIR_PATH_DEV);
+        path
+    } else {
+        PathBuf::from(CLIENT_STORAGE_FS_DIR_PATH)
+    };
+
+    // initiate Root
+    let root = path.to_path_buf();
+
+    let is_exist = root.try_exists().map_err(|err| {
+        anyhow!(
+            "{} failed checking root storage directory: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !is_exist {
+        // create the root dir
+        fs::create_dir_all(&root).map_err(|err| {
+            anyhow!(
+                "{} failed creating root directory at {:?} for storage fs: {}",
+                ERROR_PREFIX,
+                &root.as_path(),
+                err
+            )
+        })?;
+    }
+
+    // set permissions
+    let metadata = fs::metadata(&root).map_err(|err| {
+        anyhow!(
+            "{} failed to read metadata of {:?}: {}",
+            ERROR_PREFIX,
+            &root.as_path(),
+            err
+        )
+    })?;
+    let mut new_permissions = metadata.permissions();
+    // 7 = read (4) + write (2) + execute (1) for owner
+    // 0 = no permissions for group
+    // 0 = no permissions for others
+    new_permissions.set_mode(CLIENT_STORAGE_FS_PERMISSION);
+    fs::set_permissions(&root, new_permissions).map_err(|err| {
+        anyhow!(
+            "{} failed setting permission into {:?}: {}",
+            ERROR_PREFIX,
+            &root.as_path(),
+            err
+        )
+    })?;
+
+    let forex = init_client_storage_fs_forex(&root)
+        .map_err(|err| anyhow!("{} failed initiating forex dir: {}", ERROR_PREFIX, err))?;
+
+    let pm = init_client_storage_fs_pm(&root)
+        .map_err(|err| anyhow!("{} failed initiating pm dir: {}", ERROR_PREFIX, err))?;
+
+    // initiate historical
+    let client_storage_fs = Arc::new(RwLock::new(ClientFS { root, forex, pm }));
+
+    Ok(client_storage_fs)
+}
+
+fn init_client_storage_fs_forex(root: &PathBuf) -> Result<PathBuf, anyhow::Error> {
+    // initiate forex
+    let forex = root.join("forex");
+
+    let is_exist = forex.try_exists().map_err(|err| {
+        anyhow!(
+            "{} failed checking forex storage directory: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !is_exist {
+        // create the forex dir
+        fs::create_dir_all(&forex).map_err(|err| {
+            anyhow!(
+                "{} failed creating forex directory at {:?} for storage fs: {}",
+                ERROR_PREFIX,
+                &forex.as_path(),
+                err
+            )
+        })?;
+    }
+
+    // set permissions
+    let metadata = fs::metadata(&forex).map_err(|err| {
+        anyhow!(
+            "{} failed to read metadata of {:?}: {}",
+            ERROR_PREFIX,
+            &forex.as_path(),
+            err
+        )
+    })?;
+    let mut new_permissions = metadata.permissions();
+    // 7 = read (4) + write (2) + execute (1) for owner
+    // 0 = no permissions for group
+    // 0 = no permissions for others
+    new_permissions.set_mode(CLIENT_STORAGE_FS_PERMISSION);
+    fs::set_permissions(&forex, new_permissions).map_err(|err| {
+        anyhow!(
+            "{} failed setting permission into {:?}: {}",
+            ERROR_PREFIX,
+            &forex.as_path(),
+            err
+        )
+    })?;
+
+    Ok(forex)
+}
+
+fn init_client_storage_fs_pm(root: &PathBuf) -> Result<PathBuf, anyhow::Error> {
+    // initiate pm
+    let pm = root.join("pm");
+
+    let is_exist = pm.try_exists().map_err(|err| {
+        anyhow!(
+            "{} failed checking pm storage directory: {}",
+            ERROR_PREFIX,
+            err
+        )
+    })?;
+
+    if !is_exist {
+        // create the pm dir
+        fs::create_dir_all(&pm).map_err(|err| {
+            anyhow!(
+                "{} failed creating pm directory at {:?} for storage fs: {}",
+                ERROR_PREFIX,
+                &pm.as_path(),
+                err
+            )
+        })?;
+    }
+
+    // set permissions
+    let metadata = fs::metadata(&pm).map_err(|err| {
+        anyhow!(
+            "{} failed to read metadata of {:?}: {}",
+            ERROR_PREFIX,
+            &pm.as_path(),
+            err
+        )
+    })?;
+    let mut new_permissions = metadata.permissions();
+    // 7 = read (4) + write (2) + execute (1) for owner
+    // 0 = no permissions for group
+    // 0 = no permissions for others
+    new_permissions.set_mode(CLIENT_STORAGE_FS_PERMISSION);
+    fs::set_permissions(&pm, new_permissions).map_err(|err| {
+        anyhow!(
+            "{} failed setting permission into {:?}: {}",
+            ERROR_PREFIX,
+            &pm.as_path(),
+            err
+        )
+    })?;
+
+    Ok(pm)
 }
 
 /// Configurations
