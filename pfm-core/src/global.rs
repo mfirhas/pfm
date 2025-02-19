@@ -35,7 +35,7 @@ const CLIENT_STORAGE_FS_PERMISSION: u32 = 0o700;
 const CLIENT_STORAGE_FS_DIR_PATH: &str = "TODO";
 
 /// path to storage for client-side data for development, placed in workspace root
-const CLIENT_STORAGE_FS_DIR_PATH_DEV: &str = "client_test_dir";
+const CLIENT_STORAGE_FS_DIR_PATH_DEV: &str = "test_dir_client";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) (END) /////////////////////////////////////
 
 /// .env file for local development, to be placed in workspace root
