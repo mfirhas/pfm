@@ -18,7 +18,7 @@ use pfm_core::{
     forex_storage_impl::forex_storage::ForexStorageImpl,
     utils::get_config,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
 #[tokio::main]
@@ -47,6 +47,7 @@ async fn main() {
             "/convert",
             get(convert_handler::<Api, Api, ForexStorageImpl>),
         )
+        .route("/batch-convert", get(batch_convert_handler))
         .route("/latest", get(get_latest_rates_handler))
         .route("/historical", get(get_historical_rates_handler))
         .route("/latest-list", get(get_latest_list_handler))
@@ -145,6 +146,52 @@ where
     let money = Money::from_str(&params.from)?;
     let currency = Currencies::from_str(&params.to)?;
     let ret = pfm_core::forex::convert(&ctx.forex_storage, money, currency)
+        .await
+        .map(|ret| HttpResponse::new(ret))?;
+
+    Ok((StatusCode::OK, Json(ret)))
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BatchConvertQuery {
+    /// separated by `;`, e.g. ?from=USD 1;USD 1,000;
+    #[serde(deserialize_with = "from_seq")]
+    pub from: Vec<String>,
+
+    pub to: Currencies,
+}
+
+fn from_seq<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = <String>::deserialize(deserializer)?;
+
+    s.split(';')
+        .map(|i| String::from_str(i))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(serde::de::Error::custom)
+}
+
+async fn batch_convert_handler<FX, FHX, FS>(
+    State(ctx): State<AppContext<FX, FHX, FS>>,
+    Query(params): Query<BatchConvertQuery>,
+) -> Result<impl IntoResponse, AppError>
+where
+    FX: ForexRates,
+    FHX: ForexHistoricalRates,
+    FS: ForexStorage,
+{
+    let input = {
+        let mut vecs: Vec<Money> = vec![];
+        for x in params.from {
+            let money = Money::from_str(&x)?;
+            vecs.push(money);
+        }
+        vecs
+    };
+
+    let ret = pfm_core::forex::batch_convert(&ctx.forex_storage, input, params.to)
         .await
         .map(|ret| HttpResponse::new(ret))?;
 

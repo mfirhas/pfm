@@ -652,22 +652,9 @@ pub async fn convert<FS>(
 where
     FS: ForexStorage,
 {
-    if from.amount() == dec!(0) {
-        return Err(ForexError::InputError(anyhow!(
-            "[FOREX] amount conversion must be greater than 0"
-        )));
-    }
-
-    if from == to {
-        return Ok(ConversionResponse {
-            last_update: Utc::now(),
-            money: from.to_string(),
-        });
-    }
-
     let latest_rates = storage.get_latest().await?;
     if let Some(err) = latest_rates.error {
-        return Err(ForexError::InputError(anyhow!(err)));
+        return Err(ForexError::StorageError(anyhow!(err)));
     }
 
     let ret = {
@@ -681,6 +668,25 @@ where
     };
 
     Ok(ret)
+}
+
+pub async fn batch_convert<FS>(
+    storage: &FS,
+    from: Vec<Money>,
+    to: Currencies,
+) -> ForexResult<Vec<ConversionResponse>>
+where
+    FS: ForexStorage,
+{
+    let mut results: Vec<ConversionResponse> = vec![];
+
+    for x in from {
+        let ret = convert(storage, x, to).await?;
+
+        results.push(ret);
+    }
+
+    Ok(results)
 }
 
 /// Get rates from 3rd API.
