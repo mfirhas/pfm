@@ -12,7 +12,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
         ConversionResponse, Currencies, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
-        Money, Order,
+        HttpResponse, Money, Order,
     },
     forex_impl::open_exchange_api::Api,
     forex_storage_impl::forex_storage::ForexStorageImpl,
@@ -90,36 +90,6 @@ async fn ping() -> impl IntoResponse {
     "pong"
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Response<T> {
-    #[serde(rename = "data")]
-    pub data: Option<T>,
-
-    #[serde(rename = "error")]
-    pub error: Option<String>,
-
-    #[serde(skip)]
-    _marker: PhantomData<T>,
-}
-
-impl<T> Response<T> {
-    fn new(data: T) -> Self {
-        Self {
-            data: Some(data),
-            error: None,
-            _marker: PhantomData,
-        }
-    }
-
-    fn err(error: String) -> Self {
-        Self {
-            data: None,
-            error: Some(error),
-            _marker: PhantomData,
-        }
-    }
-}
-
 #[derive(Debug, Error, Serialize)]
 enum AppError {
     #[error("Invalid input: {0}")]
@@ -136,7 +106,7 @@ impl IntoResponse for AppError {
             Self::InternalServerError(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
         };
 
-        let resp = Response::<((), ())>::err(err_msg);
+        let resp = HttpResponse::<((), ())>::err(err_msg);
 
         (status_code, Json(resp)).into_response()
     }
@@ -176,7 +146,7 @@ where
     let currency = Currencies::from_str(&params.to)?;
     let ret = pfm_core::forex::convert(&ctx.forex_storage, money, currency)
         .await
-        .map(|ret| Response::new(ret))?;
+        .map(|ret| HttpResponse::new(ret))?;
 
     Ok((StatusCode::OK, Json(ret)))
 }
@@ -190,7 +160,7 @@ async fn get_latest_rates_handler(
             ctx.forex_storage
                 .get_latest()
                 .await
-                .map(|ret| Response::new(ret))?,
+                .map(|ret| HttpResponse::new(ret))?,
         ),
     ))
 }
@@ -214,7 +184,7 @@ async fn get_historical_rates_handler(
             ctx.forex_storage
                 .get_historical(date)
                 .await
-                .map(|ret| Response::new(ret))?,
+                .map(|ret| HttpResponse::new(ret))?,
         ),
     ))
 }
@@ -236,7 +206,7 @@ async fn get_latest_list_handler(
             ctx.forex_storage
                 .get_latest_list(query.page, query.size, query.order)
                 .await
-                .map(|ret| Response::new(ret))?,
+                .map(|ret| HttpResponse::new(ret))?,
         ),
     ))
 }
@@ -251,7 +221,7 @@ async fn get_historical_list_handler(
             ctx.forex_storage
                 .get_historical_list(query.page, query.size, query.order)
                 .await
-                .map(|ret| Response::new(ret))?,
+                .map(|ret| HttpResponse::new(ret))?,
         ),
     ))
 }

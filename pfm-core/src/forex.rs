@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Debug, Display},
+    marker::PhantomData,
     str::FromStr,
 };
 use uuid::Uuid;
@@ -323,6 +324,37 @@ impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ret = to_string(global::config().forex_use_symbol, *self);
         write!(f, "{}", ret)
+    }
+}
+
+/// used as common response for http service
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HttpResponse<T> {
+    #[serde(rename = "data")]
+    pub data: Option<T>,
+
+    #[serde(rename = "error")]
+    pub error: Option<String>,
+
+    #[serde(skip)]
+    _marker: PhantomData<T>,
+}
+
+impl<T> HttpResponse<T> {
+    pub fn new(data: T) -> Self {
+        Self {
+            data: Some(data),
+            error: None,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn err(error: String) -> Self {
+        Self {
+            data: None,
+            error: Some(error),
+            _marker: PhantomData,
+        }
     }
 }
 
