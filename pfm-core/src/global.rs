@@ -317,6 +317,24 @@ pub struct ClientFS {
     pm: PathBuf,
 }
 
+impl ClientFS {
+    pub(crate) fn is_dir(&self) -> bool {
+        self.root.is_dir() && self.forex.is_dir() && self.pm.is_dir()
+    }
+
+    pub(crate) fn root(&self) -> &PathBuf {
+        &self.root
+    }
+
+    pub(crate) fn forex(&self) -> &PathBuf {
+        &self.forex
+    }
+
+    pub(crate) fn pm(&self) -> &PathBuf {
+        &self.pm
+    }
+}
+
 fn init_client_storage_fs() -> Result<ClientStorageFS, anyhow::Error> {
     let path = if cfg!(debug_assertions) {
         let workspace_dir = utils::find_workspace_root()?;
