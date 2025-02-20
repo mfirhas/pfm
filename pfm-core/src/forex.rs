@@ -1,4 +1,4 @@
-// This is Interface for foreign exchange implementations.
+// forex.rs is used in SERVER side for http and cron
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -250,6 +250,20 @@ impl Money {
             Currencies::SGD => Money::SGD(amount),
             Currencies::CNY => Money::CNY(amount),
             Currencies::SAR => Money::SAR(amount),
+        }
+    }
+
+    pub fn currency(&self) -> Currencies {
+        match self {
+            Self::IDR(_) => Currencies::IDR,
+            Self::USD(_) => Currencies::USD,
+            Self::EUR(_) => Currencies::EUR,
+            Self::GBP(_) => Currencies::GBP,
+            Self::JPY(_) => Currencies::JPY,
+            Self::CHF(_) => Currencies::CHF,
+            Self::SGD(_) => Currencies::SGD,
+            Self::CNY(_) => Currencies::CNY,
+            Self::SAR(_) => Currencies::SAR,
         }
     }
 
