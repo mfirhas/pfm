@@ -1,3 +1,4 @@
+// forex_storage.rs implement storage mechanism for SERVER side http and cron.
 // implementations for database to store forex data polled from the APIs.
 // using filesystem with tokio
 

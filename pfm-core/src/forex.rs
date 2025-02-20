@@ -516,7 +516,7 @@ pub struct ConversionResponse {
     pub last_update: DateTime<Utc>,
 
     /// conversion result.
-    pub money: String,
+    pub money: Money,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -663,7 +663,7 @@ where
 
         ConversionResponse {
             last_update: date,
-            money: res.to_string(),
+            money: res,
         }
     };
 
