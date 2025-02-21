@@ -61,6 +61,7 @@ pub fn client_storage_fs() -> ClientStorageFS {
     CLIENT_STORAGE_FS.clone()
 }
 
+pub const BASE_CURRENCY: Currencies = Currencies::USD;
 lazy_static! {
     static ref CONFIG: Config = init_config().expect("failed init core config");
     static ref HTTP_CLIENT: Client = init_http_client().expect("failed init core http client");
@@ -508,9 +509,6 @@ pub struct Config {
     /// Using symbol or code for displaying money.
     #[serde(alias = "CORE_FOREX_USE_SYMBOL", default)]
     pub forex_use_symbol: bool,
-
-    #[serde(alias = "CORE_FOREX_BASE_CURRENCY")]
-    pub forex_base_currency: Currencies,
 
     /// API key for https://currencyapi.com
     #[serde(alias = "CORE_FOREX_CURRENCY_API_KEY")]

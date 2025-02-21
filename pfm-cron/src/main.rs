@@ -247,7 +247,7 @@ fn poll_latest_rates_sge_job(
         Box::pin(poll_latest_rates_handler(
             forex,
             storage,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
@@ -269,7 +269,7 @@ fn poll_latest_rates_lbma_am_job(
         Box::pin(poll_latest_rates_handler(
             forex,
             storage,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
@@ -291,7 +291,7 @@ fn poll_latest_rates_lbma_pm_job(
         Box::pin(poll_latest_rates_handler(
             forex,
             storage,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
@@ -326,7 +326,7 @@ fn poll_historical_rates_job(
             forex,
             storage,
             date,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
