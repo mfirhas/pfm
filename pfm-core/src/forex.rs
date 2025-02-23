@@ -86,6 +86,7 @@ pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains th
 
 const ERROR_PREFIX: &str = "[FOREX]";
 
+/// pfm-core Currency.
 /// List of supported currencies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Currency {
