@@ -215,84 +215,133 @@ mod currency_tests {
     }
 }
 
+mod money_tests {
+    use std::str::FromStr;
+
+    use rust_decimal_macros::dec;
+
+    use crate::forex::Currency;
+    use crate::forex::Money;
+
+    #[test]
+    fn test_impl() {
+        let expected_usd = Money::new_money(Currency::USD, dec!(1000));
+        let expected_idr = Money::new_money(Currency::IDR, dec!(234000));
+        let expected_chf = Money::new_money(Currency::CHF, dec!(412300));
+        let expected_eur = Money::new_money(Currency::EUR, dec!(8000));
+        let expected_sar = Money::new_money(Currency::SAR, dec!(5000));
+
+        let ret = Money::new("USD", "1000");
+        assert_eq!(ret.as_ref().unwrap(), &expected_usd);
+        assert_eq!(Currency::USD, ret.as_ref().unwrap().currency());
+        assert_eq!("USD".to_string(), ret.as_ref().unwrap().code());
+        assert_eq!("$".to_string(), ret.unwrap().symbol());
+
+        let ret_idr = Money::new("IDR", "234000");
+        assert_eq!(ret_idr.as_ref().unwrap(), &expected_idr);
+        assert_eq!(Currency::IDR, ret_idr.as_ref().unwrap().currency());
+        assert_eq!("IDR".to_string(), ret_idr.as_ref().unwrap().code());
+        assert_eq!("Rp".to_string(), ret_idr.unwrap().symbol());
+
+        let ret_chf = Money::new("CHF", "412300");
+        assert_eq!(ret_chf.as_ref().unwrap(), &expected_chf);
+        assert_eq!(Currency::CHF, ret_chf.as_ref().unwrap().currency());
+        assert_eq!("CHF".to_string(), ret_chf.as_ref().unwrap().code());
+        assert_eq!("₣".to_string(), ret_chf.unwrap().symbol());
+
+        let ret_eur = Money::new("EUR", "8000");
+        assert_eq!(ret_eur.as_ref().unwrap(), &expected_eur);
+        assert_eq!(Currency::EUR, ret_eur.as_ref().unwrap().currency());
+        assert_eq!("EUR".to_string(), ret_eur.as_ref().unwrap().code());
+        assert_eq!("€".to_string(), ret_eur.unwrap().symbol());
+
+        let ret_sar = Money::new("SAR", "5000");
+        assert_eq!(ret_sar.as_ref().unwrap(), &expected_sar);
+        assert_eq!(Currency::SAR, ret_sar.as_ref().unwrap().currency());
+        assert_eq!("SAR".to_string(), ret_sar.as_ref().unwrap().code());
+        assert_eq!("ر.س".to_string(), ret_sar.unwrap().symbol());
+    }
+
+    #[test]
+    fn test_money_to_string() {
+        let expected = "USD 23,000";
+        let money = Money::new("USD", "23000");
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+        let expected = "IDR 45.000.000"; // indonesian rupiah is dot separated for thousands.
+        let money = Money::new("IDR", "45000000");
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+    }
+
+    #[test]
+    fn test_money_from_str() {
+        let input = "USD 23,000";
+        let expected = "USD 23,000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+        // comma separated currencies cannot be written in dot separated.
+        let input = "USD 23.000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        // println!("{}", money.as_ref().unwrap());
+        assert!(money.is_err());
+
+        let input = "IDR 23.000";
+        let expected = "IDR 23.000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+        // dot separated currencies can be written in comma separated
+        let input = "IDR 23,000";
+        let expected = "IDR 23.000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+        //// without thousands separator
+        let input = "USD 23000";
+        let expected = "USD 23,000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+        let input = "IDR 23000";
+        let expected = "IDR 23.000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+
+        // dot separated currencies can be written in comma separated
+        let input = "IDR 23000";
+        let expected = "IDR 23.000";
+        let money = Money::from_str(input);
+        dbg!(&money);
+        println!("{}", money.as_ref().unwrap());
+        assert!(money.is_ok());
+        assert_eq!(money.unwrap().to_string().as_str(), expected);
+    }
+}
+
 use super::forex::Money;
-#[test]
-fn test_money() {
-    let expected = "USD 23,000";
-    let money = Money::new("USD", "23000");
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-
-    let expected = "IDR 45.000.000"; // indonesian rupiah is dot separated for thousands.
-    let money = Money::new("IDR", "45000000");
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-}
-
-#[test]
-fn test_money_from_str() {
-    let input = "USD 23,000";
-    let expected = "USD 23,000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-
-    // comma separated currencies cannot be written in dot separated.
-    let input = "USD 23.000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    // println!("{}", money.as_ref().unwrap());
-    assert!(money.is_err());
-
-    let input = "IDR 23.000";
-    let expected = "IDR 23.000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-
-    // dot separated currencies can be written in comma separated
-    let input = "IDR 23,000";
-    let expected = "IDR 23.000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-
-    //// without thousands separator
-    let input = "USD 23000";
-    let expected = "USD 23,000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-
-    let input = "IDR 23000";
-    let expected = "IDR 23.000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-
-    // dot separated currencies can be written in comma separated
-    let input = "IDR 23000";
-    let expected = "IDR 23.000";
-    let money = Money::from_str(input);
-    dbg!(&money);
-    println!("{}", money.as_ref().unwrap());
-    assert!(money.is_ok());
-    assert_eq!(money.unwrap().to_string().as_str(), expected);
-}
 
 // make sure to test get_rates first to populate directory before testing this
 #[tokio::test]
