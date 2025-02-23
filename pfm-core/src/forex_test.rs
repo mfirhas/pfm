@@ -112,8 +112,7 @@ use chrono::{TimeZone, Utc};
 use rust_decimal_macros::dec;
 
 use crate::{
-    forex::ForexStorage,
-    forex::{convert, poll_historical_rates, poll_rates, Currency},
+    forex::{batch_convert, convert, poll_historical_rates, poll_rates, Currency, ForexStorage},
     forex_impl, forex_storage_impl, global,
 };
 
@@ -355,6 +354,25 @@ async fn test_convert() {
     dbg!(&ret);
 
     assert!(ret.is_ok());
+}
+
+#[tokio::test]
+async fn test_batch_convert() {
+    let fs = global::storage_fs();
+    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+
+    let from_gbp = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
+    let from_usd = Money::new_money(crate::forex::Currency::USD, dec!(4000));
+    let from_idr = Money::new_money(crate::forex::Currency::IDR, dec!(23000));
+    let from_chf = Money::new_money(crate::forex::Currency::CHF, dec!(1000));
+    let from_sgd = Money::new_money(crate::forex::Currency::SGD, dec!(1300));
+    let from = vec![from_gbp, from_usd, from_idr, from_chf, from_sgd];
+    let to = Currency::SAR;
+    let ret = batch_convert(&storage, from, to).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
+    assert_eq!(ret.unwrap().len(), 5);
 }
 
 #[tokio::test]
