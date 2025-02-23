@@ -1,5 +1,5 @@
 use crate::{
-    forex::{ConversionResponse, Currencies, HttpResponse, Money},
+    forex::{ConversionResponse, Currency, HttpResponse, Money},
     forex_manager::{ForexManager, ForexManagerError, ForexManagerResult},
 };
 
@@ -34,7 +34,7 @@ impl Api {
     pub async fn batch_convert(
         &self,
         from: String,
-        to: Currencies,
+        to: Currency,
     ) -> ForexManagerResult<Vec<ConversionResponse>> {
         let convert_endpoint = self
             .pfm_core_base_url
@@ -100,7 +100,7 @@ impl ForexManager for Api {
     async fn batch_convert(
         &self,
         from: Vec<Money>,
-        to: Currencies,
+        to: Currency,
     ) -> ForexManagerResult<Vec<ConversionResponse>> {
         let input = from
             .iter()

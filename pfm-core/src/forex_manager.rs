@@ -10,7 +10,7 @@ use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::forex::{ConversionResponse, Currencies, Money};
+use crate::forex::{ConversionResponse, Currency, Money};
 
 const ERROR_PREFIX: &str = "[FOREX_MANAGER]";
 
@@ -168,7 +168,7 @@ pub trait ForexManager {
     async fn batch_convert(
         &self,
         from: Vec<Money>,
-        to: Currencies,
+        to: Currency,
     ) -> ForexManagerResult<Vec<ConversionResponse>>;
 }
 
@@ -292,7 +292,7 @@ pub struct CashTotal {
 pub async fn total<FS, FX>(
     storage: &FS,
     fx: &FX,
-    currency_target: Currencies,
+    currency_target: Currency,
 ) -> ForexManagerResult<CashTotal>
 where
     FS: ForexManagerStorage,
@@ -340,7 +340,7 @@ where
 
 async fn convert_and_sum(
     fx: &impl ForexManager,
-    target_currency: Currencies,
+    target_currency: Currency,
     list: &[Cash],
 ) -> ForexManagerResult<(Decimal, DateTime<Utc>)> {
     let input = list.iter().map(|item| item.money).collect::<Vec<_>>();

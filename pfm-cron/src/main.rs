@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use configrs::config::Config as configrs;
 use pfm_core::{
-    forex::{self, Currencies, ForexHistoricalRates, ForexRates, ForexStorage},
+    forex::{self, Currency, ForexHistoricalRates, ForexRates, ForexStorage},
     forex_impl, forex_storage_impl, global,
 };
 use serde::Deserialize;
@@ -233,7 +233,7 @@ async fn register_cron_jobs<'a>(
 
 //////////////////////////////////////////// HANDLERS AND JOBS ////////////////////////////////////////////
 // Job::new_async adds job using UTC offset
-async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currencies) {
+async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currency) {
     let _ = forex::poll_rates(&fx, &fs, base).await;
 }
 
@@ -307,7 +307,7 @@ async fn poll_historical_rates_handler(
     fx: impl ForexHistoricalRates,
     fs: impl ForexStorage,
     date: DateTime<Utc>,
-    base: Currencies,
+    base: Currency,
 ) {
     let _ = forex::poll_historical_rates(&fx, &fs, date, base).await;
 }

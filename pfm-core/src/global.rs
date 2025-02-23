@@ -11,7 +11,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::{fmt::Debug, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 
-use crate::forex::Currencies;
+use crate::forex::Currency;
 use crate::utils;
 
 const ENV_PREFIX: &str = "CORE_";
@@ -61,7 +61,7 @@ pub fn client_storage_fs() -> ClientStorageFS {
     CLIENT_STORAGE_FS.clone()
 }
 
-pub const BASE_CURRENCY: Currencies = Currencies::USD;
+pub const BASE_CURRENCY: Currency = Currency::USD;
 lazy_static! {
     static ref CONFIG: Config = init_config().expect("failed init core config");
     static ref HTTP_CLIENT: Client = init_http_client().expect("failed init core http client");

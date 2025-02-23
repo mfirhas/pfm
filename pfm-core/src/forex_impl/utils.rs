@@ -2,7 +2,7 @@ use crate::forex::ForexError::InputError;
 use crate::forex::*;
 use accounting::Accounting;
 use anyhow::anyhow;
-use iso_currency::Currency;
+use iso_currency::Currency as CurrencyLib;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
@@ -13,11 +13,11 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     if currency_parts.len() != 2 {
         return Err(InputError(anyhow!(ERROR_CURRENCY_PARTS)));
     }
-    let currency = Currency::from_str(currency_parts[0])
+    let currency = CurrencyLib::from_str(currency_parts[0])
         .map_err(|err| InputError(anyhow!("invalid currency code: {}", err)))?;
 
     // 2. check if first part is in list of currency codes
-    let code = Currency::from_str(currency_parts[0])
+    let code = CurrencyLib::from_str(currency_parts[0])
         .map_err(|err| InputError(anyhow!("Currency code invalid: {}", err)))?;
 
     // 3. check if the code is in comma or dot separated for thousands.
@@ -64,15 +64,15 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     })?;
 
     match currency {
-        Currency::IDR => Ok(Money::IDR(decimal)),
-        Currency::USD => Ok(Money::USD(decimal)),
-        Currency::EUR => Ok(Money::EUR(decimal)),
-        Currency::GBP => Ok(Money::GBP(decimal)),
-        Currency::JPY => Ok(Money::JPY(decimal)),
-        Currency::CHF => Ok(Money::CHF(decimal)),
-        Currency::SGD => Ok(Money::SGD(decimal)),
-        Currency::CNY => Ok(Money::CNY(decimal)),
-        Currency::SAR => Ok(Money::SAR(decimal)),
+        CurrencyLib::IDR => Ok(Money::IDR(decimal)),
+        CurrencyLib::USD => Ok(Money::USD(decimal)),
+        CurrencyLib::EUR => Ok(Money::EUR(decimal)),
+        CurrencyLib::GBP => Ok(Money::GBP(decimal)),
+        CurrencyLib::JPY => Ok(Money::JPY(decimal)),
+        CurrencyLib::CHF => Ok(Money::CHF(decimal)),
+        CurrencyLib::SGD => Ok(Money::SGD(decimal)),
+        CurrencyLib::CNY => Ok(Money::CNY(decimal)),
+        CurrencyLib::SAR => Ok(Money::SAR(decimal)),
         _ => Err(InputError(anyhow!(
             "forex_impl: failed parsing Money from string, currency {} not supported.",
             currency.code()
@@ -88,15 +88,15 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
     };
 
     let curr = match money {
-        Money::IDR(_) => Currency::IDR,
-        Money::USD(_) => Currency::USD,
-        Money::EUR(_) => Currency::EUR,
-        Money::GBP(_) => Currency::GBP,
-        Money::JPY(_) => Currency::JPY,
-        Money::CHF(_) => Currency::CHF,
-        Money::SGD(_) => Currency::SGD,
-        Money::CNY(_) => Currency::CNY,
-        Money::SAR(_) => Currency::SAR,
+        Money::IDR(_) => CurrencyLib::IDR,
+        Money::USD(_) => CurrencyLib::USD,
+        Money::EUR(_) => CurrencyLib::EUR,
+        Money::GBP(_) => CurrencyLib::GBP,
+        Money::JPY(_) => CurrencyLib::JPY,
+        Money::CHF(_) => CurrencyLib::CHF,
+        Money::SGD(_) => CurrencyLib::SGD,
+        Money::CNY(_) => CurrencyLib::CNY,
+        Money::SAR(_) => CurrencyLib::SAR,
     };
 
     let mut ac = if COMMA_SEPARATED_CURRENCIES.contains(&curr) {
@@ -116,7 +116,7 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
     money_display
 }
 
-pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currencies) -> ForexResult<Money> {
+pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currency) -> ForexResult<Money> {
     if from == to {
         return Ok(from);
     }
@@ -136,15 +136,15 @@ pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currencies) -> Fo
 
     // 2. multiply the above result with the rate of target conversion relative to base currency.
     let to_target = match to {
-        Currencies::IDR => to_base * rates.rates.idr,
-        Currencies::USD => to_base * rates.rates.usd,
-        Currencies::EUR => to_base * rates.rates.eur,
-        Currencies::GBP => to_base * rates.rates.gbp,
-        Currencies::JPY => to_base * rates.rates.jpy,
-        Currencies::CHF => to_base * rates.rates.chf,
-        Currencies::SGD => to_base * rates.rates.sgd,
-        Currencies::CNY => to_base * rates.rates.cny,
-        Currencies::SAR => to_base * rates.rates.sar,
+        Currency::IDR => to_base * rates.rates.idr,
+        Currency::USD => to_base * rates.rates.usd,
+        Currency::EUR => to_base * rates.rates.eur,
+        Currency::GBP => to_base * rates.rates.gbp,
+        Currency::JPY => to_base * rates.rates.jpy,
+        Currency::CHF => to_base * rates.rates.chf,
+        Currency::SGD => to_base * rates.rates.sgd,
+        Currency::CNY => to_base * rates.rates.cny,
+        Currency::SAR => to_base * rates.rates.sar,
     };
 
     let result = Money::new_money(to, to_target);

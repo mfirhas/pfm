@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
-use iso_currency::Currency;
+use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -23,44 +23,44 @@ use crate::{
 
 lazy_static! {
     /// List of currencies using comma to separate thousands.
-    pub static ref COMMA_SEPARATED_CURRENCIES: Vec<Currency> = {
+    pub static ref COMMA_SEPARATED_CURRENCIES: Vec<CurrencyLib> = {
         let comma_separated_currencies = vec![
-                Currency::AUD, // Australia
-                Currency::BWP, // Botswana
-                Currency::XCD, // British West Indies (East Caribbean Dollar)
-                Currency::BND, // Brunei
-                Currency::CAD, // Canada (English-speaking)
-                Currency::DOP, // Dominican Republic
-                Currency::GTQ, // Guatemala
-                Currency::HKD, // Hong Kong
-                Currency::INR, // India
-                Currency::EUR, // euro
-                Currency::ILS, // Israel
-                Currency::JPY, // Japan
-                Currency::KES, // Kenya
-                Currency::KPW, // Korea (North)
-                Currency::KRW, // Korea (South)
-                Currency::LBP, // Lebanon
-                Currency::MYR, // Malaysia
-                Currency::EUR, // Malta
-                Currency::MXN, // Mexico
-                Currency::NPR, // Nepal
-                Currency::NZD, // New Zealand
-                Currency::NIO, // Nicaragua
-                Currency::NGN, // Nigeria
-                Currency::PKR, // Pakistan
-                Currency::CNY, // People's Republic of China
-                Currency::PHP, // Philippines
-                Currency::SGD, // Singapore
-                Currency::LKR, // Sri Lanka
-                Currency::CHF, // Switzerland (only when amount is in Swiss francs)
-                Currency::TWD, // Taiwan
-                Currency::TZS, // Tanzania
-                Currency::THB, // Thailand
-                Currency::UGX, // Uganda
-                Currency::GBP, // United Kingdom
-                Currency::USD, // United States (including insular areas)
-                Currency::ZWL, // Zimbabwe
+                CurrencyLib::AUD, // Australia
+                CurrencyLib::BWP, // Botswana
+                CurrencyLib::XCD, // British West Indies (East Caribbean Dollar)
+                CurrencyLib::BND, // Brunei
+                CurrencyLib::CAD, // Canada (English-speaking)
+                CurrencyLib::DOP, // Dominican Republic
+                CurrencyLib::GTQ, // Guatemala
+                CurrencyLib::HKD, // Hong Kong
+                CurrencyLib::INR, // India
+                CurrencyLib::EUR, // euro
+                CurrencyLib::ILS, // Israel
+                CurrencyLib::JPY, // Japan
+                CurrencyLib::KES, // Kenya
+                CurrencyLib::KPW, // Korea (North)
+                CurrencyLib::KRW, // Korea (South)
+                CurrencyLib::LBP, // Lebanon
+                CurrencyLib::MYR, // Malaysia
+                CurrencyLib::EUR, // Malta
+                CurrencyLib::MXN, // Mexico
+                CurrencyLib::NPR, // Nepal
+                CurrencyLib::NZD, // New Zealand
+                CurrencyLib::NIO, // Nicaragua
+                CurrencyLib::NGN, // Nigeria
+                CurrencyLib::PKR, // Pakistan
+                CurrencyLib::CNY, // People's Republic of China
+                CurrencyLib::PHP, // Philippines
+                CurrencyLib::SGD, // Singapore
+                CurrencyLib::LKR, // Sri Lanka
+                CurrencyLib::CHF, // Switzerland (only when amount is in Swiss francs)
+                CurrencyLib::TWD, // Taiwan
+                CurrencyLib::TZS, // Tanzania
+                CurrencyLib::THB, // Thailand
+                CurrencyLib::UGX, // Uganda
+                CurrencyLib::GBP, // United Kingdom
+                CurrencyLib::USD, // United States (including insular areas)
+                CurrencyLib::ZWL, // Zimbabwe
             ];
 
             comma_separated_currencies
@@ -88,7 +88,7 @@ const ERROR_PREFIX: &str = "[FOREX]";
 
 /// List of supported currencies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Currencies {
+pub enum Currency {
     USD,
     IDR,
     EUR,
@@ -100,24 +100,24 @@ pub enum Currencies {
     SAR,
 }
 
-impl FromStr for Currencies {
+impl FromStr for Currency {
     type Err = ForexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let curr: Currency = s.parse().map_err(|err| {
+        let curr: CurrencyLib = s.parse().map_err(|err| {
             ForexError::InputError(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
         })?;
 
         match curr {
-            Currency::IDR => Ok(Self::IDR),
-            Currency::USD => Ok(Self::USD),
-            Currency::EUR => Ok(Self::EUR),
-            Currency::GBP => Ok(Self::GBP),
-            Currency::JPY => Ok(Self::JPY),
-            Currency::CHF => Ok(Self::CHF),
-            Currency::SGD => Ok(Self::SGD),
-            Currency::CNY => Ok(Self::CNY),
-            Currency::SAR => Ok(Self::SAR),
+            CurrencyLib::IDR => Ok(Self::IDR),
+            CurrencyLib::USD => Ok(Self::USD),
+            CurrencyLib::EUR => Ok(Self::EUR),
+            CurrencyLib::GBP => Ok(Self::GBP),
+            CurrencyLib::JPY => Ok(Self::JPY),
+            CurrencyLib::CHF => Ok(Self::CHF),
+            CurrencyLib::SGD => Ok(Self::SGD),
+            CurrencyLib::CNY => Ok(Self::CNY),
+            CurrencyLib::SAR => Ok(Self::SAR),
             _ => Err(ForexError::InputError(anyhow!(
                 "{} Currency {} not supported",
                 ERROR_PREFIX,
@@ -127,29 +127,29 @@ impl FromStr for Currencies {
     }
 }
 
-impl Default for Currencies {
+impl Default for Currency {
     fn default() -> Self {
         Self::USD
     }
 }
 
-impl Currencies {
+impl Currency {
     pub fn code(&self) -> &'static str {
         match self {
-            Self::IDR => Currency::IDR.code(),
-            Self::USD => Currency::USD.code(),
-            Self::EUR => Currency::EUR.code(),
-            Self::GBP => Currency::GBP.code(),
-            Self::JPY => Currency::JPY.code(),
-            Self::CHF => Currency::CHF.code(),
-            Self::SGD => Currency::SGD.code(),
-            Self::CNY => Currency::CNY.code(),
-            Self::SAR => Currency::SAR.code(),
+            Self::IDR => CurrencyLib::IDR.code(),
+            Self::USD => CurrencyLib::USD.code(),
+            Self::EUR => CurrencyLib::EUR.code(),
+            Self::GBP => CurrencyLib::GBP.code(),
+            Self::JPY => CurrencyLib::JPY.code(),
+            Self::CHF => CurrencyLib::CHF.code(),
+            Self::SGD => CurrencyLib::SGD.code(),
+            Self::CNY => CurrencyLib::CNY.code(),
+            Self::SAR => CurrencyLib::SAR.code(),
         }
     }
 }
 
-impl From<Money> for Currencies {
+impl From<Money> for Currency {
     fn from(value: Money) -> Self {
         match value {
             Money::IDR(_) => Self::IDR,
@@ -165,36 +165,36 @@ impl From<Money> for Currencies {
     }
 }
 
-impl Display for Currencies {
+impl Display for Currency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let r = match self {
-            Self::IDR => Currency::IDR.code(),
-            Self::USD => Currency::USD.code(),
-            Self::EUR => Currency::EUR.code(),
-            Self::GBP => Currency::GBP.code(),
-            Self::JPY => Currency::JPY.code(),
-            Self::CHF => Currency::CHF.code(),
-            Self::SGD => Currency::SGD.code(),
-            Self::CNY => Currency::CNY.code(),
-            Self::SAR => Currency::SAR.code(),
+            Self::IDR => CurrencyLib::IDR.code(),
+            Self::USD => CurrencyLib::USD.code(),
+            Self::EUR => CurrencyLib::EUR.code(),
+            Self::GBP => CurrencyLib::GBP.code(),
+            Self::JPY => CurrencyLib::JPY.code(),
+            Self::CHF => CurrencyLib::CHF.code(),
+            Self::SGD => CurrencyLib::SGD.code(),
+            Self::CNY => CurrencyLib::CNY.code(),
+            Self::SAR => CurrencyLib::SAR.code(),
         };
 
         write!(f, "{}", r)
     }
 }
 
-impl PartialEq<Currencies> for Money {
-    fn eq(&self, other: &Currencies) -> bool {
+impl PartialEq<Currency> for Money {
+    fn eq(&self, other: &Currency) -> bool {
         match (self, other) {
-            (Money::IDR(_), Currencies::IDR) => true,
-            (Money::USD(_), Currencies::USD) => true,
-            (Money::EUR(_), Currencies::EUR) => true,
-            (Money::GBP(_), Currencies::GBP) => true,
-            (Money::JPY(_), Currencies::JPY) => true,
-            (Money::CHF(_), Currencies::CHF) => true,
-            (Money::SGD(_), Currencies::SGD) => true,
-            (Money::CNY(_), Currencies::CNY) => true,
-            (Money::SAR(_), Currencies::SAR) => true,
+            (Money::IDR(_), Currency::IDR) => true,
+            (Money::USD(_), Currency::USD) => true,
+            (Money::EUR(_), Currency::EUR) => true,
+            (Money::GBP(_), Currency::GBP) => true,
+            (Money::JPY(_), Currency::JPY) => true,
+            (Money::CHF(_), Currency::CHF) => true,
+            (Money::SGD(_), Currency::SGD) => true,
+            (Money::CNY(_), Currency::CNY) => true,
+            (Money::SAR(_), Currency::SAR) => true,
             _ => false,
         }
     }
@@ -215,7 +215,7 @@ pub enum Money {
 
 impl Money {
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
-        let curr = Currency::from_str(currency).map_err(|err| {
+        let curr = CurrencyLib::from_str(currency).map_err(|err| {
             ForexError::InputError(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
         })?;
         let val = Decimal::from_str(amount).map_err(|err| {
@@ -223,15 +223,15 @@ impl Money {
         })?;
 
         match curr {
-            Currency::IDR => Ok(Self::IDR(val)),
-            Currency::USD => Ok(Self::USD(val)),
-            Currency::EUR => Ok(Self::EUR(val)),
-            Currency::GBP => Ok(Self::GBP(val)),
-            Currency::JPY => Ok(Self::JPY(val)),
-            Currency::CHF => Ok(Self::CHF(val)),
-            Currency::SGD => Ok(Self::SGD(val)),
-            Currency::CNY => Ok(Self::CNY(val)),
-            Currency::SAR => Ok(Self::SAR(val)),
+            CurrencyLib::IDR => Ok(Self::IDR(val)),
+            CurrencyLib::USD => Ok(Self::USD(val)),
+            CurrencyLib::EUR => Ok(Self::EUR(val)),
+            CurrencyLib::GBP => Ok(Self::GBP(val)),
+            CurrencyLib::JPY => Ok(Self::JPY(val)),
+            CurrencyLib::CHF => Ok(Self::CHF(val)),
+            CurrencyLib::SGD => Ok(Self::SGD(val)),
+            CurrencyLib::CNY => Ok(Self::CNY(val)),
+            CurrencyLib::SAR => Ok(Self::SAR(val)),
             _ => Err(ForexError::InputError(anyhow!(
                 "{} Currency {} not supported",
                 ERROR_PREFIX,
@@ -240,31 +240,31 @@ impl Money {
         }
     }
 
-    pub fn new_money(currency: Currencies, amount: Decimal) -> Money {
+    pub fn new_money(currency: Currency, amount: Decimal) -> Money {
         match currency {
-            Currencies::IDR => Money::IDR(amount),
-            Currencies::USD => Money::USD(amount),
-            Currencies::EUR => Money::EUR(amount),
-            Currencies::GBP => Money::GBP(amount),
-            Currencies::JPY => Money::JPY(amount),
-            Currencies::CHF => Money::CHF(amount),
-            Currencies::SGD => Money::SGD(amount),
-            Currencies::CNY => Money::CNY(amount),
-            Currencies::SAR => Money::SAR(amount),
+            Currency::IDR => Money::IDR(amount),
+            Currency::USD => Money::USD(amount),
+            Currency::EUR => Money::EUR(amount),
+            Currency::GBP => Money::GBP(amount),
+            Currency::JPY => Money::JPY(amount),
+            Currency::CHF => Money::CHF(amount),
+            Currency::SGD => Money::SGD(amount),
+            Currency::CNY => Money::CNY(amount),
+            Currency::SAR => Money::SAR(amount),
         }
     }
 
-    pub fn currency(&self) -> Currencies {
+    pub fn currency(&self) -> Currency {
         match self {
-            Self::IDR(_) => Currencies::IDR,
-            Self::USD(_) => Currencies::USD,
-            Self::EUR(_) => Currencies::EUR,
-            Self::GBP(_) => Currencies::GBP,
-            Self::JPY(_) => Currencies::JPY,
-            Self::CHF(_) => Currencies::CHF,
-            Self::SGD(_) => Currencies::SGD,
-            Self::CNY(_) => Currencies::CNY,
-            Self::SAR(_) => Currencies::SAR,
+            Self::IDR(_) => Currency::IDR,
+            Self::USD(_) => Currency::USD,
+            Self::EUR(_) => Currency::EUR,
+            Self::GBP(_) => Currency::GBP,
+            Self::JPY(_) => Currency::JPY,
+            Self::CHF(_) => Currency::CHF,
+            Self::SGD(_) => Currency::SGD,
+            Self::CNY(_) => Currency::CNY,
+            Self::SAR(_) => Currency::SAR,
         }
     }
 
@@ -284,29 +284,29 @@ impl Money {
 
     pub fn code(&self) -> String {
         match self {
-            Self::IDR(_) => Currency::IDR.code().to_string(),
-            Self::USD(_) => Currency::USD.code().to_string(),
-            Self::EUR(_) => Currency::EUR.code().to_string(),
-            Self::GBP(_) => Currency::GBP.code().to_string(),
-            Self::JPY(_) => Currency::JPY.code().to_string(),
-            Self::CHF(_) => Currency::CHF.code().to_string(),
-            Self::SGD(_) => Currency::SGD.code().to_string(),
-            Self::CNY(_) => Currency::CNY.code().to_string(),
-            Self::SAR(_) => Currency::SAR.code().to_string(),
+            Self::IDR(_) => CurrencyLib::IDR.code().to_string(),
+            Self::USD(_) => CurrencyLib::USD.code().to_string(),
+            Self::EUR(_) => CurrencyLib::EUR.code().to_string(),
+            Self::GBP(_) => CurrencyLib::GBP.code().to_string(),
+            Self::JPY(_) => CurrencyLib::JPY.code().to_string(),
+            Self::CHF(_) => CurrencyLib::CHF.code().to_string(),
+            Self::SGD(_) => CurrencyLib::SGD.code().to_string(),
+            Self::CNY(_) => CurrencyLib::CNY.code().to_string(),
+            Self::SAR(_) => CurrencyLib::SAR.code().to_string(),
         }
     }
 
     pub fn symbol(&self) -> String {
         match self {
-            Self::IDR(_) => Currency::IDR.symbol().to_string(),
-            Self::USD(_) => Currency::USD.symbol().to_string(),
-            Self::EUR(_) => Currency::EUR.symbol().to_string(),
-            Self::GBP(_) => Currency::GBP.symbol().to_string(),
-            Self::JPY(_) => Currency::JPY.symbol().to_string(),
-            Self::CHF(_) => Currency::CHF.symbol().to_string(),
-            Self::SGD(_) => Currency::SGD.symbol().to_string(),
-            Self::CNY(_) => Currency::CNY.symbol().to_string(),
-            Self::SAR(_) => Currency::SAR.symbol().to_string(),
+            Self::IDR(_) => CurrencyLib::IDR.symbol().to_string(),
+            Self::USD(_) => CurrencyLib::USD.symbol().to_string(),
+            Self::EUR(_) => CurrencyLib::EUR.symbol().to_string(),
+            Self::GBP(_) => CurrencyLib::GBP.symbol().to_string(),
+            Self::JPY(_) => CurrencyLib::JPY.symbol().to_string(),
+            Self::CHF(_) => CurrencyLib::CHF.symbol().to_string(),
+            Self::SGD(_) => CurrencyLib::SGD.symbol().to_string(),
+            Self::CNY(_) => CurrencyLib::CNY.symbol().to_string(),
+            Self::SAR(_) => CurrencyLib::SAR.symbol().to_string(),
         }
     }
 }
@@ -411,7 +411,7 @@ impl RatesResponse<Rates> {
             poll_date: Utc::now(),
             data: Rates {
                 latest_update: date,
-                base: Currencies::default(),
+                base: Currency::default(),
                 rates: RatesData::default(),
             },
             error: Some(error),
@@ -439,7 +439,7 @@ impl RatesResponse<HistoricalRates> {
             poll_date: Utc::now(),
             data: HistoricalRates {
                 date,
-                base: Currencies::default(),
+                base: Currency::default(),
                 rates: RatesData::default(),
             },
             error: Some(error),
@@ -453,7 +453,7 @@ pub struct Rates {
     pub latest_update: DateTime<Utc>,
 
     #[serde(alias = "base")]
-    pub base: Currencies,
+    pub base: Currency,
 
     #[serde(alias = "rates")]
     pub rates: RatesData,
@@ -465,7 +465,7 @@ pub struct HistoricalRates {
     pub date: DateTime<Utc>,
 
     #[serde(alias = "base")]
-    pub base: Currencies,
+    pub base: Currency,
 
     #[serde(alias = "rates")]
     pub rates: RatesData,
@@ -557,7 +557,7 @@ impl Display for ForexError {
 #[async_trait]
 pub trait ForexConverter {
     /// convert from Money into to Currency using latest rates
-    async fn convert(&self, from: Money, to: Currencies) -> ForexResult<ConversionResponse>;
+    async fn convert(&self, from: Money, to: Currency) -> ForexResult<ConversionResponse>;
 }
 ///////////////
 
@@ -565,7 +565,7 @@ pub trait ForexConverter {
 #[async_trait]
 pub trait ForexRates {
     /// get latest list of rates with a base currency
-    async fn rates(&self, base: Currencies) -> ForexResult<RatesResponse<Rates>>;
+    async fn rates(&self, base: Currency) -> ForexResult<RatesResponse<Rates>>;
 }
 
 #[async_trait]
@@ -574,7 +574,7 @@ pub trait ForexHistoricalRates {
     async fn historical_rates(
         &self,
         date: DateTime<Utc>,
-        base: Currencies,
+        base: Currency,
     ) -> ForexResult<RatesResponse<HistoricalRates>>;
 }
 ///////////////
@@ -644,11 +644,7 @@ pub enum Order {
 ///////////////////////////////////// APIs /////////////////////////////////////
 /// Convert Money into another currency.
 /// This only call storage to get latest rates and do the calculations.
-pub async fn convert<FS>(
-    storage: &FS,
-    from: Money,
-    to: Currencies,
-) -> ForexResult<ConversionResponse>
+pub async fn convert<FS>(storage: &FS, from: Money, to: Currency) -> ForexResult<ConversionResponse>
 where
     FS: ForexStorage,
 {
@@ -673,7 +669,7 @@ where
 pub async fn batch_convert<FS>(
     storage: &FS,
     from: Vec<Money>,
-    to: Currencies,
+    to: Currency,
 ) -> ForexResult<Vec<ConversionResponse>>
 where
     FS: ForexStorage,
@@ -694,7 +690,7 @@ where
 pub async fn poll_rates<FX, FS>(
     forex: &FX,
     storage: &FS,
-    base: Currencies,
+    base: Currency,
 ) -> ForexResult<RatesResponse<Rates>>
 where
     FX: ForexRates,
@@ -716,7 +712,7 @@ pub async fn poll_historical_rates<FX, FS>(
     forex: &FX,
     storage: &FS,
     date: DateTime<Utc>,
-    base: Currencies,
+    base: Currency,
 ) -> ForexResult<RatesResponse<HistoricalRates>>
 where
     FX: ForexHistoricalRates,

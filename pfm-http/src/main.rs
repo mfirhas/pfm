@@ -11,7 +11,7 @@ use axum::{
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
-        ConversionResponse, Currencies, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
+        ConversionResponse, Currency, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
         HttpResponse, Money, Order,
     },
     forex_impl::open_exchange_api::Api,
@@ -144,7 +144,7 @@ where
     FS: ForexStorage,
 {
     let money = Money::from_str(&params.from)?;
-    let currency = Currencies::from_str(&params.to)?;
+    let currency = Currency::from_str(&params.to)?;
     let ret = pfm_core::forex::convert(&ctx.forex_storage, money, currency)
         .await
         .map(|ret| HttpResponse::new(ret))?;
@@ -158,7 +158,7 @@ pub struct BatchConvertQuery {
     #[serde(deserialize_with = "from_seq")]
     pub from: Vec<String>,
 
-    pub to: Currencies,
+    pub to: Currency,
 }
 
 fn from_seq<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>

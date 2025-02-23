@@ -4,7 +4,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::{
-    forex::{Currencies, Money},
+    forex::{Currency, Money},
     forex_manager::{
         Cash, CashListResponse, ForexManagerError::StorageError, ForexManagerResult,
         ForexManagerStorage, ForexPurchaseParams, Order,
@@ -58,7 +58,7 @@ impl ForexManagerStorageImpl {
         Ok(())
     }
 
-    fn generate_forex_filename(currency: Currencies, purchase_date: DateTime<Utc>) -> String {
+    fn generate_forex_filename(currency: Currency, purchase_date: DateTime<Utc>) -> String {
         let curr = currency.to_string();
         let year = purchase_date.year();
         let month = purchase_date.month();
@@ -395,14 +395,14 @@ impl ForexManagerStorageImpl {
 mod forex_manager_storage_tests {
     use chrono::{TimeZone, Utc};
 
-    use crate::forex::{Currencies, Money};
+    use crate::forex::{Currency, Money};
 
     use super::ForexManagerStorageImpl;
 
     #[test]
     fn test_generate_forex_filename() {
         let expected = "USD-2025-01-01T10:10:10Z.json";
-        let input_currency = Currencies::USD;
+        let input_currency = Currency::USD;
         let purchase_date = Utc.with_ymd_and_hms(2025, 1, 1, 10, 10, 10).unwrap();
         let ret = ForexManagerStorageImpl::generate_forex_filename(input_currency, purchase_date);
 

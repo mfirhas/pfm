@@ -113,7 +113,7 @@ use rust_decimal_macros::dec;
 
 use crate::{
     forex::ForexStorage,
-    forex::{convert, poll_historical_rates, poll_rates, Currencies},
+    forex::{convert, poll_historical_rates, poll_rates, Currency},
     forex_impl, forex_storage_impl, global,
 };
 
@@ -202,8 +202,8 @@ async fn test_convert() {
     let fs = global::storage_fs();
     let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
 
-    let from = Money::new_money(crate::forex::Currencies::GBP, dec!(1000));
-    let to = Currencies::SAR;
+    let from = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
+    let to = Currency::SAR;
     let ret = convert(&storage, from, to).await;
     dbg!(&ret);
 
@@ -219,7 +219,7 @@ async fn test_poll_rates() {
     let forex =
         forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
 
-    let base = Currencies::USD;
+    let base = Currency::USD;
     let ret = poll_rates(&forex, &storage, base).await;
     dbg!(&ret);
 
@@ -235,7 +235,7 @@ async fn test_poll_historical_rates() {
     let forex =
         forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
 
-    let base = Currencies::USD;
+    let base = Currency::USD;
     let date = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
     let ret = poll_historical_rates(&forex, &storage, date, base).await;
     dbg!(&ret);
