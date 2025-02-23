@@ -237,6 +237,8 @@ async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, b
     let _ = forex::poll_rates(&fx, &fs, base).await;
 }
 
+/// CRON_TAB_POLL_RATES_SGE="5 8 * * 1-5"
+/// Run at every 08:05 UTC from mon-fri
 fn poll_latest_rates_sge_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
@@ -259,6 +261,8 @@ fn poll_latest_rates_sge_job(
     })
 }
 
+/// CRON_TAB_POLL_RATES_LBMA_AM="35 10 * * 1-5"
+/// Run at every 10:35 UTC from mon-fri
 fn poll_latest_rates_lbma_am_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
@@ -281,6 +285,8 @@ fn poll_latest_rates_lbma_am_job(
     })
 }
 
+/// CRON_TAB_POLL_RATES_LBMA_PM="5 15 * * 1-5"
+/// Run at every 15:05 UTC from mon-fri
 fn poll_latest_rates_lbma_pm_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
