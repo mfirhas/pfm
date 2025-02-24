@@ -14,8 +14,8 @@ use pfm_core::{
         ConversionResponse, Currency, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
         HttpResponse, Money, Order,
     },
+    forex_impl::forex_storage::ForexStorageImpl,
     forex_impl::open_exchange_api::Api,
-    forex_storage_impl::forex_storage::ForexStorageImpl,
     utils::get_config,
 };
 use serde::{Deserialize, Deserializer, Serialize};
@@ -32,7 +32,7 @@ async fn main() {
         &core_cfg.forex_open_exchange_api_key,
         http_client,
     );
-    let storage = pfm_core::forex_storage_impl::forex_storage::ForexStorageImpl::new(storage_fs);
+    let storage = pfm_core::forex_impl::forex_storage::ForexStorageImpl::new(storage_fs);
 
     let app_ctx = AppContext {
         forex_rates: forex.clone(),

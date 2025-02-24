@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use configrs::config::Config as configrs;
 use pfm_core::{
     forex::{self, Currency, ForexHistoricalRates, ForexRates, ForexStorage},
-    forex_impl, forex_storage_impl, global,
+    forex_impl, global,
 };
 use serde::Deserialize;
 use tokio::signal;
@@ -115,10 +115,10 @@ fn dep_forex_impl() -> forex_impl::open_exchange_api::Api {
     forex_impl
 }
 
-fn dep_storage_impl() -> forex_storage_impl::forex_storage::ForexStorageImpl {
+fn dep_storage_impl() -> forex_impl::forex_storage::ForexStorageImpl {
     let storage = global::storage_fs();
 
-    let storage_impl = forex_storage_impl::forex_storage::ForexStorageImpl::new(storage);
+    let storage_impl = forex_impl::forex_storage::ForexStorageImpl::new(storage);
 
     storage_impl
 }

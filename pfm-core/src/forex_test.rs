@@ -113,7 +113,7 @@ use rust_decimal_macros::dec;
 
 use crate::{
     forex::{batch_convert, convert, poll_historical_rates, poll_rates, Currency, ForexStorage},
-    forex_impl, forex_storage_impl, global,
+    forex_impl, global,
 };
 
 /// test crate::forex::Currency
@@ -346,7 +346,7 @@ use super::forex::Money;
 #[tokio::test]
 async fn test_convert() {
     let fs = global::storage_fs();
-    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
 
     let from = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
     let to = Currency::SAR;
@@ -359,7 +359,7 @@ async fn test_convert() {
 #[tokio::test]
 async fn test_batch_convert() {
     let fs = global::storage_fs();
-    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
 
     let from_gbp = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
     let from_usd = Money::new_money(crate::forex::Currency::USD, dec!(4000));
@@ -380,7 +380,7 @@ async fn test_poll_rates() {
     let cfg = global::config();
     let fs = global::storage_fs();
     let http_client = global::http_client();
-    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
     let forex =
         forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
 
@@ -396,7 +396,7 @@ async fn test_poll_historical_rates() {
     let cfg = global::config();
     let fs = global::storage_fs();
     let http_client = global::http_client();
-    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
     let forex =
         forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
 
@@ -411,7 +411,7 @@ async fn test_poll_historical_rates() {
 #[tokio::test]
 async fn test_get_rates_list() {
     let fs = global::storage_fs();
-    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
 
     let ret = storage
         .get_latest_list(1, 5, crate::forex::Order::DESC)
@@ -422,7 +422,7 @@ async fn test_get_rates_list() {
 #[tokio::test]
 async fn test_get_historical_list() {
     let fs = global::storage_fs();
-    let storage = forex_storage_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
 
     let ret = storage
         .get_historical_list(1, 5, crate::forex::Order::DESC)

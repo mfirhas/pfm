@@ -13,4 +13,7 @@ pub mod open_exchange_api;
 // #[cfg(test)]
 // mod open_exchange_api_test;
 
+/// SERVER side storage for cron and http services
+pub mod forex_storage;
+
 pub(crate) mod utils;
