@@ -11,7 +11,7 @@
 // - very limited historical rates.
 
 use crate::forex::ForexError::{self, ExchangeAPIError};
-use crate::forex::{Currencies, ForexHistoricalRates, ForexRates, RatesData, RatesResponse};
+use crate::forex::{Currency, ForexHistoricalRates, ForexRates, RatesData, RatesResponse};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -28,7 +28,7 @@ const ERROR_PREFIX: &str = "[FOREX][exchange-api]";
 
 #[derive(Debug)]
 pub struct Response {
-    base: Currencies,
+    base: Currency,
     api_response: ApiResponse,
 }
 
@@ -182,7 +182,7 @@ impl Api {
 impl ForexRates for Api {
     async fn rates(
         &self,
-        base: Currencies,
+        base: Currency,
     ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", "latest")
@@ -232,7 +232,7 @@ impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: Currencies,
+        base: Currency,
     ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = CLOUDFLARE_ENDPOINT_V1

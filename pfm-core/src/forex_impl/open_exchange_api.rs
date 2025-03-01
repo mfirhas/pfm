@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use crate::forex::ForexError::{self, OpenExchangeAPIError};
 use crate::forex::{
-    Currencies, ForexHistoricalRates, ForexRates, HistoricalRates, RatesData, RatesResponse,
+    Currency, ForexHistoricalRates, ForexRates, HistoricalRates, RatesData, RatesResponse,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -109,7 +109,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
             xpt: value.rates.xpt,
         };
 
-        let base = Currencies::from_str(&value.base_currency).map_err(|err| {
+        let base = Currency::from_str(&value.base_currency).map_err(|err| {
             OpenExchangeAPIError(anyhow!(
                 "{} base currency not supported :{}",
                 ERROR_PREFIX,
@@ -155,7 +155,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             xpt: value.rates.xpt,
         };
 
-        let base = Currencies::from_str(&value.base_currency).map_err(|err| {
+        let base = Currency::from_str(&value.base_currency).map_err(|err| {
             OpenExchangeAPIError(anyhow!(
                 "{} base currency not supported :{}",
                 ERROR_PREFIX,
@@ -188,7 +188,7 @@ impl Api {
 impl ForexRates for Api {
     async fn rates(
         &self,
-        base: Currencies,
+        base: Currency,
     ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
         let params = [
             ("app_id", self.key),
@@ -237,7 +237,7 @@ impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: Currencies,
+        base: Currency,
     ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = HISTORICAL_ENDPOINT.replace(":date", yyyymmdd.as_str());

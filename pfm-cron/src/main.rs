@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use configrs::config::Config as configrs;
 use pfm_core::{
-    forex::{self, Currencies, ForexHistoricalRates, ForexRates, ForexStorage},
-    forex_impl, forex_storage_impl, global,
+    forex::{self, Currency, ForexHistoricalRates, ForexRates, ForexStorage},
+    forex_impl, global,
 };
 use serde::Deserialize;
 use tokio::signal;
@@ -115,10 +115,10 @@ fn dep_forex_impl() -> forex_impl::open_exchange_api::Api {
     forex_impl
 }
 
-fn dep_storage_impl() -> forex_storage_impl::forex_storage::ForexStorageImpl {
+fn dep_storage_impl() -> forex_impl::forex_storage::ForexStorageImpl {
     let storage = global::storage_fs();
 
-    let storage_impl = forex_storage_impl::forex_storage::ForexStorageImpl::new(storage);
+    let storage_impl = forex_impl::forex_storage::ForexStorageImpl::new(storage);
 
     storage_impl
 }
@@ -233,10 +233,12 @@ async fn register_cron_jobs<'a>(
 
 //////////////////////////////////////////// HANDLERS AND JOBS ////////////////////////////////////////////
 // Job::new_async adds job using UTC offset
-async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currencies) {
+async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currency) {
     let _ = forex::poll_rates(&fx, &fs, base).await;
 }
 
+/// CRON_TAB_POLL_RATES_SGE="5 8 * * 1-5"
+/// Run at every 08:05 UTC from mon-fri
 fn poll_latest_rates_sge_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
@@ -247,7 +249,7 @@ fn poll_latest_rates_sge_job(
         Box::pin(poll_latest_rates_handler(
             forex,
             storage,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
@@ -259,6 +261,8 @@ fn poll_latest_rates_sge_job(
     })
 }
 
+/// CRON_TAB_POLL_RATES_LBMA_AM="35 10 * * 1-5"
+/// Run at every 10:35 UTC from mon-fri
 fn poll_latest_rates_lbma_am_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
@@ -269,7 +273,7 @@ fn poll_latest_rates_lbma_am_job(
         Box::pin(poll_latest_rates_handler(
             forex,
             storage,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
@@ -281,6 +285,8 @@ fn poll_latest_rates_lbma_am_job(
     })
 }
 
+/// CRON_TAB_POLL_RATES_LBMA_PM="5 15 * * 1-5"
+/// Run at every 15:05 UTC from mon-fri
 fn poll_latest_rates_lbma_pm_job(
     cron_cfg: &Config,
     core_cfg: &'static pfm_core::global::Config,
@@ -291,7 +297,7 @@ fn poll_latest_rates_lbma_pm_job(
         Box::pin(poll_latest_rates_handler(
             forex,
             storage,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {
@@ -307,7 +313,7 @@ async fn poll_historical_rates_handler(
     fx: impl ForexHistoricalRates,
     fs: impl ForexStorage,
     date: DateTime<Utc>,
-    base: Currencies,
+    base: Currency,
 ) {
     let _ = forex::poll_historical_rates(&fx, &fs, date, base).await;
 }
@@ -326,7 +332,7 @@ fn poll_historical_rates_job(
             forex,
             storage,
             date,
-            core_cfg.forex_base_currency,
+            global::BASE_CURRENCY,
         ))
     })
     .map_err(|err| {

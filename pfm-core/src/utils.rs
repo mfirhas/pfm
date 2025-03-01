@@ -1,5 +1,7 @@
 use configrs::config::Config as configrs;
 use serde::Deserialize;
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
@@ -99,4 +101,40 @@ fn is_workspace_root(dir: &Path) -> bool {
     }
 
     false
+}
+
+pub fn set_root(root: PathBuf, permission: u32) -> Result<PathBuf, anyhow::Error> {
+    let is_exist = root.try_exists()?;
+
+    if !is_exist {
+        fs::create_dir_all(&root)?;
+    }
+
+    let metadata = fs::metadata(&root)?;
+    let mut new_permissions = metadata.permissions();
+    new_permissions.set_mode(permission);
+    fs::set_permissions(&root, new_permissions)?;
+
+    Ok(root)
+}
+
+pub fn set_sub_dir(
+    parent: &PathBuf,
+    sub_dir_name: &str,
+    permission: u32,
+) -> Result<PathBuf, anyhow::Error> {
+    let sub_dir = parent.join(sub_dir_name);
+
+    let is_exist = sub_dir.try_exists()?;
+
+    if !is_exist {
+        fs::create_dir_all(&sub_dir)?;
+    }
+
+    let metadata = fs::metadata(&sub_dir)?;
+    let mut new_permissions = metadata.permissions();
+    new_permissions.set_mode(permission);
+    fs::set_permissions(&sub_dir, new_permissions)?;
+
+    Ok(sub_dir)
 }

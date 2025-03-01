@@ -6,7 +6,7 @@
 // 10 reqs/minute
 
 use crate::forex::ForexError::{self, CurrencyAPIError};
-use crate::forex::{Currencies, ForexHistoricalRates, HistoricalRates, RatesResponse};
+use crate::forex::{Currency, ForexHistoricalRates, HistoricalRates, RatesResponse};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -36,7 +36,7 @@ impl Api {
 
 #[derive(Debug)]
 pub struct Response {
-    pub base: Currencies,
+    pub base: Currency,
     pub api_response: ApiResponse,
 }
 
@@ -57,52 +57,52 @@ pub struct Metadata {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Data {
     #[serde(rename = "IDR")]
-    pub idr: Currency,
+    pub idr: RateData,
 
     #[serde(rename = "USD")]
-    pub usd: Currency,
+    pub usd: RateData,
 
     #[serde(rename = "EUR")]
-    pub eur: Currency,
+    pub eur: RateData,
 
     #[serde(rename = "GBP")]
-    pub gbp: Currency,
+    pub gbp: RateData,
 
     #[serde(rename = "JPY")]
-    pub jpy: Currency,
+    pub jpy: RateData,
 
     #[serde(rename = "CHF")]
-    pub chf: Currency,
+    pub chf: RateData,
 
     #[serde(rename = "SGD")]
-    pub sgd: Currency,
+    pub sgd: RateData,
 
     #[serde(rename = "CNY")]
-    pub cny: Currency,
+    pub cny: RateData,
 
     #[serde(rename = "SAR")]
-    pub sar: Currency,
+    pub sar: RateData,
 
     #[serde(rename = "XAU")]
-    pub xau: Currency,
+    pub xau: RateData,
 
     #[serde(rename = "XAG")]
-    pub xag: Currency,
+    pub xag: RateData,
 
-    #[serde(rename = "XPT", default = "xpt_currency_default")]
-    pub xpt: Currency,
+    #[serde(rename = "XPT", default = "xpt_rate_default")]
+    pub xpt: RateData,
 }
 
 // some times in the past currencyapi.com return no XPT
-fn xpt_currency_default() -> Currency {
-    Currency {
+fn xpt_rate_default() -> RateData {
+    RateData {
         code: "XPT".to_string(),
         value: Decimal::default(),
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Currency {
+pub struct RateData {
     #[serde(rename = "code")]
     pub code: String,
     #[serde(rename = "value")]
@@ -150,7 +150,7 @@ impl ForexHistoricalRates for Api {
     async fn historical_rates(
         &self,
         date: chrono::DateTime<chrono::Utc>,
-        base: Currencies,
+        base: Currency,
     ) -> crate::forex::ForexResult<crate::forex::RatesResponse<HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 
