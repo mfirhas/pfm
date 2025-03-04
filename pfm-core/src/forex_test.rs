@@ -1,108 +1,87 @@
-mod regex_format_tests {
-    use super::super::forex::{COMMA_SEPARATOR_REGEX, DOT_SEPARATOR_REGEX};
+mod money_format_regex_tests {
+    use core::panic;
+
+    use super::super::forex::MONEY_FORMAT_REGEX;
 
     #[test]
-    fn test_dot_separated_amount() {
-        let regex = &DOT_SEPARATOR_REGEX;
+    fn test_money_format_regex() {
+        // HAPPY PATH TEST CASES
+        let happy_path_tests = vec![
+            // Basic formats
+            "USD 100",
+            "EUR 200",
+            "JPY 300",
+            // With comma separators
+            "USD 1,000",
+            "USD 1,000,000",
+            "USD 1,000,000,000",
+            // With decimal places
+            "USD 100.00",
+            "USD 100.50",
+            "USD 100.12345", // Multiple decimal places
+            // Combining comma separators and decimal places
+            "USD 1,000.00",
+            "USD 1,000,000.50",
+            "USD 1,000,000,000.99",
+            // Different currency codes
+            "IDR 50000",
+            "GBP 1,234.56",
+            "AUD 9,876.54",
+            // Single digit
+            "USD 1",
+            "USD 1.5",
+            // Large numbers
+            "BTC 0.00000001",
+            "IDR 999,999,999,999.99999",
+            "USD  100", // Multiple spaces (this actually works with our regex due to \s+)
+        ];
 
-        // Valid cases
-        assert!(
-            regex.is_match("1.000.000.000,24"),
-            "should match 1.000.000.000,24"
-        );
-        assert!(regex.is_match("1.000.000,00"), "should match 1.000.000,00");
-        assert!(regex.is_match("1.000"), "should match 1.000");
-        assert!(regex.is_match("1000"), "should match 1000");
-        assert!(regex.is_match("1.000,50"), "should match 1.000,50");
-        assert!(regex.is_match("01.000"), "should match 01.000");
-        assert!(regex.is_match("1.234.567,89"), "should match 1.234.567,89");
-        assert!(regex.is_match("1000.000"), "should match 1.000.000");
+        // UNHAPPY PATH TEST CASES
+        let unhappy_path_tests = vec![
+            // Invalid currency code format
+            "Us 100",   // Lowercase letters
+            "USDD 100", // More than 3 letters
+            "US 100",   // Less than 3 letters
+            "123 100",  // Numbers instead of letters
+            // Invalid spacing
+            "USD100", // No space
+            // Invalid amount format
+            "USD 1,00",     // Incorrect comma placement
+            "USD 1,0000",   // Incorrect grouping
+            "USD 1.000.00", // Multiple decimal points
+            "USD 1,000,00", // Incorrect comma placement
+            "USD ,100",     // Starting with comma
+            "USD 100,",     // Ending with comma
+            // Decimal separator issues
+            "USD 100,00",   // Using comma as decimal separator (European style)
+            "USD 1.000,00", // European number format
+            // Invalid characters
+            "USD 100a", // Letters in amount
+            "USD $100", // Symbols in amount
+            "USD -100", // Negative numbers
+            "USD +100", // Explicit positive sign
+            // Empty or missing values
+            "USD ", // Missing amount
+            " 100", // Missing currency code
+            "",     // Empty string
+            // Extra information
+            "USD 100.00 only", // Extra text
+            "Price: USD 100",  // Extra text
+        ];
 
-        // Invalid cases
-        assert!(
-            !regex.is_match("1,000.000.000,24"),
-            "should match 1.000.000.000,24"
-        );
+        for v in happy_path_tests {
+            let ret = MONEY_FORMAT_REGEX.is_match(v);
+            if !ret {
+                panic!("test_money_format_regex error on happy_path_tests: expected '{}' to be validated", v);
+            }
+        }
 
-        assert!(
-            !regex.is_match("1.00.000"),
-            "should not match 1.00.000 (wrong grouping)"
-        );
-        assert!(
-            !regex.is_match("1,000.00"),
-            "should not match 1,000.00 (wrong separators)"
-        );
-        assert!(
-            !regex.is_match("1.000."),
-            "should not match 1.000. (trailing separator)"
-        );
-        assert!(
-            !regex.is_match(".1.000"),
-            "should not match .1.000 (leading separator)"
-        );
-        assert!(
-            !regex.is_match("1.000,0"),
-            "should not match 1.000,0 (single decimal)"
-        );
-        assert!(
-            !regex.is_match("1.000,000"),
-            "should not match 1.000,000 (three decimals)"
-        );
-        assert!(
-            !regex.is_match("1,00,00"),
-            "should not match 100,00 (three decimals)"
-        );
-    }
-
-    #[test]
-    fn test_comma_separated_amount() {
-        let regex = &COMMA_SEPARATOR_REGEX;
-
-        // Valid cases
-        assert!(
-            regex.is_match("1,000,000,000.24"),
-            "should match 1,000,000,000.24"
-        );
-
-        assert!(regex.is_match("1,000,000.00"), "should match 1,000,000.00");
-        assert!(regex.is_match("1,000"), "should match 1,000");
-        assert!(regex.is_match("1000"), "should match 1000");
-        assert!(regex.is_match("1,000.50"), "should match 1,000.50");
-        assert!(regex.is_match("01,000"), "should match 01,000");
-        assert!(regex.is_match("1,234,567.89"), "should match 1,234,567.89");
-        assert!(regex.is_match("1000,000"), "should match 1,000,000");
-
-        // Invalid cases
-        assert!(
-            !regex.is_match("1.000,000,000.24"),
-            "should match 1,000,000,000.24"
-        );
-
-        assert!(
-            !regex.is_match("1,00,000"),
-            "should not match 1,00,000 (wrong grouping)"
-        );
-        assert!(
-            !regex.is_match("1.000,00"),
-            "should not match 1.000,00 (wrong separators)"
-        );
-        assert!(
-            !regex.is_match("1,000,"),
-            "should not match 1,000, (trailing separator)"
-        );
-        assert!(
-            !regex.is_match(",1,000"),
-            "should not match ,1,000 (leading separator)"
-        );
-        assert!(
-            !regex.is_match("1,000.0"),
-            "should not match 1,000.0 (single decimal)"
-        );
-        assert!(
-            !regex.is_match("1,000.000"),
-            "should not match 1,000.000 (three decimals)"
-        );
-        assert!(!regex.is_match("1.00.00"), "should match 100.00");
+        for v in unhappy_path_tests {
+            let ret = MONEY_FORMAT_REGEX.is_match(v);
+            if ret {
+                panic!("test_money_format_regex error on unhappy_path_tests: expected '{}' to be validated", v);
+            }
+        }
     }
 }
 
@@ -270,7 +249,7 @@ mod money_tests {
         assert!(money.is_ok());
         assert_eq!(money.unwrap().to_string().as_str(), expected);
 
-        let expected = "IDR 45.000.000"; // indonesian rupiah is dot separated for thousands.
+        let expected = "IDR 45,000,000"; // indonesian rupiah is dot separated for thousands.
         let money = Money::new("IDR", "45000000");
         dbg!(&money);
         println!("{}", money.as_ref().unwrap());
@@ -288,15 +267,15 @@ mod money_tests {
         assert!(money.is_ok());
         assert_eq!(money.unwrap().to_string().as_str(), expected);
 
-        // comma separated currencies cannot be written in dot separated.
+        // will be treated as dot separating fraction
         let input = "USD 23.000";
         let money = Money::from_str(input);
-        dbg!(&money);
+        dbg!("-->", &money);
         // println!("{}", money.as_ref().unwrap());
-        assert!(money.is_err());
+        assert!(money.is_ok());
 
-        let input = "IDR 23.000";
-        let expected = "IDR 23.000";
+        let input = "IDR 23,000";
+        let expected = "IDR 23,000";
         let money = Money::from_str(input);
         dbg!(&money);
         println!("{}", money.as_ref().unwrap());
@@ -305,7 +284,7 @@ mod money_tests {
 
         // dot separated currencies can be written in comma separated
         let input = "IDR 23,000";
-        let expected = "IDR 23.000";
+        let expected = "IDR 23,000";
         let money = Money::from_str(input);
         dbg!(&money);
         println!("{}", money.as_ref().unwrap());
@@ -322,7 +301,7 @@ mod money_tests {
         assert_eq!(money.unwrap().to_string().as_str(), expected);
 
         let input = "IDR 23000";
-        let expected = "IDR 23.000";
+        let expected = "IDR 23,000";
         let money = Money::from_str(input);
         dbg!(&money);
         println!("{}", money.as_ref().unwrap());
@@ -331,7 +310,7 @@ mod money_tests {
 
         // dot separated currencies can be written in comma separated
         let input = "IDR 23000";
-        let expected = "IDR 23.000";
+        let expected = "IDR 23,000";
         let money = Money::from_str(input);
         dbg!(&money);
         println!("{}", money.as_ref().unwrap());
