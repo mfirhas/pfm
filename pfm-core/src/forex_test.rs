@@ -317,6 +317,25 @@ mod money_tests {
         assert!(money.is_ok());
         assert_eq!(money.unwrap().to_string().as_str(), expected);
     }
+
+    #[test]
+    fn test_money_equality() {
+        let a = Money::new_money(Currency::USD, dec!(42533));
+        let b = Money::new_money(Currency::USD, dec!(42533));
+        assert_eq!(a, b);
+
+        let a = Money::new_money(Currency::USD, dec!(1.234));
+        let b = Money::new_money(Currency::USD, dec!(1.234));
+        assert_eq!(a, b);
+
+        let a = Money::new_money(Currency::USD, dec!(1.2345));
+        let b = Money::new_money(Currency::USD, dec!(1.234));
+        assert_ne!(a, b);
+
+        let a = Money::new_money(Currency::USD, dec!(1.234));
+        let b = Money::new_money(Currency::IDR, dec!(1.234));
+        assert_ne!(a, b);
+    }
 }
 
 use super::forex::Money;
