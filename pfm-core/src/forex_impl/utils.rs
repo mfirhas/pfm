@@ -2,82 +2,38 @@ use crate::forex::ForexError::InputError;
 use crate::forex::*;
 use accounting::Accounting;
 use anyhow::anyhow;
-use iso_currency::Currency as CurrencyLib;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
 pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
-    // 1. Check currency parts
-    // currency parts <CODE> <major-unit.minor-unit>
-    let currency_parts: Vec<&str> = input_money.split_whitespace().collect();
-    if currency_parts.len() != 2 {
-        return Err(InputError(anyhow!(ERROR_CURRENCY_PARTS)));
-    }
-    let currency = CurrencyLib::from_str(currency_parts[0])
-        .map_err(|err| InputError(anyhow!("invalid currency code: {}", err)))?;
-
-    // 2. check if first part is in list of currency codes
-    let code = CurrencyLib::from_str(currency_parts[0])
-        .map_err(|err| InputError(anyhow!("Currency code invalid: {}", err)))?;
-
-    // 3. check if the code is in comma or dot separated for thousands.
-    let mut is_comma_separated_code = COMMA_SEPARATED_CURRENCIES.contains(&code);
-
-    // 4. validate format using regex
-    let is_amount_validated = COMMA_SEPARATOR_REGEX.is_match(currency_parts[1]);
-    if is_amount_validated {
-        if !is_comma_separated_code {
-            is_comma_separated_code = true;
-        }
-    } else {
-        if !is_comma_separated_code {
-            let is_dot_validated = DOT_SEPARATOR_REGEX.is_match(currency_parts[1]);
-            if !is_dot_validated {
-                return Err(InputError(anyhow!(ERROR_INVALID_AMOUNT_FORMAT)));
-            }
-        } else {
-            return Err(InputError(anyhow!(ERROR_INVALID_AMOUNT_FORMAT)));
-        }
+    // 1. parse with regex
+    if !MONEY_FORMAT_REGEX.is_match(input_money) {
+        return Err(InputError(anyhow!(ERROR_MONEY_FORMAT)));
     }
 
-    // 5. remove thousands separator and convert decimal/minor unit separator to dot.
-    let amount = if is_comma_separated_code {
-        let ch = ',';
-        let ret: String = currency_parts[1].chars().filter(|&c| c != ch).collect();
-        ret
-    } else {
-        let ch = '.';
-        let ret: String = currency_parts[1].chars().filter(|&c| c != ch).collect();
-        let ret: String = ret
-            .chars()
-            .map(|c| if c == ',' { '.' } else { c })
-            .collect();
-        ret
-    };
+    // 2. take money parts: currency and amount
+    let money_parts: Vec<&str> = input_money.split_whitespace().collect();
+    if money_parts.len() != 2 {
+        return Err(InputError(anyhow!(ERROR_MONEY_FORMAT)));
+    }
 
-    // 6. convert amount into Decimal.
-    let decimal = Decimal::from_str(&amount).map_err(|err| {
+    // 3. parse currency code
+    let currency = money_parts[0].parse::<Currency>()?;
+
+    // 4. remove thousands separator
+    let comma = ',';
+    let amount_str: String = money_parts[1].chars().filter(|&c| c != comma).collect();
+
+    // 5. convert amount into Decimal.
+    let amount = Decimal::from_str(&amount_str).map_err(|err| {
         InputError(anyhow!(
-            "failed converting amount into decimal type: {}",
+            "failed converting amount '{}' into decimal type: {}",
+            &amount_str,
             err
         ))
     })?;
 
-    match currency {
-        CurrencyLib::IDR => Ok(Money::IDR(decimal)),
-        CurrencyLib::USD => Ok(Money::USD(decimal)),
-        CurrencyLib::EUR => Ok(Money::EUR(decimal)),
-        CurrencyLib::GBP => Ok(Money::GBP(decimal)),
-        CurrencyLib::JPY => Ok(Money::JPY(decimal)),
-        CurrencyLib::CHF => Ok(Money::CHF(decimal)),
-        CurrencyLib::SGD => Ok(Money::SGD(decimal)),
-        CurrencyLib::CNY => Ok(Money::CNY(decimal)),
-        CurrencyLib::SAR => Ok(Money::SAR(decimal)),
-        _ => Err(InputError(anyhow!(
-            "forex_impl: failed parsing Money from string, currency {} not supported.",
-            currency.code()
-        ))),
-    }
+    Ok(Money::new_money(currency, amount))
 }
 
 pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
@@ -87,23 +43,7 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
         money.code()
     };
 
-    let curr = match money {
-        Money::IDR(_) => CurrencyLib::IDR,
-        Money::USD(_) => CurrencyLib::USD,
-        Money::EUR(_) => CurrencyLib::EUR,
-        Money::GBP(_) => CurrencyLib::GBP,
-        Money::JPY(_) => CurrencyLib::JPY,
-        Money::CHF(_) => CurrencyLib::CHF,
-        Money::SGD(_) => CurrencyLib::SGD,
-        Money::CNY(_) => CurrencyLib::CNY,
-        Money::SAR(_) => CurrencyLib::SAR,
-    };
-
-    let mut ac = if COMMA_SEPARATED_CURRENCIES.contains(&curr) {
-        Accounting::new_from_seperator(currency_code.as_str(), 2, ",", ".")
-    } else {
-        Accounting::new_from_seperator(currency_code.as_str(), 2, ".", ",")
-    };
+    let mut ac = Accounting::new_from_seperator(currency_code.as_str(), 2, ",", ".");
 
     if use_symbol {
         ac.set_format("{s}{v}");

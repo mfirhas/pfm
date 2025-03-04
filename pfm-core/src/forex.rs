@@ -14,7 +14,6 @@ use chrono::{DateTime, Utc};
 use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 
 use crate::{
     forex_impl::utils::{convert_currency, parse_str, to_string},
@@ -22,67 +21,18 @@ use crate::{
 };
 
 lazy_static! {
-    /// List of currencies using comma to separate thousands.
-    pub static ref COMMA_SEPARATED_CURRENCIES: Vec<CurrencyLib> = {
-        let comma_separated_currencies = vec![
-                CurrencyLib::AUD, // Australia
-                CurrencyLib::BWP, // Botswana
-                CurrencyLib::XCD, // British West Indies (East Caribbean Dollar)
-                CurrencyLib::BND, // Brunei
-                CurrencyLib::CAD, // Canada (English-speaking)
-                CurrencyLib::DOP, // Dominican Republic
-                CurrencyLib::GTQ, // Guatemala
-                CurrencyLib::HKD, // Hong Kong
-                CurrencyLib::INR, // India
-                CurrencyLib::EUR, // euro
-                CurrencyLib::ILS, // Israel
-                CurrencyLib::JPY, // Japan
-                CurrencyLib::KES, // Kenya
-                CurrencyLib::KPW, // Korea (North)
-                CurrencyLib::KRW, // Korea (South)
-                CurrencyLib::LBP, // Lebanon
-                CurrencyLib::MYR, // Malaysia
-                CurrencyLib::EUR, // Malta
-                CurrencyLib::MXN, // Mexico
-                CurrencyLib::NPR, // Nepal
-                CurrencyLib::NZD, // New Zealand
-                CurrencyLib::NIO, // Nicaragua
-                CurrencyLib::NGN, // Nigeria
-                CurrencyLib::PKR, // Pakistan
-                CurrencyLib::CNY, // People's Republic of China
-                CurrencyLib::PHP, // Philippines
-                CurrencyLib::SGD, // Singapore
-                CurrencyLib::LKR, // Sri Lanka
-                CurrencyLib::CHF, // Switzerland (only when amount is in Swiss francs)
-                CurrencyLib::TWD, // Taiwan
-                CurrencyLib::TZS, // Tanzania
-                CurrencyLib::THB, // Thailand
-                CurrencyLib::UGX, // Uganda
-                CurrencyLib::GBP, // United Kingdom
-                CurrencyLib::USD, // United States (including insular areas)
-                CurrencyLib::ZWL, // Zimbabwe
-            ];
-
-            comma_separated_currencies
-    };
+    /// Using ISO 4217 currency code with comma separated thousands(optional) and dot separated fraction(optional).
+    /// e.g.
+    /// USD 1000
+    /// USD 1,000
+    /// USD 1,000.00
+    /// IDR 5,000.235
+    /// IDR 5,000,0223.445
+    pub(crate) static ref MONEY_FORMAT_REGEX: regex::Regex =
+        regex::Regex::new(r"^([A-Z]{3})\s+((?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?)$").expect("failed compiling money format regex");
 }
 
-/// thousands separated by commas. E.g. 1,000 or 1,000.00
-pub(crate) const COMMA_SEPARATOR: &str = r"^\d{1,3}(,?\d{3})*(\.\d{2})?$";
-
-/// thousands separated by dots. E.g. 1.000 or 1.000,00
-pub(crate) const DOT_SEPARATOR: &str = r"^\d{1,3}(\.?\d{3})*(?:,\d{2})?$";
-
-lazy_static! {
-    pub static ref COMMA_SEPARATOR_REGEX: regex::Regex =
-        regex::Regex::new(COMMA_SEPARATOR).expect("failed compiling comma separator regex");
-    pub static ref DOT_SEPARATOR_REGEX: regex::Regex =
-        regex::Regex::new(DOT_SEPARATOR).expect("failed to compile dot separator regex");
-}
-
-pub(crate) const ERROR_CURRENCY_PARTS: &str = "The money must be written in ISO 4217 format using currency code first then major unit along with minor unit(optional). They're separated by space. For example: USD 5,000,000 or USD 5,000,000.23 or IDR 5.000.000 or IDR 5.000.000,00. Thousands separators are optional. Minor units must be 2.";
-
-pub(crate) const ERROR_INVALID_AMOUNT_FORMAT: &str = "The amount may contains thousands separator or not, if it contains use the appropriate ones for the currency. If minor unit exists use the correct separator. Minor units must be 2.";
+pub(crate) const ERROR_MONEY_FORMAT: &str = "The money must be written in ISO 4217 format: <CODE> <AMOUNT>. Amount may be separated by comma for thousands, and by dot for fraction.";
 
 const ERROR_PREFIX: &str = "[FOREX]";
 
