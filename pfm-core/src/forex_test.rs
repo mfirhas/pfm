@@ -87,11 +87,14 @@ mod money_format_regex_tests {
 
 use std::str::FromStr;
 
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal_macros::dec;
 
 use crate::{
-    forex::{batch_convert, convert, poll_historical_rates, poll_rates, Currency, ForexStorage},
+    forex::{
+        batch_convert, convert, poll_historical_rates, poll_rates, ConversionResponse, Currency,
+        ForexStorage, Money,
+    },
     forex_impl, global,
 };
 
@@ -317,15 +320,32 @@ mod money_tests {
         assert!(money.is_ok());
         assert_eq!(money.unwrap().to_string().as_str(), expected);
     }
-}
 
-use super::forex::Money;
+    #[test]
+    fn test_money_equality() {
+        let a = Money::new_money(Currency::USD, dec!(42533));
+        let b = Money::new_money(Currency::USD, dec!(42533));
+        assert_eq!(a, b);
+
+        let a = Money::new_money(Currency::USD, dec!(1.234));
+        let b = Money::new_money(Currency::USD, dec!(1.234));
+        assert_eq!(a, b);
+
+        let a = Money::new_money(Currency::USD, dec!(1.2345));
+        let b = Money::new_money(Currency::USD, dec!(1.234));
+        assert_ne!(a, b);
+
+        let a = Money::new_money(Currency::USD, dec!(1.234));
+        let b = Money::new_money(Currency::IDR, dec!(1.234));
+        assert_ne!(a, b);
+    }
+}
 
 // make sure to test get_rates first to populate directory before testing this
 #[tokio::test]
 async fn test_convert() {
     let fs = global::storage_fs();
-    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = super::forex_mock::ForexStorageSuccessMock;
 
     let from = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
     let to = Currency::SAR;
@@ -333,12 +353,17 @@ async fn test_convert() {
     dbg!(&ret);
 
     assert!(ret.is_ok());
+
+    let ret = ret.unwrap();
+    // expected data come from forex_mock
+    let expected = Money::new_money(Currency::SAR, dec!(4762.0152292578498482026199809));
+    assert_eq!(ret.money, expected);
 }
 
 #[tokio::test]
 async fn test_batch_convert() {
     let fs = global::storage_fs();
-    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = super::forex_mock::ForexStorageSuccessMock;
 
     let from_gbp = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
     let from_usd = Money::new_money(crate::forex::Currency::USD, dec!(4000));
@@ -350,8 +375,46 @@ async fn test_batch_convert() {
     let ret = batch_convert(&storage, from, to).await;
     dbg!(&ret);
 
+    // expected data come from forex_mock
+    let expected_conversions = vec![
+        ConversionResponse {
+            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            money: Money::SAR(dec!(4762.0152292578498482026199809)),
+        },
+        ConversionResponse {
+            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            money: Money::SAR(dec!(15001.548000)),
+        },
+        ConversionResponse {
+            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            money: Money::SAR(dec!(5.2401981046108984873336978311)),
+        },
+        ConversionResponse {
+            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            money: Money::SAR(dec!(4186.4940892803322058872777200)),
+        },
+        ConversionResponse {
+            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            money: Money::SAR(dec!(3625.2651561342823236183774170)),
+        },
+    ];
+
     assert!(ret.is_ok());
-    assert_eq!(ret.unwrap().len(), 5);
+    assert_eq!(ret.as_ref().unwrap().len(), 5);
+    let ret = ret.unwrap();
+    for (i, v) in expected_conversions.iter().enumerate() {
+        assert_eq!(ret[i].money, v.money);
+    }
 }
 
 #[tokio::test]
@@ -359,15 +422,16 @@ async fn test_poll_rates() {
     let cfg = global::config();
     let fs = global::storage_fs();
     let http_client = global::http_client();
-    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
-    let forex =
-        forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
+    let storage = super::forex_mock::ForexStorageSuccessMock;
+    let forex = super::forex_mock::ForexApiSuccessMock;
 
     let base = Currency::USD;
     let ret = poll_rates(&forex, &storage, base).await;
     dbg!(&ret);
 
     assert!(ret.is_ok());
+    assert!(ret.as_ref().unwrap().error.is_none());
+    assert_eq!(ret.unwrap().data.base, Currency::USD);
 }
 
 #[tokio::test]
@@ -375,36 +439,47 @@ async fn test_poll_historical_rates() {
     let cfg = global::config();
     let fs = global::storage_fs();
     let http_client = global::http_client();
-    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
-    let forex =
-        forex_impl::open_exchange_api::Api::new(&cfg.forex_open_exchange_api_key, http_client);
+    let storage = super::forex_mock::ForexStorageSuccessMock;
+    let forex = super::forex_mock::ForexApiSuccessMock;
 
     let base = Currency::USD;
-    let date = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
+    let date = Utc.with_ymd_and_hms(2022, 12, 25, 0, 0, 0).unwrap();
     let ret = poll_historical_rates(&forex, &storage, date, base).await;
     dbg!(&ret);
 
     assert!(ret.is_ok());
+    assert!(ret.as_ref().unwrap().error.is_none());
+    assert_eq!(ret.unwrap().data.base, Currency::USD);
 }
 
 #[tokio::test]
 async fn test_get_rates_list() {
     let fs = global::storage_fs();
-    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = super::forex_mock::ForexStorageSuccessMock;
 
     let ret = storage
         .get_latest_list(1, 5, crate::forex::Order::DESC)
         .await;
     dbg!(&ret);
+    let ret = ret.unwrap();
+    assert!(ret.rates_list.len().eq(&5));
+    assert_eq!(ret.has_prev, false);
+    assert_eq!(ret.has_next, true);
+    assert!(ret.rates_list[0].data.latest_update > ret.rates_list[1].data.latest_update);
 }
 
 #[tokio::test]
 async fn test_get_historical_list() {
     let fs = global::storage_fs();
-    let storage = forex_impl::forex_storage::ForexStorageImpl::new(fs);
+    let storage = super::forex_mock::ForexStorageSuccessMock;
 
     let ret = storage
         .get_historical_list(1, 5, crate::forex::Order::DESC)
         .await;
     dbg!(&ret);
+    let ret = ret.unwrap();
+    assert!(ret.rates_list.len().eq(&4));
+    assert_eq!(ret.has_prev, false);
+    assert_eq!(ret.has_next, false);
+    assert!(ret.rates_list[0].data.date > ret.rates_list[1].data.date);
 }
