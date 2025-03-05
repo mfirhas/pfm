@@ -1,4 +1,4 @@
-// forex.rs is used in SERVER side for http and cron
+// forex.rs is domain for the exchanges/prices of currencies, precious metals, cryptos, etc.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
