@@ -424,40 +424,40 @@ pub struct HistoricalRates {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RatesData {
-    #[serde(alias = "USD")]
+    #[serde(alias = "USD", default)]
     pub usd: Decimal,
 
-    #[serde(alias = "IDR")]
+    #[serde(alias = "IDR", default)]
     pub idr: Decimal,
 
-    #[serde(alias = "EUR")]
+    #[serde(alias = "EUR", default)]
     pub eur: Decimal,
 
-    #[serde(alias = "GBP")]
+    #[serde(alias = "GBP", default)]
     pub gbp: Decimal,
 
-    #[serde(alias = "JPY")]
+    #[serde(alias = "JPY", default)]
     pub jpy: Decimal,
 
-    #[serde(alias = "CHF")]
+    #[serde(alias = "CHF", default)]
     pub chf: Decimal,
 
-    #[serde(alias = "SGD")]
+    #[serde(alias = "SGD", default)]
     pub sgd: Decimal,
 
-    #[serde(alias = "CNY")]
+    #[serde(alias = "CNY", default)]
     pub cny: Decimal,
 
-    #[serde(alias = "SAR")]
+    #[serde(alias = "SAR", default)]
     pub sar: Decimal,
 
-    #[serde(alias = "XAU")]
+    #[serde(alias = "XAU", default)]
     pub xau: Decimal,
 
-    #[serde(alias = "XAG")]
+    #[serde(alias = "XAG", default)]
     pub xag: Decimal,
 
-    #[serde(alias = "XPT")]
+    #[serde(alias = "XPT", default)]
     pub xpt: Decimal,
 }
 
