@@ -46,40 +46,40 @@ pub struct Response {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Rates {
-    #[serde(rename = "CHF")]
+    #[serde(rename = "CHF", default)]
     pub chf: Decimal,
 
-    #[serde(rename = "CNY")]
+    #[serde(rename = "CNY", default)]
     pub cny: Decimal,
 
-    #[serde(rename = "EUR")]
+    #[serde(rename = "EUR", default)]
     pub eur: Decimal,
 
-    #[serde(rename = "GBP")]
+    #[serde(rename = "GBP", default)]
     pub gbp: Decimal,
 
-    #[serde(rename = "IDR")]
+    #[serde(rename = "IDR", default)]
     pub idr: Decimal,
 
-    #[serde(rename = "JPY")]
+    #[serde(rename = "JPY", default)]
     pub jpy: Decimal,
 
-    #[serde(rename = "SAR")]
+    #[serde(rename = "SAR", default)]
     pub sar: Decimal,
 
-    #[serde(rename = "SGD")]
+    #[serde(rename = "SGD", default)]
     pub sgd: Decimal,
 
-    #[serde(rename = "USD")]
+    #[serde(rename = "USD", default)]
     pub usd: Decimal,
 
-    #[serde(rename = "XAG")]
+    #[serde(rename = "XAG", default)]
     pub xag: Decimal,
 
-    #[serde(rename = "XAU")]
+    #[serde(rename = "XAU", default)]
     pub xau: Decimal,
 
-    #[serde(rename = "XPT")]
+    #[serde(rename = "XPT", default)]
     pub xpt: Decimal,
 }
 
