@@ -186,6 +186,20 @@ impl ForexStorageImpl {
         let historical_write = historical_write.historical();
         let historical_write = historical_write.join(generate_historical_file_path(date));
 
+        let year_dir = historical_write.parent();
+        if let Some(dir) = year_dir {
+            if !dir.is_dir() {
+                tokio::fs::create_dir_all(dir)
+                    .await
+                    .map_err(|err| StorageError(anyhow!(err)))?;
+            }
+        } else {
+            return Err(StorageError(anyhow!(
+                "{} failed creating year directory for historical rates",
+                ERROR_PREFIX
+            )));
+        };
+
         let mut file = File::create(&historical_write).await.map_err(|err| {
             StorageError(anyhow!(
                 "{} failed creating path {:?}: {}",
