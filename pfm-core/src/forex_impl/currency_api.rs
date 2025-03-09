@@ -56,52 +56,44 @@ pub struct Metadata {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Data {
-    #[serde(rename = "IDR")]
+    #[serde(rename = "IDR", default)]
     pub idr: RateData,
 
-    #[serde(rename = "USD")]
+    #[serde(rename = "USD", default)]
     pub usd: RateData,
 
-    #[serde(rename = "EUR")]
+    #[serde(rename = "EUR", default)]
     pub eur: RateData,
 
-    #[serde(rename = "GBP")]
+    #[serde(rename = "GBP", default)]
     pub gbp: RateData,
 
-    #[serde(rename = "JPY")]
+    #[serde(rename = "JPY", default)]
     pub jpy: RateData,
 
-    #[serde(rename = "CHF")]
+    #[serde(rename = "CHF", default)]
     pub chf: RateData,
 
-    #[serde(rename = "SGD")]
+    #[serde(rename = "SGD", default)]
     pub sgd: RateData,
 
-    #[serde(rename = "CNY")]
+    #[serde(rename = "CNY", default)]
     pub cny: RateData,
 
-    #[serde(rename = "SAR")]
+    #[serde(rename = "SAR", default)]
     pub sar: RateData,
 
-    #[serde(rename = "XAU")]
+    #[serde(rename = "XAU", default)]
     pub xau: RateData,
 
-    #[serde(rename = "XAG")]
+    #[serde(rename = "XAG", default)]
     pub xag: RateData,
 
-    #[serde(rename = "XPT", default = "xpt_rate_default")]
+    #[serde(rename = "XPT", default)]
     pub xpt: RateData,
 }
 
-// some times in the past currencyapi.com return no XPT
-fn xpt_rate_default() -> RateData {
-    RateData {
-        code: "XPT".to_string(),
-        value: Decimal::default(),
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct RateData {
     #[serde(rename = "code")]
     pub code: String,
