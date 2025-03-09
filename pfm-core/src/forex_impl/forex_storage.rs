@@ -80,7 +80,7 @@ impl ForexStorageImpl {
 
         let latest_write = self.fs.write().await;
         let latest_write = latest_write.latest();
-        let latest_write = latest_write.join(generate_latest_file_name(date));
+        let latest_write = latest_write.join(generate_latest_file_path(date));
 
         let mut file = File::create(&latest_write).await.map_err(|err| {
             StorageError(anyhow!(
@@ -184,7 +184,7 @@ impl ForexStorageImpl {
 
         let historical_write = self.fs.write().await;
         let historical_write = historical_write.historical();
-        let historical_write = historical_write.join(generate_historical_file_name(date));
+        let historical_write = historical_write.join(generate_historical_file_path(date));
 
         let mut file = File::create(&historical_write).await.map_err(|err| {
             StorageError(anyhow!(
@@ -222,7 +222,7 @@ impl ForexStorageImpl {
     ) -> ForexResult<RatesResponse<HistoricalRates>> {
         let historical_read = self.fs.read().await;
         let historical_read = historical_read.historical();
-        let filepath = historical_read.join(&generate_historical_file_name(date));
+        let filepath = historical_read.join(&generate_historical_file_path(date));
 
         let content = fs::read_to_string(&filepath).await.map_err(|err| {
             StorageError(anyhow!(
@@ -400,7 +400,8 @@ impl ForexStorageImpl {
     }
 }
 
-fn generate_latest_file_name(date: DateTime<Utc>) -> String {
+/// generate path to file from parent
+fn generate_latest_file_path(date: DateTime<Utc>) -> String {
     let year = date.year();
     let month = date.month();
     let day = date.day();
@@ -426,7 +427,8 @@ fn generate_latest_file_name(date: DateTime<Utc>) -> String {
     filename
 }
 
-fn generate_historical_file_name(date: DateTime<Utc>) -> String {
+/// generate path to file from parent
+fn generate_historical_file_path(date: DateTime<Utc>) -> String {
     let year = date.year();
     let month = date.month();
     let day = date.day();
@@ -444,7 +446,7 @@ fn generate_historical_file_name(date: DateTime<Utc>) -> String {
         .replace("{MM}", tostr(month).as_str())
         .replace("{DD}", tostr(day).as_str());
 
-    filename
+    format!("{}/{}", year, filename)
 }
 
 #[cfg(test)]
@@ -457,28 +459,28 @@ mod forex_storage_impl_tests {
     fn test_generate_latest_file_name() {
         let expected = "latest-2020-01-01T04:05:06Z.json";
         let date = Utc.with_ymd_and_hms(2020, 1, 1, 4, 5, 6).unwrap();
-        let ret = generate_latest_file_name(date);
+        let ret = generate_latest_file_path(date);
         println!("{ret}");
         assert_eq!(&ret, expected);
 
         let expected = "latest-2024-10-05T23:00:10Z.json";
         let date = Utc.with_ymd_and_hms(2024, 10, 5, 23, 0, 10).unwrap();
-        let ret = generate_latest_file_name(date);
+        let ret = generate_latest_file_path(date);
         println!("{ret}");
         assert_eq!(&ret, expected);
     }
 
     #[test]
     fn test_generate_historical_file_name() {
-        let expected = "historical-2020-01-01Z.json";
+        let expected = "2020/historical-2020-01-01Z.json";
         let date = Utc.with_ymd_and_hms(2020, 1, 1, 4, 5, 6).unwrap();
-        let ret = generate_historical_file_name(date);
+        let ret = generate_historical_file_path(date);
         println!("{ret}");
         assert_eq!(&ret, expected);
 
-        let expected = "historical-2024-10-05Z.json";
+        let expected = "2024/historical-2024-10-05Z.json";
         let date = Utc.with_ymd_and_hms(2024, 10, 5, 23, 0, 10).unwrap();
-        let ret = generate_historical_file_name(date);
+        let ret = generate_historical_file_path(date);
         println!("{ret}");
         assert_eq!(&ret, expected);
     }
