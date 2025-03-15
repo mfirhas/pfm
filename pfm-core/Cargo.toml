@@ -16,6 +16,8 @@ configrs = "0.1"
 anyhow = "1"
 thiserror = "1"
 regex = "1"
+strum = "0.26"
+strum_macros = "0.26"
 
 async-trait = "0.1"
 

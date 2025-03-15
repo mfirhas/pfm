@@ -1,7 +1,7 @@
 mod money_format_regex_tests {
     use core::panic;
 
-    use super::super::forex::MONEY_FORMAT_REGEX;
+    use crate::forex::money::MONEY_FORMAT_REGEX;
 
     #[test]
     fn test_money_format_regex() {
@@ -92,8 +92,9 @@ use rust_decimal_macros::dec;
 
 use crate::{
     forex::{
-        batch_convert, convert, poll_historical_rates, poll_rates, ConversionResponse, Currency,
-        ForexStorage, Money,
+        currency::Currency, entity::ConversionResponse, interface::ForexStorage,
+        service::batch_convert, service::convert, service::poll_historical_rates,
+        service::poll_rates, Money,
     },
     forex_impl, global,
 };
@@ -458,7 +459,7 @@ async fn test_get_rates_list() {
     let storage = super::forex_mock::ForexStorageSuccessMock;
 
     let ret = storage
-        .get_latest_list(1, 5, crate::forex::Order::DESC)
+        .get_latest_list(1, 5, crate::forex::entity::Order::DESC)
         .await;
     dbg!(&ret);
     let ret = ret.unwrap();
@@ -474,7 +475,7 @@ async fn test_get_historical_list() {
     let storage = super::forex_mock::ForexStorageSuccessMock;
 
     let ret = storage
-        .get_historical_list(1, 5, crate::forex::Order::DESC)
+        .get_historical_list(1, 5, crate::forex::entity::Order::DESC)
         .await;
     dbg!(&ret);
     let ret = ret.unwrap();

@@ -2,6 +2,8 @@ use crate::forex::ForexError::InputError;
 use crate::forex::*;
 use accounting::Accounting;
 use anyhow::anyhow;
+use entity::Rates;
+use money::{ERROR_MONEY_FORMAT, MONEY_FORMAT_REGEX};
 use rust_decimal::Decimal;
 use std::str::FromStr;
 

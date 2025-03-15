@@ -6,10 +6,10 @@ use std::fmt::Debug;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::forex::entity::{HistoricalRates, Order, Rates, RatesList, RatesResponse};
+use crate::forex::interface::ForexStorage;
 use crate::forex::ForexError::{self, StorageError};
-use crate::forex::{
-    ForexResult, ForexStorage, HistoricalRates, Order, Rates, RatesList, RatesResponse,
-};
+use crate::forex::ForexResult;
 use crate::global::StorageFS;
 use anyhow::anyhow;
 use async_trait::async_trait;

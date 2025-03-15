@@ -10,8 +10,13 @@
 // - DAILY updates at 00.00 UTC, but slower to update on time.
 // - very limited historical rates.
 
-use crate::forex::ForexError::{self, ExchangeAPIError};
-use crate::forex::{Currency, ForexHistoricalRates, ForexRates, RatesData, RatesResponse};
+use crate::forex::{
+    entity::{HistoricalRates, RatesData, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates},
+    Currency,
+    ForexError::{self, ExchangeAPIError},
+    ForexResult,
+};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -39,7 +44,7 @@ pub struct ApiResponse {
     rates: Rates,
 }
 
-impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
+impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
@@ -51,7 +56,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
                 err
             ))
         })?;
-        let forex_rates = crate::forex::Rates {
+        let forex_rates = crate::forex::entity::Rates {
             latest_update: date,
             base: value.base,
             rates: RatesData {
@@ -74,7 +79,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
     }
 }
 
-impl TryFrom<Response> for RatesResponse<crate::forex::HistoricalRates> {
+impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
@@ -86,7 +91,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::HistoricalRates> {
                 err
             ))
         })?;
-        let forex_rates = crate::forex::HistoricalRates {
+        let forex_rates = HistoricalRates {
             date,
             base: value.base,
             rates: RatesData {
@@ -183,7 +188,7 @@ impl ForexRates for Api {
     async fn rates(
         &self,
         base: Currency,
-    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
+    ) -> ForexResult<RatesResponse<crate::forex::entity::Rates>> {
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", "latest")
             .replace("{currency_code}", base.code().to_lowercase().as_str());
@@ -233,7 +238,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: chrono::DateTime<chrono::Utc>,
         base: Currency,
-    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
+    ) -> crate::forex::ForexResult<RatesResponse<HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = CLOUDFLARE_ENDPOINT_V1
             .replace("{date}", &yyyymmdd)

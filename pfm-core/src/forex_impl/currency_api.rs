@@ -5,13 +5,20 @@
 // daily historical rates
 // 10 reqs/minute
 
-use crate::forex::ForexError::{self, CurrencyAPIError};
-use crate::forex::{Currency, ForexHistoricalRates, HistoricalRates, RatesResponse};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+
+use crate::forex::entity::RatesData;
+use crate::forex::interface::ForexHistoricalRates;
+use crate::forex::ForexError::CurrencyAPIError;
+use crate::forex::ForexResult;
+use crate::forex::{
+    entity::{HistoricalRates, RatesResponse},
+    Currency, ForexError,
+};
 
 const SOURCE: &str = "currencyapi.com";
 
@@ -101,7 +108,7 @@ pub struct RateData {
     pub value: Decimal,
 }
 
-impl TryFrom<Response> for crate::forex::RatesResponse<crate::forex::HistoricalRates> {
+impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
@@ -117,7 +124,7 @@ impl TryFrom<Response> for crate::forex::RatesResponse<crate::forex::HistoricalR
         let historical_rates = HistoricalRates {
             date,
             base: value.base,
-            rates: crate::forex::RatesData {
+            rates: RatesData {
                 idr: value.api_response.rates.idr.value,
                 usd: value.api_response.rates.usd.value,
                 eur: value.api_response.rates.eur.value,
@@ -143,7 +150,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: chrono::DateTime<chrono::Utc>,
         base: Currency,
-    ) -> crate::forex::ForexResult<crate::forex::RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 
         let params = [
