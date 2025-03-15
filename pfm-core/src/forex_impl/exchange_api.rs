@@ -14,7 +14,7 @@ use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
     interface::{ForexHistoricalRates, ForexRates},
     Currency,
-    ForexError::{self, ExchangeAPIError},
+    ForexError::{self, APIError},
     ForexResult,
 };
 use anyhow::anyhow;
@@ -29,7 +29,7 @@ const SOURCE: &str = "https://github.com/fawazahmed0/exchange-api/";
 const CLOUDFLARE_ENDPOINT_V1: &str =
     "https://{date}.currency-api.pages.dev/v1/currencies/{currency_code}.json";
 
-const ERROR_PREFIX: &str = "[FOREX][exchange-api]";
+const ERROR_PREFIX: &str = "[FOREX][https://github.com/fawazahmed0/exchange-api/]";
 
 #[derive(Debug)]
 pub struct Response {
@@ -50,7 +50,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let utc = format!("{}T00:00:00Z", value.api_response.date);
         let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
-            ExchangeAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
                 ERROR_PREFIX,
                 err
@@ -85,7 +85,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let utc = format!("{}T00:00:00Z", value.api_response.date);
         let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
-            ExchangeAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
                 ERROR_PREFIX,
                 err
@@ -199,7 +199,7 @@ impl ForexRates for Api {
             .send()
             .await
             .map_err(|err| {
-                ExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed calling api rates: {}",
                     ERROR_PREFIX,
                     err
@@ -207,7 +207,7 @@ impl ForexRates for Api {
             })?
             .error_for_status()
             .map_err(|err| {
-                ExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed because non 200/201 status code on api rates: {}",
                     ERROR_PREFIX,
                     err
@@ -216,7 +216,7 @@ impl ForexRates for Api {
             .json()
             .await
             .map_err(|err| {
-                ExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed parsing rates result into json: {}",
                     ERROR_PREFIX,
                     err
@@ -250,7 +250,7 @@ impl ForexHistoricalRates for Api {
             .send()
             .await
             .map_err(|err| {
-                ExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed calling api historical rates: {}",
                     ERROR_PREFIX,
                     err
@@ -258,7 +258,7 @@ impl ForexHistoricalRates for Api {
             })?
             .error_for_status()
             .map_err(|err| {
-                ExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed because non 200/201 status code on api historical rates: {}",
                     ERROR_PREFIX,
                     err
@@ -267,7 +267,7 @@ impl ForexHistoricalRates for Api {
             .json()
             .await
             .map_err(|err| {
-                ExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed parsing historical rates result into json: {}",
                     ERROR_PREFIX,
                     err

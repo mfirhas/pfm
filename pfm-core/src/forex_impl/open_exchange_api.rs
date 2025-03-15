@@ -11,7 +11,7 @@ use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
     interface::{ForexHistoricalRates, ForexRates},
     Currency,
-    ForexError::{self, OpenExchangeAPIError},
+    ForexError::{self, APIError},
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 const SOURCE: &str = "openexchangerates.org";
 
-const ERROR_PREFIX: &str = "[FOREX][open-exchange-api]";
+const ERROR_PREFIX: &str = "[FOREX][openexchangerates.org]";
 
 const LATEST_ENDPOINT: &str = "https://openexchangerates.org/api/latest.json";
 
@@ -92,7 +92,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
         let date = Utc
             .timestamp_opt(value.timestamp, 0)
             .single()
-            .ok_or(OpenExchangeAPIError(anyhow!(
+            .ok_or(APIError(anyhow!(
                 "{} Failed converting unix epoch {} into utc",
                 ERROR_PREFIX,
                 value.timestamp,
@@ -114,7 +114,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
         };
 
         let base = Currency::from_str(&value.base_currency).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} base currency not supported :{}",
                 ERROR_PREFIX,
                 err
@@ -138,7 +138,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
         let date = Utc
             .timestamp_opt(value.timestamp, 0)
             .single()
-            .ok_or(OpenExchangeAPIError(anyhow!(
+            .ok_or(APIError(anyhow!(
                 "{} Failed converting unix epoch {} into utc",
                 ERROR_PREFIX,
                 value.timestamp
@@ -160,7 +160,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
         };
 
         let base = Currency::from_str(&value.base_currency).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} base currency not supported :{}",
                 ERROR_PREFIX,
                 err
@@ -207,7 +207,7 @@ impl ForexRates for Api {
             .send()
             .await
             .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed calling api rates: {}",
                     ERROR_PREFIX,
                     err
@@ -216,7 +216,7 @@ impl ForexRates for Api {
             .text()
             .await
             .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed fetching rates api response as string: {}",
                     ERROR_PREFIX,
                     err
@@ -224,7 +224,7 @@ impl ForexRates for Api {
             })?;
 
         let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} failed parsing into json. Error: {}, Response: {}",
                 ERROR_PREFIX,
                 err,
@@ -258,7 +258,7 @@ impl ForexHistoricalRates for Api {
             .send()
             .await
             .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed calling api historical rates: {}",
                     ERROR_PREFIX,
                     err
@@ -267,7 +267,7 @@ impl ForexHistoricalRates for Api {
             .text()
             .await
             .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed fetching historical api as string: {}",
                     ERROR_PREFIX,
                     err
@@ -275,7 +275,7 @@ impl ForexHistoricalRates for Api {
             })?;
 
         let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} failed parsing into json. Error: {}, Response: {}",
                 ERROR_PREFIX,
                 err,

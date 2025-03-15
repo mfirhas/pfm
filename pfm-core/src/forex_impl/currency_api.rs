@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::forex::entity::RatesData;
 use crate::forex::interface::ForexHistoricalRates;
-use crate::forex::ForexError::CurrencyAPIError;
+use crate::forex::ForexError::APIError;
 use crate::forex::ForexResult;
 use crate::forex::{
     entity::{HistoricalRates, RatesResponse},
@@ -24,7 +24,7 @@ const SOURCE: &str = "currencyapi.com";
 
 const HISTORICAL_ENDPOINT: &str = "https://api.currencyapi.com/v3/historical";
 
-const ERROR_PREFIX: &str = "[FOREX][currency-api]";
+const ERROR_PREFIX: &str = "[FOREX][currencyapi.com]";
 
 #[derive(Clone)]
 pub struct Api {
@@ -118,7 +118,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             .last_updated_at
             .parse::<DateTime<Utc>>()
             .map_err(|err| {
-                CurrencyAPIError(anyhow!("{} Failed parsing datetime: {}", ERROR_PREFIX, err))
+                APIError(anyhow!("{} Failed parsing datetime: {}", ERROR_PREFIX, err))
             })?;
 
         let historical_rates = HistoricalRates {
@@ -170,7 +170,7 @@ impl ForexHistoricalRates for Api {
             .send()
             .await
             .map_err(|err| {
-                CurrencyAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed calling api historical rates: {}",
                     ERROR_PREFIX,
                     err
@@ -179,7 +179,7 @@ impl ForexHistoricalRates for Api {
             .text()
             .await
             .map_err(|err| {
-                CurrencyAPIError(anyhow!(
+                APIError(anyhow!(
                     "{} failed fetching historical api response as string: {}",
                     ERROR_PREFIX,
                     err
@@ -187,7 +187,7 @@ impl ForexHistoricalRates for Api {
             })?;
 
         let resp = serde_json::from_str::<ApiResponse>(&ret).map_err(|err| {
-            CurrencyAPIError(anyhow!(
+            APIError(anyhow!(
                 "{} failed parsing into json. Error: {}, Response: {}",
                 ERROR_PREFIX,
                 err,

@@ -22,19 +22,15 @@ pub type ForexResult<T> = Result<T, ForexError>;
 pub enum ForexError {
     InputError(anyhow::Error),
     StorageError(anyhow::Error),
-    ExchangeAPIError(anyhow::Error),
-    CurrencyAPIError(anyhow::Error),
-    OpenExchangeAPIError(anyhow::Error),
+    APIError(anyhow::Error),
 }
 
 impl Display for ForexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ret = match self {
-            Self::InputError(val) => val.to_string(),
-            Self::StorageError(val) => val.to_string(),
-            Self::ExchangeAPIError(val) => val.to_string(),
-            Self::CurrencyAPIError(val) => val.to_string(),
-            Self::OpenExchangeAPIError(val) => val.to_string(),
+            Self::InputError(val) => format!("{} input error: {}", ERROR_PREFIX, val),
+            Self::StorageError(val) => format!("{} storage error: {}", ERROR_PREFIX, val),
+            Self::APIError(val) => format!("{} api error: {}", ERROR_PREFIX, val),
         };
         write!(f, "{}", ret)
     }
