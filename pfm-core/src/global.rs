@@ -28,7 +28,7 @@ const STORAGE_FS_PERMISSION: u32 = 0o700;
 const STORAGE_FS_DIR_PATH: &str = "TODO";
 
 /// directory name for local development for server-side data, to be placed in workspace root
-const STORAGE_FS_DIR_PATH_DEV: &str = "test_dir";
+const STORAGE_FS_DIR_NAME_DEV: &str = "test_dir";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
 ///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) /////////////////////////////////////
@@ -147,7 +147,7 @@ impl ServerFS {
 fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
     let root_pb = if cfg!(debug_assertions) {
         let workspace_dir = utils::find_workspace_root()?;
-        let path = workspace_dir.join(STORAGE_FS_DIR_PATH_DEV);
+        let path = workspace_dir.join(STORAGE_FS_DIR_NAME_DEV);
         path
     } else {
         PathBuf::from(STORAGE_FS_DIR_PATH)

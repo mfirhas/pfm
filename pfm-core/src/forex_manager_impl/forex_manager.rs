@@ -1,5 +1,5 @@
 use crate::{
-    forex::{ConversionResponse, Currency, HttpResponse, Money},
+    forex::{entity::ConversionResponse, entity::HttpResponse, Currency, Money},
     forex_manager::{ForexManager, ForexManagerError, ForexManagerResult},
 };
 

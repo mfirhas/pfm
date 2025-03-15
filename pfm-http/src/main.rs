@@ -11,8 +11,9 @@ use axum::{
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
-        ConversionResponse, Currency, ForexError, ForexHistoricalRates, ForexRates, ForexStorage,
-        HttpResponse, Money, Order,
+        currency::Currency, entity::ConversionResponse, entity::HttpResponse, entity::Order,
+        interface::ForexError, interface::ForexHistoricalRates, interface::ForexRates,
+        interface::ForexStorage, Money,
     },
     forex_impl::forex_storage::ForexStorageImpl,
     forex_impl::open_exchange_api::Api,
@@ -145,7 +146,7 @@ where
 {
     let money = Money::from_str(&params.from)?;
     let currency = Currency::from_str(&params.to)?;
-    let ret = pfm_core::forex::convert(&ctx.forex_storage, money, currency)
+    let ret = pfm_core::forex::service::convert(&ctx.forex_storage, money, currency)
         .await
         .map(|ret| HttpResponse::new(ret))?;
 
@@ -191,7 +192,7 @@ where
         vecs
     };
 
-    let ret = pfm_core::forex::batch_convert(&ctx.forex_storage, input, params.to)
+    let ret = pfm_core::forex::service::batch_convert(&ctx.forex_storage, input, params.to)
         .await
         .map(|ret| HttpResponse::new(ret))?;
 

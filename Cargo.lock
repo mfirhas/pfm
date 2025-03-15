@@ -1280,6 +1280,8 @@ dependencies = [
  "rusty-money",
  "serde",
  "serde_json",
+ "strum",
+ "strum_macros",
  "thiserror",
  "tokio",
  "uuid",

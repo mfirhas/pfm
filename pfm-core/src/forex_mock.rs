@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::forex::{
-    Currency, ForexHistoricalRates, ForexRates, ForexResult, ForexStorage, HistoricalRates, Order,
-    Rates, RatesData, RatesList, RatesResponse,
+    entity::{HistoricalRates, Order, Rates, RatesData, RatesList, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates, ForexStorage},
+    Currency, ForexResult,
 };
 
 fn latest_rate() -> Rates {

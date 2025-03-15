@@ -10,7 +10,7 @@ use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::forex::{ConversionResponse, Currency, Money};
+use crate::forex::{entity::ConversionResponse, Currency, Money};
 
 const ERROR_PREFIX: &str = "[FOREX_MANAGER]";
 

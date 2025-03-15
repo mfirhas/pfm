@@ -2,12 +2,16 @@
 // Hourly rate updates
 // Daily historical data
 // 1,000 API requests per month
+// rate limit: 5 requests / second
+// might return 429 once reach limit.
 
 use std::str::FromStr;
 
-use crate::forex::ForexError::{self, OpenExchangeAPIError};
 use crate::forex::{
-    Currency, ForexHistoricalRates, ForexRates, HistoricalRates, RatesData, RatesResponse,
+    entity::{HistoricalRates, RatesData, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates},
+    Currency,
+    ForexError::{self, OpenExchangeAPIError},
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -44,44 +48,44 @@ pub struct Response {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Rates {
-    #[serde(rename = "CHF")]
+    #[serde(rename = "CHF", default)]
     pub chf: Decimal,
 
-    #[serde(rename = "CNY")]
+    #[serde(rename = "CNY", default)]
     pub cny: Decimal,
 
-    #[serde(rename = "EUR")]
+    #[serde(rename = "EUR", default)]
     pub eur: Decimal,
 
-    #[serde(rename = "GBP")]
+    #[serde(rename = "GBP", default)]
     pub gbp: Decimal,
 
-    #[serde(rename = "IDR")]
+    #[serde(rename = "IDR", default)]
     pub idr: Decimal,
 
-    #[serde(rename = "JPY")]
+    #[serde(rename = "JPY", default)]
     pub jpy: Decimal,
 
-    #[serde(rename = "SAR")]
+    #[serde(rename = "SAR", default)]
     pub sar: Decimal,
 
-    #[serde(rename = "SGD")]
+    #[serde(rename = "SGD", default)]
     pub sgd: Decimal,
 
-    #[serde(rename = "USD")]
+    #[serde(rename = "USD", default)]
     pub usd: Decimal,
 
-    #[serde(rename = "XAG")]
+    #[serde(rename = "XAG", default)]
     pub xag: Decimal,
 
-    #[serde(rename = "XAU")]
+    #[serde(rename = "XAU", default)]
     pub xau: Decimal,
 
-    #[serde(rename = "XPT")]
+    #[serde(rename = "XPT", default)]
     pub xpt: Decimal,
 }
 
-impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
+impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
@@ -117,7 +121,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::Rates> {
             ))
         })?;
 
-        let ret = crate::forex::Rates {
+        let ret = crate::forex::entity::Rates {
             latest_update: date,
             base,
             rates,
@@ -163,7 +167,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             ))
         })?;
 
-        let ret = crate::forex::HistoricalRates { base, date, rates };
+        let ret = crate::forex::entity::HistoricalRates { base, date, rates };
 
         Ok(RatesResponse::new(SOURCE.into(), ret))
     }
@@ -189,7 +193,7 @@ impl ForexRates for Api {
     async fn rates(
         &self,
         base: Currency,
-    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::Rates>> {
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::entity::Rates>> {
         let params = [
             ("app_id", self.key),
             ("base", base.code()),
@@ -238,7 +242,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: chrono::DateTime<chrono::Utc>,
         base: Currency,
-    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::HistoricalRates>> {
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::entity::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = HISTORICAL_ENDPOINT.replace(":date", yyyymmdd.as_str());
         let params = [
