@@ -352,24 +352,41 @@ impl ForexStorageImpl {
             .map_err(|err| StorageError(err.into()))?
         {
             let path = entry.path();
-            let content = tokio::fs::read_to_string(&path).await.map_err(|err| {
-                ForexError::StorageError(anyhow!(
-                    "{} failed getting latest list reading file content: {:?}: {}",
+            let mut sub_entries = fs::read_dir(&path).await.map_err(|err| {
+                StorageError(anyhow!(
+                    "{} failed reading sub dir: {:?} : {}",
                     ERROR_PREFIX,
                     &path.as_path(),
                     err
                 ))
             })?;
-            let resp: RatesResponse<HistoricalRates> =
-                serde_json::from_str(&content).map_err(|err| {
-                    ForexError::StorageError(anyhow!(
+            while let Some(sub_entry) = sub_entries
+                .next_entry()
+                .await
+                .map_err(|err| StorageError(err.into()))?
+            {
+                let sub_entry_path = sub_entry.path();
+                let content = tokio::fs::read_to_string(&sub_entry_path)
+                    .await
+                    .map_err(|err| {
+                        ForexError::StorageError(anyhow!(
+                            "{} failed getting latest list reading file content: {:?}: {}",
+                            ERROR_PREFIX,
+                            &path.as_path(),
+                            err
+                        ))
+                    })?;
+                let resp: RatesResponse<HistoricalRates> =
+                    serde_json::from_str(&content).map_err(|err| {
+                        ForexError::StorageError(anyhow!(
                     "{} failed getting latest list converting to RatesResponse<Rates>: {:?}: {}",
                     ERROR_PREFIX,
                     &path.as_path(),
                     err
                 ))
-                })?;
-            files.push(resp);
+                    })?;
+                files.push(resp);
+            }
         }
 
         if files.is_empty() {
