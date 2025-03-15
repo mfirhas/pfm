@@ -120,8 +120,6 @@ impl From<ForexError> for AppError {
             ForexError::InputError(err) => Self::BadRequest(err.to_string()),
             ForexError::StorageError(err) => Self::InternalServerError(err.to_string()),
             ForexError::APIError(err) => Self::InternalServerError(err.to_string()),
-            ForexError::APIError(err) => Self::InternalServerError(err.to_string()),
-            ForexError::APIError(err) => Self::InternalServerError(err.to_string()),
         }
     }
 }
