@@ -1,6 +1,6 @@
 use std::fmt::Debug;
-use std::fmt::Display;
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,30 +13,62 @@ use super::entity::Rates;
 use super::entity::RatesList;
 use super::entity::RatesResponse;
 use super::money::Money;
+use thiserror::Error;
 
 pub(super) const ERROR_PREFIX: &str = "[FOREX]";
 
 pub type ForexResult<T> = Result<T, ForexError>;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ForexError {
-    InputError(anyhow::Error),
-    StorageError(anyhow::Error),
-    ExchangeAPIError(anyhow::Error),
-    CurrencyAPIError(anyhow::Error),
-    OpenExchangeAPIError(anyhow::Error),
+    #[error("{ERROR_PREFIX} forex client error: {0}")]
+    ClientError(#[from] ClientError),
+
+    #[error("{ERROR_PREFIX} forex internal error: {0}")]
+    InternalError(#[from] InternalError),
 }
 
-impl Display for ForexError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ret = match self {
-            Self::InputError(val) => val.to_string(),
-            Self::StorageError(val) => val.to_string(),
-            Self::ExchangeAPIError(val) => val.to_string(),
-            Self::CurrencyAPIError(val) => val.to_string(),
-            Self::OpenExchangeAPIError(val) => val.to_string(),
-        };
-        write!(f, "{}", ret)
+impl ForexError {
+    pub fn client_error(err_msg: &str) -> Self {
+        ForexError::ClientError(ClientError(anyhow!(err_msg.to_owned())))
+    }
+
+    pub fn internal_error(err_msg: &str) -> Self {
+        ForexError::InternalError(InternalError(anyhow!(err_msg.to_owned())))
+    }
+}
+
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct ClientError(#[from] anyhow::Error);
+
+#[derive(Debug, Error)]
+#[error("{0}")]
+pub struct InternalError(#[from] anyhow::Error);
+
+pub trait AsClientError<T> {
+    fn as_client_err(self) -> Result<T, ClientError>;
+}
+
+pub trait AsInternalError<T> {
+    fn as_internal_err(self) -> Result<T, InternalError>;
+}
+
+impl<T, E> AsClientError<T> for Result<T, E>
+where
+    E: Into<anyhow::Error>,
+{
+    fn as_client_err(self) -> Result<T, ClientError> {
+        self.map_err(|e| ClientError(e.into()))
+    }
+}
+
+impl<T, E> AsInternalError<T> for Result<T, E>
+where
+    E: Into<anyhow::Error>,
+{
+    fn as_internal_err(self) -> Result<T, InternalError> {
+        self.map_err(|e| InternalError(e.into()))
     }
 }
 

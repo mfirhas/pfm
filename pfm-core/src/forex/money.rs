@@ -3,11 +3,10 @@ use std::{fmt::Display, str::FromStr};
 use super::{
     currency::Currency,
     entity::Rates,
-    interface::{ForexError, ForexResult, ERROR_PREFIX},
+    interface::{AsClientError, ForexError, ForexResult},
 };
 use accounting::Accounting;
-use anyhow::anyhow;
-use chrono::{DateTime, Utc};
+use anyhow::Context;
 use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
@@ -44,12 +43,12 @@ pub enum Money {
 
 impl Money {
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
-        let curr = CurrencyLib::from_str(currency).map_err(|err| {
-            ForexError::InputError(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
-        })?;
-        let val = Decimal::from_str(amount).map_err(|err| {
-            ForexError::InputError(anyhow!("{} invalid amount: {}", ERROR_PREFIX, err))
-        })?;
+        let curr = CurrencyLib::from_str(currency)
+            .context("creating new Money with invalid currency")
+            .as_client_err()?;
+        let val = Decimal::from_str(amount)
+            .context("Money convert str to Decimal")
+            .as_client_err()?;
 
         match curr {
             CurrencyLib::IDR => Ok(Self::IDR(val)),
@@ -61,11 +60,7 @@ impl Money {
             CurrencyLib::SGD => Ok(Self::SGD(val)),
             CurrencyLib::CNY => Ok(Self::CNY(val)),
             CurrencyLib::SAR => Ok(Self::SAR(val)),
-            _ => Err(ForexError::InputError(anyhow!(
-                "{} Currency {} not supported",
-                ERROR_PREFIX,
-                curr.code()
-            ))),
+            _ => Err(ForexError::client_error("currency not supported yet")),
         }
     }
 
@@ -142,13 +137,13 @@ impl Money {
     fn parse_str(input_money: &str) -> ForexResult<Money> {
         // 1. parse with regex
         if !MONEY_FORMAT_REGEX.is_match(input_money) {
-            return Err(ForexError::InputError(anyhow!(ERROR_MONEY_FORMAT)));
+            return Err(ForexError::client_error(ERROR_MONEY_FORMAT));
         }
 
         // 2. take money parts: currency and amount
         let money_parts: Vec<&str> = input_money.split_whitespace().collect();
         if money_parts.len() != 2 {
-            return Err(ForexError::InputError(anyhow!(ERROR_MONEY_FORMAT)));
+            return Err(ForexError::client_error(ERROR_MONEY_FORMAT));
         }
 
         // 3. parse currency code
@@ -159,13 +154,9 @@ impl Money {
         let amount_str: String = money_parts[1].chars().filter(|&c| c != comma).collect();
 
         // 5. convert amount into Decimal.
-        let amount = Decimal::from_str(&amount_str).map_err(|err| {
-            ForexError::InputError(anyhow!(
-                "failed converting amount '{}' into decimal type: {}",
-                &amount_str,
-                err
-            ))
-        })?;
+        let amount = Decimal::from_str(&amount_str)
+            .context("Money parse_str to Decimal")
+            .as_client_err()?;
 
         Ok(Money::new_money(currency, amount))
     }

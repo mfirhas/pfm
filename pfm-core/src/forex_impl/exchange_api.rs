@@ -12,12 +12,10 @@
 
 use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
-    interface::{ForexHistoricalRates, ForexRates},
-    Currency,
-    ForexError::{self, ExchangeAPIError},
-    ForexResult,
+    interface::{AsInternalError, ForexHistoricalRates, ForexRates},
+    Currency, ForexError, ForexResult,
 };
-use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -29,7 +27,7 @@ const SOURCE: &str = "https://github.com/fawazahmed0/exchange-api/";
 const CLOUDFLARE_ENDPOINT_V1: &str =
     "https://{date}.currency-api.pages.dev/v1/currencies/{currency_code}.json";
 
-const ERROR_PREFIX: &str = "[FOREX][exchange-api]";
+const ERROR_PREFIX: &str = "[FOREX][https://github.com/fawazahmed0/exchange-api/]";
 
 #[derive(Debug)]
 pub struct Response {
@@ -49,13 +47,10 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let utc = format!("{}T00:00:00Z", value.api_response.date);
-        let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
-            ExchangeAPIError(anyhow!(
-                "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+        let date = utc
+            .parse::<DateTime<Utc>>()
+            .context("exchange_api parse date time")
+            .as_internal_err()?;
         let forex_rates = crate::forex::entity::Rates {
             latest_update: date,
             base: value.base,
@@ -84,13 +79,10 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
         let utc = format!("{}T00:00:00Z", value.api_response.date);
-        let date = utc.parse::<DateTime<Utc>>().map_err(|err| {
-            ExchangeAPIError(anyhow!(
-                "{} Failed converting datetime in ExchangeAPIResponse into crate::forex::Rates : {}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+        let date = utc
+            .parse::<DateTime<Utc>>()
+            .context("exchange_api parse date time")
+            .as_internal_err()?;
         let forex_rates = HistoricalRates {
             date,
             base: value.base,
@@ -198,30 +190,15 @@ impl ForexRates for Api {
             .get(&endpoint)
             .send()
             .await
-            .map_err(|err| {
-                ExchangeAPIError(anyhow!(
-                    "{} failed calling api rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("exchange_api invoking latest rates api")
+            .as_internal_err()?
             .error_for_status()
-            .map_err(|err| {
-                ExchangeAPIError(anyhow!(
-                    "{} failed because non 200/201 status code on api rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("non 200/201 error")
+            .as_internal_err()?
             .json()
             .await
-            .map_err(|err| {
-                ExchangeAPIError(anyhow!(
-                    "{} failed parsing rates result into json: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
+            .context("exchange api parsing into json")
+            .as_internal_err()?;
 
         let ret = Response {
             api_response: ret,
@@ -249,30 +226,15 @@ impl ForexHistoricalRates for Api {
             .get(&endpoint)
             .send()
             .await
-            .map_err(|err| {
-                ExchangeAPIError(anyhow!(
-                    "{} failed calling api historical rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("exchange_api invoking historical rates api")
+            .as_internal_err()?
             .error_for_status()
-            .map_err(|err| {
-                ExchangeAPIError(anyhow!(
-                    "{} failed because non 200/201 status code on api historical rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("exchange_api non 200/201 error")
+            .as_internal_err()?
             .json()
             .await
-            .map_err(|err| {
-                ExchangeAPIError(anyhow!(
-                    "{} failed parsing historical rates result into json: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
+            .context("exchange_api converting response to json")
+            .as_internal_err()?;
 
         let ret = Response {
             base,

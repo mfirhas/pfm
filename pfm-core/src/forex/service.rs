@@ -6,7 +6,6 @@ use super::{
     interface::{ForexError, ForexHistoricalRates, ForexRates, ForexResult, ForexStorage},
     money::Money,
 };
-use anyhow::anyhow;
 
 pub async fn convert<FS>(storage: &FS, from: Money, to: Currency) -> ForexResult<ConversionResponse>
 where
@@ -14,7 +13,7 @@ where
 {
     let latest_rates = storage.get_latest().await?;
     if let Some(err) = latest_rates.error {
-        return Err(ForexError::StorageError(anyhow!(err)));
+        return Err(ForexError::internal_error(&err));
     }
 
     let ret = {

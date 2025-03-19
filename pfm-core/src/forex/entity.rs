@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use uuid::Uuid;
 
-use super::{currency::Currency, money::Money, interface::ForexError};
+use super::{currency::Currency, interface::ForexError, money::Money};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HttpResponse<T> {
@@ -73,56 +73,32 @@ where
 
 impl RatesResponse<Rates> {
     pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
-        let (source, error) = match err {
-            ForexError::InputError(err) => ("forex".to_string(), err.to_string()),
-            ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
-            ForexError::ExchangeAPIError(err) => (
-                "https://github.com/fawazahmed0/exchange-api/".to_string(),
-                err.to_string(),
-            ),
-            ForexError::CurrencyAPIError(err) => ("currencyapi.com".to_string(), err.to_string()),
-            ForexError::OpenExchangeAPIError(err) => {
-                ("openexchangerates.org".to_string(), err.to_string())
-            }
-        };
         Self {
             id: Uuid::new_v4(),
-            source,
+            source: String::default(),
             poll_date: Utc::now(),
             data: Rates {
                 latest_update: date,
                 base: Currency::default(),
                 rates: RatesData::default(),
             },
-            error: Some(error),
+            error: Some(err.to_string()),
         }
     }
 }
 
 impl RatesResponse<HistoricalRates> {
     pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
-        let (source, error) = match err {
-            ForexError::InputError(err) => ("forex".to_string(), err.to_string()),
-            ForexError::StorageError(err) => ("storage".to_string(), err.to_string()),
-            ForexError::ExchangeAPIError(err) => (
-                "https://github.com/fawazahmed0/exchange-api/".to_string(),
-                err.to_string(),
-            ),
-            ForexError::CurrencyAPIError(err) => ("currencyapi.com".to_string(), err.to_string()),
-            ForexError::OpenExchangeAPIError(err) => {
-                ("openexchangerates.org".to_string(), err.to_string())
-            }
-        };
         Self {
             id: Uuid::new_v4(),
-            source,
+            source: String::default(),
             poll_date: Utc::now(),
             data: HistoricalRates {
                 date,
                 base: Currency::default(),
                 rates: RatesData::default(),
             },
-            error: Some(error),
+            error: Some(err.to_string()),
         }
     }
 }

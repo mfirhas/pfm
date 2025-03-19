@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::Context;
 use std::{fmt::Display, str::FromStr};
 
 use iso_currency::Currency as CurrencyLib;
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
 use super::{
-    interface::{ForexError, ERROR_PREFIX},
+    interface::{AsClientError, ForexError},
     money::Money,
 };
 
@@ -51,9 +51,10 @@ impl FromStr for Currency {
     type Err = ForexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let curr: CurrencyLib = s.parse().map_err(|err| {
-            ForexError::InputError(anyhow!("{} invalid currency: {}", ERROR_PREFIX, err))
-        })?;
+        let curr: CurrencyLib = s
+            .parse()
+            .context("currency parsing from str")
+            .as_client_err()?;
 
         match curr {
             CurrencyLib::IDR => Ok(Self::IDR),
@@ -65,11 +66,7 @@ impl FromStr for Currency {
             CurrencyLib::SGD => Ok(Self::SGD),
             CurrencyLib::CNY => Ok(Self::CNY),
             CurrencyLib::SAR => Ok(Self::SAR),
-            _ => Err(ForexError::InputError(anyhow!(
-                "{} Currency {} not supported",
-                ERROR_PREFIX,
-                curr.code()
-            ))),
+            _ => Err(ForexError::client_error("currency not supported")),
         }
     }
 }

@@ -5,15 +5,14 @@
 // daily historical rates
 // 10 reqs/minute
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::forex::entity::RatesData;
-use crate::forex::interface::ForexHistoricalRates;
-use crate::forex::ForexError::CurrencyAPIError;
+use crate::forex::interface::{AsInternalError, ForexHistoricalRates};
 use crate::forex::ForexResult;
 use crate::forex::{
     entity::{HistoricalRates, RatesResponse},
@@ -24,7 +23,7 @@ const SOURCE: &str = "currencyapi.com";
 
 const HISTORICAL_ENDPOINT: &str = "https://api.currencyapi.com/v3/historical";
 
-const ERROR_PREFIX: &str = "[FOREX][currency-api]";
+const ERROR_PREFIX: &str = "[FOREX][currencyapi.com]";
 
 #[derive(Clone)]
 pub struct Api {
@@ -117,9 +116,8 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             .metadata
             .last_updated_at
             .parse::<DateTime<Utc>>()
-            .map_err(|err| {
-                CurrencyAPIError(anyhow!("{} Failed parsing datetime: {}", ERROR_PREFIX, err))
-            })?;
+            .context("currency_api parsing datetime")
+            .as_internal_err()?;
 
         let historical_rates = HistoricalRates {
             date,
@@ -169,31 +167,16 @@ impl ForexHistoricalRates for Api {
             .query(&params)
             .send()
             .await
-            .map_err(|err| {
-                CurrencyAPIError(anyhow!(
-                    "{} failed calling api historical rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("invoking currency_api historical rates")
+            .as_internal_err()?
             .text()
             .await
-            .map_err(|err| {
-                CurrencyAPIError(anyhow!(
-                    "{} failed fetching historical api response as string: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
+            .context("fetch currency_api historical response as string")
+            .as_internal_err()?;
 
-        let resp = serde_json::from_str::<ApiResponse>(&ret).map_err(|err| {
-            CurrencyAPIError(anyhow!(
-                "{} failed parsing into json. Error: {}, Response: {}",
-                ERROR_PREFIX,
-                err,
-                &ret
-            ))
-        })?;
+        let resp = serde_json::from_str::<ApiResponse>(&ret)
+            .context("currency_api parsing into json")
+            .as_internal_err()?;
 
         let resp = Response {
             base,

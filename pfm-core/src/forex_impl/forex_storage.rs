@@ -7,11 +7,11 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::forex::entity::{HistoricalRates, Order, Rates, RatesList, RatesResponse};
-use crate::forex::interface::ForexStorage;
-use crate::forex::ForexError::{self, StorageError};
+use crate::forex::interface::{AsInternalError, ForexStorage};
+use crate::forex::ForexError;
 use crate::forex::ForexResult;
 use crate::global::StorageFS;
-use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use serde::{Deserialize, Serialize};
@@ -40,24 +40,14 @@ impl ForexStorageImpl {
         // Set permissions to 600 (owner read/write only)
         let mut perms = fs::metadata(&pathbuf)
             .await
-            .map_err(|err| {
-                StorageError(anyhow!(
-                    "{} failed setting permission into file {:?}: {}",
-                    ERROR_PREFIX,
-                    &pathbuf.as_path(),
-                    err
-                ))
-            })?
+            .context("forex storage read metadata")
+            .as_internal_err()?
             .permissions();
         perms.set_mode(FILE_PERMISSION);
-        fs::set_permissions(&pathbuf, perms).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed setting permission on {:?}: {}",
-                ERROR_PREFIX,
-                pathbuf.as_path(),
-                err
-            ))
-        })?;
+        fs::set_permissions(&pathbuf, perms)
+            .await
+            .context("forex storage setting permission")
+            .as_internal_err()?;
 
         Ok(())
     }
@@ -70,42 +60,26 @@ impl ForexStorageImpl {
     where
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
     {
-        let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed parsing Rates into json string :{}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+        let json_string = serde_json::to_string_pretty(&rates)
+            .context("forex storage insert latest parse into json string")
+            .as_internal_err()?;
 
         let latest_write = self.fs.write().await;
         let latest_write = latest_write.latest();
         let latest_write = latest_write.join(generate_latest_file_path(date));
 
-        let mut file = File::create(&latest_write).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed creating path {:?}: {}",
-                ERROR_PREFIX,
-                &latest_write.as_path(),
-                err
-            ))
-        })?;
+        let mut file = File::create(&latest_write)
+            .await
+            .context("forex storage insert latest create path")
+            .as_internal_err()?;
         file.write_all(json_string.as_bytes())
             .await
-            .map_err(|err| {
-                StorageError(anyhow!(
-                    "{} failed writing into latest dir: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
-        file.flush().await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed flushing insert_latest: {}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+            .context("forex storage insert latest write")
+            .as_internal_err()?;
+        file.flush()
+            .await
+            .context("forex storage insert latest flush")
+            .as_internal_err()?;
 
         Self::set_permission(&latest_write).await?;
 
@@ -116,52 +90,37 @@ impl ForexStorageImpl {
         let latest_read = self.fs.read().await;
         let latest_read = latest_read.latest();
 
-        let mut entries = fs::read_dir(latest_read).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed reading directory {:?} :{}",
-                ERROR_PREFIX,
-                &latest_read.as_path(),
-                err
-            ))
-        })?;
+        let mut entries = fs::read_dir(latest_read)
+            .await
+            .context("storage get latest read dir")
+            .as_internal_err()?;
 
         let mut files: Vec<PathBuf> = Vec::new();
         while let Some(entry) = entries
             .next_entry()
             .await
-            .map_err(|err| StorageError(err.into()))?
+            .context("storage get latest reading entries")
+            .as_internal_err()?
         {
             let path = entry.path();
             files.push(path);
         }
 
         if files.is_empty() {
-            return Err(StorageError(anyhow!(
-                "{} latest directory is empty",
-                ERROR_PREFIX
-            )));
+            return Err(ForexError::internal_error("storage get latest dir empty"));
         }
 
         // sort descending
         files.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
 
-        let content = fs::read_to_string(&files[0]).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed reading the content of file {:?}: {}",
-                ERROR_PREFIX,
-                &files[0].as_path(),
-                err
-            ))
-        })?;
+        let content = fs::read_to_string(&files[0])
+            .await
+            .context("storage get latest reading content")
+            .as_internal_err()?;
 
-        let rates: RatesResponse<Rates> = serde_json::from_str(&content).map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed parsing file content {:?} into Rates :{}",
-                ERROR_PREFIX,
-                &content,
-                err
-            ))
-        })?;
+        let rates: RatesResponse<Rates> = serde_json::from_str(&content)
+            .context("storage get latest parse to json")
+            .as_internal_err()?;
 
         Ok(rates)
     }
@@ -174,13 +133,9 @@ impl ForexStorageImpl {
     where
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
     {
-        let json_string = serde_json::to_string_pretty(&rates).map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed parsing Rates into json string :{}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+        let json_string = serde_json::to_string_pretty(&rates)
+            .context("storage insert historical parse input into json string")
+            .as_internal_err()?;
 
         let historical_write = self.fs.write().await;
         let historical_write = historical_write.historical();
@@ -191,39 +146,27 @@ impl ForexStorageImpl {
             if !dir.is_dir() {
                 tokio::fs::create_dir_all(dir)
                     .await
-                    .map_err(|err| StorageError(anyhow!(err)))?;
+                    .context("storage insert historical create year dir")
+                    .as_internal_err()?;
             }
         } else {
-            return Err(StorageError(anyhow!(
-                "{} failed creating year directory for historical rates",
-                ERROR_PREFIX
-            )));
+            return Err(ForexError::internal_error(
+                "storage insert historical create year dir",
+            ));
         };
 
-        let mut file = File::create(&historical_write).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed creating path {:?}: {}",
-                ERROR_PREFIX,
-                &historical_write.as_path(),
-                err
-            ))
-        })?;
+        let mut file = File::create(&historical_write)
+            .await
+            .context("storage insert historical create filepath")
+            .as_internal_err()?;
         file.write_all(json_string.as_bytes())
             .await
-            .map_err(|err| {
-                StorageError(anyhow!(
-                    "{} failed writing into historical dir: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
-        file.flush().await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed flushing insert_latest: {}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+            .context("storage insert historical write content")
+            .as_internal_err()?;
+        file.flush()
+            .await
+            .context("storage insert historical flush")
+            .as_internal_err()?;
 
         Self::set_permission(&historical_write).await?;
 
@@ -238,24 +181,14 @@ impl ForexStorageImpl {
         let historical_read = historical_read.historical();
         let filepath = historical_read.join(&generate_historical_file_path(date));
 
-        let content = fs::read_to_string(&filepath).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed reading the content of file {:?}: {}",
-                ERROR_PREFIX,
-                &filepath.as_path(),
-                err
-            ))
-        })?;
+        let content = fs::read_to_string(&filepath)
+            .await
+            .context("storage get historical read file")
+            .as_internal_err()?;
 
-        let rates: RatesResponse<HistoricalRates> =
-            serde_json::from_str(&content).map_err(|err| {
-                StorageError(anyhow!(
-                    "{} failed parsing file content {:?} into Rates :{}",
-                    ERROR_PREFIX,
-                    &content,
-                    err
-                ))
-            })?;
+        let rates: RatesResponse<HistoricalRates> = serde_json::from_str(&content)
+            .context("storage get historical parse to json")
+            .as_internal_err()?;
 
         Ok(rates)
     }
@@ -269,46 +202,35 @@ impl ForexStorageImpl {
         let latest_read = self.fs.read().await;
         let latest_read = latest_read.latest();
 
-        let mut entries = fs::read_dir(latest_read).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed reading directory {:?} :{}",
-                ERROR_PREFIX,
-                &latest_read.as_path(),
-                err
-            ))
-        })?;
+        let mut entries = fs::read_dir(latest_read)
+            .await
+            .context("storage get latest list read dir")
+            .as_internal_err()?;
 
         let mut files: Vec<RatesResponse<Rates>> = Vec::new();
         while let Some(entry) = entries
             .next_entry()
             .await
-            .map_err(|err| StorageError(err.into()))?
+            .context("storage get latest list read entries")
+            .as_internal_err()?
         {
             let path = entry.path();
-            let content = tokio::fs::read_to_string(&path).await.map_err(|err| {
-                ForexError::StorageError(anyhow!(
-                    "{} failed getting latest list reading file content: {:?}: {}",
-                    ERROR_PREFIX,
-                    &path.as_path(),
-                    err
-                ))
-            })?;
-            let resp: RatesResponse<Rates> = serde_json::from_str(&content).map_err(|err| {
-                ForexError::StorageError(anyhow!(
-                    "{} failed getting latest list converting to RatesResponse<Rates>: {:?}: {}",
-                    ERROR_PREFIX,
-                    &path.as_path(),
-                    err
-                ))
-            })?;
+            let content = tokio::fs::read_to_string(&path)
+                .await
+                .context("storage get latest list reading file")
+                .as_internal_err()?;
+            let resp: RatesResponse<Rates> = serde_json::from_str(&content)
+                .context("storage get latest list parse to json")
+                .as_internal_err()?;
             files.push(resp);
         }
 
         if files.is_empty() {
-            return Err(StorageError(anyhow!(
-                "{} latest directory is empty",
-                ERROR_PREFIX
-            )));
+            return Ok(RatesList {
+                has_prev: false,
+                rates_list: vec![],
+                has_next: false,
+            });
         }
 
         match order {
@@ -336,47 +258,47 @@ impl ForexStorageImpl {
         let historical_read = self.fs.read().await;
         let historical_read = historical_read.historical();
 
-        let mut entries = fs::read_dir(historical_read).await.map_err(|err| {
-            StorageError(anyhow!(
-                "{} failed reading directory {:?} :{}",
-                ERROR_PREFIX,
-                &historical_read.as_path(),
-                err
-            ))
-        })?;
+        let mut entries = fs::read_dir(historical_read)
+            .await
+            .context("storage get historical list read dir")
+            .as_internal_err()?;
 
         let mut files: Vec<RatesResponse<HistoricalRates>> = Vec::new();
         while let Some(entry) = entries
             .next_entry()
             .await
-            .map_err(|err| StorageError(err.into()))?
+            .context("storage get historical list reading entries")
+            .as_internal_err()?
         {
             let path = entry.path();
-            let content = tokio::fs::read_to_string(&path).await.map_err(|err| {
-                ForexError::StorageError(anyhow!(
-                    "{} failed getting latest list reading file content: {:?}: {}",
-                    ERROR_PREFIX,
-                    &path.as_path(),
-                    err
-                ))
-            })?;
-            let resp: RatesResponse<HistoricalRates> =
-                serde_json::from_str(&content).map_err(|err| {
-                    ForexError::StorageError(anyhow!(
-                    "{} failed getting latest list converting to RatesResponse<Rates>: {:?}: {}",
-                    ERROR_PREFIX,
-                    &path.as_path(),
-                    err
-                ))
-                })?;
-            files.push(resp);
+            let mut sub_entries = fs::read_dir(&path)
+                .await
+                .context("storage get historical list read sub entry")
+                .as_internal_err()?;
+            while let Some(sub_entry) = sub_entries
+                .next_entry()
+                .await
+                .context("storage get historical list read subentries")
+                .as_internal_err()?
+            {
+                let sub_entry_path = sub_entry.path();
+                let content = tokio::fs::read_to_string(&sub_entry_path)
+                    .await
+                    .context("storage get historical list read subentry content")
+                    .as_internal_err()?;
+                let resp: RatesResponse<HistoricalRates> = serde_json::from_str(&content)
+                    .context("storage get historical list parse subentry to json")
+                    .as_internal_err()?;
+                files.push(resp);
+            }
         }
 
         if files.is_empty() {
-            return Err(StorageError(anyhow!(
-                "{} latest directory is empty",
-                ERROR_PREFIX
-            )));
+            return Ok(RatesList {
+                has_prev: false,
+                rates_list: vec![],
+                has_next: false,
+            });
         }
 
         match order {

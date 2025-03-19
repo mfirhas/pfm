@@ -117,11 +117,8 @@ impl IntoResponse for AppError {
 impl From<ForexError> for AppError {
     fn from(value: ForexError) -> Self {
         match value {
-            ForexError::InputError(err) => Self::BadRequest(err.to_string()),
-            ForexError::StorageError(err) => Self::InternalServerError(err.to_string()),
-            ForexError::ExchangeAPIError(err) => Self::InternalServerError(err.to_string()),
-            ForexError::CurrencyAPIError(err) => Self::InternalServerError(err.to_string()),
-            ForexError::OpenExchangeAPIError(err) => Self::InternalServerError(err.to_string()),
+            ForexError::ClientError(v) => Self::BadRequest(v.to_string()),
+            ForexError::InternalError(v) => Self::InternalServerError(v.to_string()),
         }
     }
 }

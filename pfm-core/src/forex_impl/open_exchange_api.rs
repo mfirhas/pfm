@@ -9,11 +9,10 @@ use std::str::FromStr;
 
 use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
-    interface::{ForexHistoricalRates, ForexRates},
-    Currency,
-    ForexError::{self, OpenExchangeAPIError},
+    interface::{AsInternalError, ForexHistoricalRates, ForexRates},
+    Currency, ForexError,
 };
-use anyhow::anyhow;
+use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
 use rust_decimal::Decimal;
@@ -21,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 const SOURCE: &str = "openexchangerates.org";
 
-const ERROR_PREFIX: &str = "[FOREX][open-exchange-api]";
+const ERROR_PREFIX: &str = "[FOREX][openexchangerates.org]";
 
 const LATEST_ENDPOINT: &str = "https://openexchangerates.org/api/latest.json";
 
@@ -89,14 +88,12 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
-        let date = Utc
-            .timestamp_opt(value.timestamp, 0)
-            .single()
-            .ok_or(OpenExchangeAPIError(anyhow!(
-                "{} Failed converting unix epoch {} into utc",
-                ERROR_PREFIX,
-                value.timestamp,
-            )))?;
+        let date =
+            Utc.timestamp_opt(value.timestamp, 0)
+                .single()
+                .ok_or(ForexError::internal_error(
+                    "openexchangerates converting latest rates unix epoch to utc",
+                ))?;
 
         let rates = RatesData {
             idr: value.rates.idr,
@@ -113,13 +110,9 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
             xpt: value.rates.xpt,
         };
 
-        let base = Currency::from_str(&value.base_currency).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
-                "{} base currency not supported :{}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+        let base = Currency::from_str(&value.base_currency)
+            .context("openexchangerates parse base currency")
+            .as_internal_err()?;
 
         let ret = crate::forex::entity::Rates {
             latest_update: date,
@@ -135,14 +128,12 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
-        let date = Utc
-            .timestamp_opt(value.timestamp, 0)
-            .single()
-            .ok_or(OpenExchangeAPIError(anyhow!(
-                "{} Failed converting unix epoch {} into utc",
-                ERROR_PREFIX,
-                value.timestamp
-            )))?;
+        let date =
+            Utc.timestamp_opt(value.timestamp, 0)
+                .single()
+                .ok_or(ForexError::internal_error(
+                    "openexchangerates converting historical rates unix epoch to utc",
+                ))?;
 
         let rates = RatesData {
             idr: value.rates.idr,
@@ -159,13 +150,9 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             xpt: value.rates.xpt,
         };
 
-        let base = Currency::from_str(&value.base_currency).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
-                "{} base currency not supported :{}",
-                ERROR_PREFIX,
-                err
-            ))
-        })?;
+        let base = Currency::from_str(&value.base_currency)
+            .context("openexchangerates parse base currency")
+            .as_internal_err()?;
 
         let ret = crate::forex::entity::HistoricalRates { base, date, rates };
 
@@ -206,31 +193,16 @@ impl ForexRates for Api {
             .query(&params)
             .send()
             .await
-            .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
-                    "{} failed calling api rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("openexchangerates invoke latest rates api")
+            .as_internal_err()?
             .text()
             .await
-            .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
-                    "{} failed fetching rates api response as string: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
+            .context("openexchangerates fetch latest rates api")
+            .as_internal_err()?;
 
-        let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
-                "{} failed parsing into json. Error: {}, Response: {}",
-                ERROR_PREFIX,
-                err,
-                &ret
-            ))
-        })?;
+        let resp = serde_json::from_str::<Response>(&ret)
+            .context("openexchangerates parse latest rates to json")
+            .as_internal_err()?;
 
         Ok(resp.try_into()?)
     }
@@ -257,31 +229,16 @@ impl ForexHistoricalRates for Api {
             .query(&params)
             .send()
             .await
-            .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
-                    "{} failed calling api historical rates: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?
+            .context("openexchangerates invoke historical rates api")
+            .as_internal_err()?
             .text()
             .await
-            .map_err(|err| {
-                OpenExchangeAPIError(anyhow!(
-                    "{} failed fetching historical api as string: {}",
-                    ERROR_PREFIX,
-                    err
-                ))
-            })?;
+            .context("openexchangerates fetch historical rates to json")
+            .as_internal_err()?;
 
-        let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
-            OpenExchangeAPIError(anyhow!(
-                "{} failed parsing into json. Error: {}, Response: {}",
-                ERROR_PREFIX,
-                err,
-                &ret
-            ))
-        })?;
+        let resp = serde_json::from_str::<Response>(&ret)
+            .context("openexchangerates parse latest rates to json")
+            .as_internal_err()?;
 
         Ok(resp.try_into()?)
     }
