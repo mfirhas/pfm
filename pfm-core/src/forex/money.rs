@@ -11,7 +11,7 @@ use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use strum::{EnumIter, IntoEnumIterator};
+use strum::EnumIter;
 
 use crate::global;
 
@@ -162,11 +162,11 @@ impl Money {
         Ok(Money::new_money(currency, amount))
     }
 
-    fn to_string(use_symbol: bool, money: Money) -> String {
+    fn to_string(&self, use_symbol: bool) -> String {
         let currency_code: String = if use_symbol {
-            money.symbol()
+            self.symbol()
         } else {
-            money.code()
+            self.code()
         };
 
         let mut ac = Accounting::new_from_seperator(currency_code.as_str(), 2, ",", ".");
@@ -177,7 +177,7 @@ impl Money {
             ac.set_format("{s} {v}");
         }
 
-        let money_display = ac.format_money(money.amount());
+        let money_display = ac.format_money(self.amount());
 
         money_display
     }
@@ -230,7 +230,7 @@ impl FromStr for Money {
 
 impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ret = Self::to_string(global::config().forex_use_symbol, *self);
+        let ret = self.to_string(global::config().forex_use_symbol);
         write!(f, "{}", ret)
     }
 }
