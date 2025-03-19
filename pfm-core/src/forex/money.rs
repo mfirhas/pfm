@@ -11,6 +11,7 @@ use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use strum::{EnumIter, IntoEnumIterator};
 
 use crate::global;
 
@@ -28,7 +29,7 @@ lazy_static! {
         regex::Regex::new(r"^([A-Z]{3})\s+((?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?)$").expect("failed compiling money format regex");
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Serialize, Deserialize, EnumIter)]
 pub enum Money {
     USD(Decimal),
     IDR(Decimal),

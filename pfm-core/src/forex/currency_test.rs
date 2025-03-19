@@ -1,8 +1,17 @@
 use std::str::FromStr;
 
 use rust_decimal_macros::dec;
+use strum::IntoEnumIterator;
 
 use crate::forex::{Currency, Money};
+
+/// make sure variants of currency checked
+#[test]
+fn test_currency_items() {
+    let currency_variants_count = Currency::iter().count();
+    let expected_count = 9;
+    assert_eq!(currency_variants_count, expected_count);
+}
 
 #[test]
 fn test_currency_code() {
