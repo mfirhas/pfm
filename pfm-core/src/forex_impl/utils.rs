@@ -1,8 +1,8 @@
-use crate::forex::ForexError::InputError;
 use crate::forex::*;
 use accounting::Accounting;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use entity::Rates;
+use interface::AsClientError;
 use money::{ERROR_MONEY_FORMAT, MONEY_FORMAT_REGEX};
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -10,13 +10,13 @@ use std::str::FromStr;
 pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     // 1. parse with regex
     if !MONEY_FORMAT_REGEX.is_match(input_money) {
-        return Err(InputError(anyhow!(ERROR_MONEY_FORMAT)));
+        return Err(ForexError::client_error(ERROR_MONEY_FORMAT));
     }
 
     // 2. take money parts: currency and amount
     let money_parts: Vec<&str> = input_money.split_whitespace().collect();
     if money_parts.len() != 2 {
-        return Err(InputError(anyhow!(ERROR_MONEY_FORMAT)));
+        return Err(ForexError::client_error(ERROR_MONEY_FORMAT));
     }
 
     // 3. parse currency code
@@ -27,13 +27,9 @@ pub(crate) fn parse_str(input_money: &str) -> ForexResult<Money> {
     let amount_str: String = money_parts[1].chars().filter(|&c| c != comma).collect();
 
     // 5. convert amount into Decimal.
-    let amount = Decimal::from_str(&amount_str).map_err(|err| {
-        InputError(anyhow!(
-            "failed converting amount '{}' into decimal type: {}",
-            &amount_str,
-            err
-        ))
-    })?;
+    let amount = Decimal::from_str(&amount_str)
+        .context("convert amount str to Decimal")
+        .as_client_err()?;
 
     Ok(Money::new_money(currency, amount))
 }
