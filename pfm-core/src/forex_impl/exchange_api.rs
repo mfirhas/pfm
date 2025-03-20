@@ -55,18 +55,36 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
             latest_update: date,
             base: value.base,
             rates: RatesData {
-                idr: value.api_response.rates.currencies().idr,
                 usd: value.api_response.rates.currencies().usd,
+                cad: value.api_response.rates.currencies().cad,
                 eur: value.api_response.rates.currencies().eur,
                 gbp: value.api_response.rates.currencies().gbp,
-                jpy: value.api_response.rates.currencies().jpy,
                 chf: value.api_response.rates.currencies().chf,
-                sgd: value.api_response.rates.currencies().sgd,
+                rub: value.api_response.rates.currencies().rub,
                 cny: value.api_response.rates.currencies().cny,
+                jpy: value.api_response.rates.currencies().jpy,
+                krw: value.api_response.rates.currencies().krw,
+                hkd: value.api_response.rates.currencies().hkd,
+                idr: value.api_response.rates.currencies().idr,
+                myr: value.api_response.rates.currencies().myr,
+                sgd: value.api_response.rates.currencies().sgd,
+                thb: value.api_response.rates.currencies().thb,
                 sar: value.api_response.rates.currencies().sar,
+                aed: value.api_response.rates.currencies().aed,
+                kwd: value.api_response.rates.currencies().kwd,
+                inr: value.api_response.rates.currencies().inr,
+                aud: value.api_response.rates.currencies().aud,
+                nzd: value.api_response.rates.currencies().nzd,
                 xau: value.api_response.rates.currencies().xau,
                 xag: value.api_response.rates.currencies().xag,
                 xpt: value.api_response.rates.currencies().xpt,
+                xpd: value.api_response.rates.currencies().xpd,
+                xrh: value.api_response.rates.currencies().xrh,
+                btc: value.api_response.rates.currencies().btc,
+                eth: value.api_response.rates.currencies().eth,
+                sol: value.api_response.rates.currencies().sol,
+                xrp: value.api_response.rates.currencies().xrp,
+                ada: value.api_response.rates.currencies().ada,
             },
         };
 
@@ -87,18 +105,36 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             date,
             base: value.base,
             rates: RatesData {
-                idr: value.api_response.rates.currencies().idr,
                 usd: value.api_response.rates.currencies().usd,
+                cad: value.api_response.rates.currencies().cad,
                 eur: value.api_response.rates.currencies().eur,
                 gbp: value.api_response.rates.currencies().gbp,
-                jpy: value.api_response.rates.currencies().jpy,
                 chf: value.api_response.rates.currencies().chf,
-                sgd: value.api_response.rates.currencies().sgd,
+                rub: value.api_response.rates.currencies().rub,
                 cny: value.api_response.rates.currencies().cny,
+                jpy: value.api_response.rates.currencies().jpy,
+                krw: value.api_response.rates.currencies().krw,
+                hkd: value.api_response.rates.currencies().hkd,
+                idr: value.api_response.rates.currencies().idr,
+                myr: value.api_response.rates.currencies().myr,
+                sgd: value.api_response.rates.currencies().sgd,
+                thb: value.api_response.rates.currencies().thb,
                 sar: value.api_response.rates.currencies().sar,
+                aed: value.api_response.rates.currencies().aed,
+                kwd: value.api_response.rates.currencies().kwd,
+                inr: value.api_response.rates.currencies().inr,
+                aud: value.api_response.rates.currencies().aud,
+                nzd: value.api_response.rates.currencies().nzd,
                 xau: value.api_response.rates.currencies().xau,
                 xag: value.api_response.rates.currencies().xag,
                 xpt: value.api_response.rates.currencies().xpt,
+                xpd: value.api_response.rates.currencies().xpd,
+                xrh: value.api_response.rates.currencies().xrh,
+                btc: value.api_response.rates.currencies().btc,
+                eth: value.api_response.rates.currencies().eth,
+                sol: value.api_response.rates.currencies().sol,
+                xrp: value.api_response.rates.currencies().xrp,
+                ada: value.api_response.rates.currencies().ada,
             },
         };
 
@@ -108,11 +144,11 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Rates {
-    #[serde(rename = "idr")]
-    IDR(RatesData),
-
     #[serde(rename = "usd")]
     USD(RatesData),
+
+    #[serde(rename = "cad")]
+    CAD(RatesData),
 
     #[serde(rename = "eur")]
     EUR(RatesData),
@@ -120,20 +156,53 @@ pub enum Rates {
     #[serde(rename = "gbp")]
     GBP(RatesData),
 
-    #[serde(rename = "jpy")]
-    JPY(RatesData),
-
     #[serde(rename = "chf")]
     CHF(RatesData),
 
-    #[serde(rename = "sgd")]
-    SGD(RatesData),
+    #[serde(rename = "rub")]
+    RUB(RatesData),
 
     #[serde(rename = "cny")]
     CNY(RatesData),
 
+    #[serde(rename = "jpy")]
+    JPY(RatesData),
+
+    #[serde(rename = "krw")]
+    KRW(RatesData),
+
+    #[serde(rename = "hkd")]
+    HKD(RatesData),
+
+    #[serde(rename = "idr")]
+    IDR(RatesData),
+
+    #[serde(rename = "myr")]
+    MYR(RatesData),
+
+    #[serde(rename = "sgd")]
+    SGD(RatesData),
+
+    #[serde(rename = "thb")]
+    THB(RatesData),
+
     #[serde(rename = "sar")]
     SAR(RatesData),
+
+    #[serde(rename = "aed")]
+    AED(RatesData),
+
+    #[serde(rename = "kwd")]
+    KWD(RatesData),
+
+    #[serde(rename = "inr")]
+    INR(RatesData),
+
+    #[serde(rename = "aud")]
+    AUD(RatesData),
+
+    #[serde(rename = "nzd")]
+    NZD(RatesData),
 
     #[serde(rename = "xau")]
     XAU(RatesData),
@@ -143,23 +212,62 @@ pub enum Rates {
 
     #[serde(rename = "xpt")]
     XPT(RatesData),
+
+    #[serde(rename = "xpd")]
+    XPD(RatesData),
+
+    #[serde(rename = "xrh")]
+    XRH(RatesData),
+
+    #[serde(rename = "btc")]
+    BTC(RatesData),
+
+    #[serde(rename = "eth")]
+    ETH(RatesData),
+
+    #[serde(rename = "sol")]
+    SOL(RatesData),
+
+    #[serde(rename = "xrp")]
+    XRP(RatesData),
+
+    #[serde(rename = "ada")]
+    ADA(RatesData),
 }
 
 impl Rates {
     pub fn currencies(&self) -> &RatesData {
         match self {
-            Rates::IDR(currencies) => currencies,
             Rates::USD(currencies) => currencies,
+            Rates::CAD(currencies) => currencies,
             Rates::EUR(currencies) => currencies,
             Rates::GBP(currencies) => currencies,
-            Rates::JPY(currencies) => currencies,
             Rates::CHF(currencies) => currencies,
-            Rates::SGD(currencies) => currencies,
+            Rates::RUB(currencies) => currencies,
             Rates::CNY(currencies) => currencies,
+            Rates::JPY(currencies) => currencies,
+            Rates::KRW(currencies) => currencies,
+            Rates::HKD(currencies) => currencies,
+            Rates::IDR(currencies) => currencies,
+            Rates::MYR(currencies) => currencies,
+            Rates::SGD(currencies) => currencies,
+            Rates::THB(currencies) => currencies,
             Rates::SAR(currencies) => currencies,
+            Rates::AED(currencies) => currencies,
+            Rates::KWD(currencies) => currencies,
+            Rates::INR(currencies) => currencies,
+            Rates::AUD(currencies) => currencies,
+            Rates::NZD(currencies) => currencies,
             Rates::XAU(currencies) => currencies,
             Rates::XAG(currencies) => currencies,
             Rates::XPT(currencies) => currencies,
+            Rates::XPD(currencies) => currencies,
+            Rates::XRH(currencies) => currencies,
+            Rates::BTC(currencies) => currencies,
+            Rates::ETH(currencies) => currencies,
+            Rates::SOL(currencies) => currencies,
+            Rates::XRP(currencies) => currencies,
+            Rates::ADA(currencies) => currencies,
         }
     }
 }

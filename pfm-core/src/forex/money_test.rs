@@ -6,7 +6,7 @@ use super::money::MONEY_FORMAT_REGEX;
 #[test]
 fn test_money_items() {
     let money_variants_count = Money::iter().count();
-    let expected_count = 9;
+    let expected_count = 30;
     assert_eq!(money_variants_count, expected_count);
 }
 

@@ -5,7 +5,7 @@
 // daily historical rates
 // 10 reqs/minute
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -62,11 +62,11 @@ pub struct Metadata {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Data {
-    #[serde(rename = "IDR", default)]
-    pub idr: RateData,
-
     #[serde(rename = "USD", default)]
     pub usd: RateData,
+
+    #[serde(rename = "CAD", default)]
+    pub cad: RateData,
 
     #[serde(rename = "EUR", default)]
     pub eur: RateData,
@@ -74,20 +74,53 @@ pub struct Data {
     #[serde(rename = "GBP", default)]
     pub gbp: RateData,
 
-    #[serde(rename = "JPY", default)]
-    pub jpy: RateData,
-
     #[serde(rename = "CHF", default)]
     pub chf: RateData,
 
-    #[serde(rename = "SGD", default)]
-    pub sgd: RateData,
+    #[serde(rename = "RUB", default)]
+    pub rub: RateData,
 
     #[serde(rename = "CNY", default)]
     pub cny: RateData,
 
+    #[serde(rename = "JPY", default)]
+    pub jpy: RateData,
+
+    #[serde(rename = "KRW", default)]
+    pub krw: RateData,
+
+    #[serde(rename = "HKD", default)]
+    pub hkd: RateData,
+
+    #[serde(rename = "IDR", default)]
+    pub idr: RateData,
+
+    #[serde(rename = "MYR", default)]
+    pub myr: RateData,
+
+    #[serde(rename = "SGD", default)]
+    pub sgd: RateData,
+
+    #[serde(rename = "THB", default)]
+    pub thb: RateData,
+
     #[serde(rename = "SAR", default)]
     pub sar: RateData,
+
+    #[serde(rename = "AED", default)]
+    pub aed: RateData,
+
+    #[serde(rename = "KWD", default)]
+    pub kwd: RateData,
+
+    #[serde(rename = "INR", default)]
+    pub inr: RateData,
+
+    #[serde(rename = "AUD", default)]
+    pub aud: RateData,
+
+    #[serde(rename = "NZD", default)]
+    pub nzd: RateData,
 
     #[serde(rename = "XAU", default)]
     pub xau: RateData,
@@ -97,6 +130,27 @@ pub struct Data {
 
     #[serde(rename = "XPT", default)]
     pub xpt: RateData,
+
+    #[serde(rename = "XPD", default)]
+    pub xpd: RateData,
+
+    #[serde(rename = "XRH", default)]
+    pub xrh: RateData,
+
+    #[serde(rename = "BTC", default)]
+    pub btc: RateData,
+
+    #[serde(rename = "ETH", default)]
+    pub eth: RateData,
+
+    #[serde(rename = "SOL", default)]
+    pub sol: RateData,
+
+    #[serde(rename = "XRP", default)]
+    pub xrp: RateData,
+
+    #[serde(rename = "ADA", default)]
+    pub ada: RateData,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -123,18 +177,36 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             date,
             base: value.base,
             rates: RatesData {
-                idr: value.api_response.rates.idr.value,
                 usd: value.api_response.rates.usd.value,
+                cad: value.api_response.rates.cad.value,
                 eur: value.api_response.rates.eur.value,
                 gbp: value.api_response.rates.gbp.value,
-                jpy: value.api_response.rates.jpy.value,
                 chf: value.api_response.rates.chf.value,
-                sgd: value.api_response.rates.sgd.value,
+                rub: value.api_response.rates.rub.value,
                 cny: value.api_response.rates.cny.value,
+                jpy: value.api_response.rates.jpy.value,
+                krw: value.api_response.rates.krw.value,
+                hkd: value.api_response.rates.hkd.value,
+                idr: value.api_response.rates.idr.value,
+                myr: value.api_response.rates.myr.value,
+                sgd: value.api_response.rates.sgd.value,
+                thb: value.api_response.rates.thb.value,
                 sar: value.api_response.rates.sar.value,
+                aed: value.api_response.rates.aed.value,
+                kwd: value.api_response.rates.kwd.value,
+                inr: value.api_response.rates.inr.value,
+                aud: value.api_response.rates.aud.value,
+                nzd: value.api_response.rates.nzd.value,
                 xau: value.api_response.rates.xau.value,
                 xag: value.api_response.rates.xag.value,
                 xpt: value.api_response.rates.xpt.value,
+                xpd: value.api_response.rates.xpd.value,
+                xrh: value.api_response.rates.xrh.value,
+                btc: value.api_response.rates.btc.value,
+                eth: value.api_response.rates.eth.value,
+                sol: value.api_response.rates.sol.value,
+                xrp: value.api_response.rates.xrp.value,
+                ada: value.api_response.rates.ada.value,
             },
         };
 
