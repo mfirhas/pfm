@@ -271,10 +271,12 @@ impl ForexRates for Api {
         &self,
         base: Currency,
     ) -> crate::forex::ForexResult<RatesResponse<crate::forex::entity::Rates>> {
+        let symbols = Currency::to_comma_separated_list_str();
+
         let params = [
             ("app_id", self.key),
             ("base", base.code()),
-            ("symbols", "IDR,USD,EUR,GBP,JPY,CHF,SGD,CNY,SAR,XAU,XAG,XPT"),
+            ("symbols", &symbols),
         ];
 
         let ret = self
@@ -307,10 +309,13 @@ impl ForexHistoricalRates for Api {
     ) -> crate::forex::ForexResult<RatesResponse<crate::forex::entity::HistoricalRates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = HISTORICAL_ENDPOINT.replace(":date", yyyymmdd.as_str());
+
+        let symbols = Currency::to_comma_separated_list_str();
+
         let params = [
             ("app_id", self.key),
             ("base", base.code()),
-            ("symbols", "IDR,USD,EUR,GBP,JPY,CHF,SGD,CNY,SAR,XAU,XAG,XPT"),
+            ("symbols", &symbols),
         ];
 
         let ret = self
