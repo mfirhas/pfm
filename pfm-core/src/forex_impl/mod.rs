@@ -15,5 +15,3 @@ pub mod open_exchange_api;
 
 /// SERVER side storage for cron and http services
 pub mod forex_storage;
-
-pub(crate) mod utils;

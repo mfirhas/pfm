@@ -17,7 +17,7 @@ where
     }
 
     let ret = {
-        let res = Money::convert(&latest_rates.data, from, to)?;
+        let res = Money::convert(&latest_rates.data.rates, from, to)?;
         let date = latest_rates.data.latest_update;
 
         ConversionResponse {
