@@ -11,9 +11,8 @@ use axum::{
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use pfm_core::{
     forex::{
-        currency::Currency, entity::ConversionResponse, entity::HttpResponse, entity::Order,
-        interface::ForexError, interface::ForexHistoricalRates, interface::ForexRates,
-        interface::ForexStorage, Money,
+        currency::Currency, entity::ConversionResponse, entity::Order, interface::ForexError,
+        interface::ForexHistoricalRates, interface::ForexRates, interface::ForexStorage, Money,
     },
     forex_impl::forex_storage::ForexStorageImpl,
     forex_impl::open_exchange_api::Api,
@@ -21,6 +20,36 @@ use pfm_core::{
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HttpResponse<T> {
+    #[serde(rename = "data")]
+    pub data: Option<T>,
+
+    #[serde(rename = "error")]
+    pub error: Option<String>,
+
+    #[serde(skip)]
+    _marker: PhantomData<T>,
+}
+
+impl<T> HttpResponse<T> {
+    pub fn new(data: T) -> Self {
+        Self {
+            data: Some(data),
+            error: None,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn err(error: String) -> Self {
+        Self {
+            data: None,
+            error: Some(error),
+            _marker: PhantomData,
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {

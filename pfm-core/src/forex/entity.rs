@@ -8,36 +8,6 @@ use uuid::Uuid;
 
 use super::{currency::Currency, interface::ForexError, money::Money};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HttpResponse<T> {
-    #[serde(rename = "data")]
-    pub data: Option<T>,
-
-    #[serde(rename = "error")]
-    pub error: Option<String>,
-
-    #[serde(skip)]
-    _marker: PhantomData<T>,
-}
-
-impl<T> HttpResponse<T> {
-    pub fn new(data: T) -> Self {
-        Self {
-            data: Some(data),
-            error: None,
-            _marker: PhantomData,
-        }
-    }
-
-    pub fn err(error: String) -> Self {
-        Self {
-            data: None,
-            error: Some(error),
-            _marker: PhantomData,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RatesResponse<T> {
     #[serde(alias = "id")]
