@@ -91,27 +91,7 @@ fn init_config<CFG>() -> Result<CFG, anyhow::Error>
 where
     CFG: for<'de> Deserialize<'de> + Debug + Clone,
 {
-    let cfg = config_rs::new().with_env_prefix(ENV_PREFIX);
-
-    // for local development config from file
-    if cfg!(debug_assertions) {
-        let workspace_root = utils::find_workspace_root()?;
-        let dev_env_path = workspace_root.join(DEV_ENV_FILE_PATH);
-        let cfg = cfg.with_env(dev_env_path).build::<CFG>().map_err(|err| {
-            anyhow::anyhow!(
-                "{} failed parsing dev config from file {}: {}",
-                ERROR_PREFIX,
-                ENV_PREFIX,
-                err
-            )
-        });
-
-        return cfg;
-    }
-
-    let cfg = cfg
-        .build::<CFG>()
-        .map_err(|err| anyhow::anyhow!("{} failed parsing env config: {}", ERROR_PREFIX, err));
+    let cfg = utils::get_config(ENV_PREFIX);
 
     cfg
 }
