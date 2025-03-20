@@ -4,6 +4,7 @@
 // daily latest rates
 // daily historical rates
 // 10 reqs/minute
+// gold price start exist on 2014-01-01
 
 use anyhow::Context;
 use async_trait::async_trait;

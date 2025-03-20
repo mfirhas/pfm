@@ -4,6 +4,7 @@
 // 1,000 API requests per month
 // rate limit: 5 requests / second
 // might return 429 once reach limit.
+// gold price start exist on 2013-04-01
 
 use std::str::FromStr;
 
