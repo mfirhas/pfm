@@ -99,7 +99,7 @@ impl Currency {
         }
     }
 
-    pub fn to_comma_separated_list_str(&self) -> String {
+    pub fn to_comma_separated_list_str() -> String {
         let ret = Currency::iter()
             .map(|c| c.to_string())
             .collect::<Vec<_>>()
