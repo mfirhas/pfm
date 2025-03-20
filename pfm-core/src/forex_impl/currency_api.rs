@@ -224,6 +224,11 @@ impl ForexHistoricalRates for Api {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 
         let currencies = Currency::to_comma_separated_list_str();
+        let currencies = currencies
+            .split(',')
+            .filter(|&c| c != "XRH") // this api doesn't accept xrh
+            .collect::<Vec<&str>>()
+            .join(",");
 
         let params = [
             ("apikey", self.key),
