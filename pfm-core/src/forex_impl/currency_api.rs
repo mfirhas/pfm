@@ -7,7 +7,7 @@
 // On this page, we’ll dive into the historical exchange rates endpoint you can use to retrieve historical exchangen rates for a specific date. Data are available all the way back to 1999.
 // gold price start exist on 2014-01-01
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -253,7 +253,13 @@ impl ForexHistoricalRates for Api {
             .as_internal_err()?;
 
         let resp = serde_json::from_str::<ApiResponse>(&ret)
-            .context("currency_api parsing into json")
+            .map_err(|err| {
+                anyhow!(
+                    "currency_api parsing into json, error parsing: {}, \n Caused by: {}",
+                    &ret,
+                    err
+                )
+            })
             .as_internal_err()?;
 
         let resp = Response {
