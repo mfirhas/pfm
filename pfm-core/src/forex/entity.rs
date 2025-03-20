@@ -8,36 +8,6 @@ use uuid::Uuid;
 
 use super::{currency::Currency, interface::ForexError, money::Money};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HttpResponse<T> {
-    #[serde(rename = "data")]
-    pub data: Option<T>,
-
-    #[serde(rename = "error")]
-    pub error: Option<String>,
-
-    #[serde(skip)]
-    _marker: PhantomData<T>,
-}
-
-impl<T> HttpResponse<T> {
-    pub fn new(data: T) -> Self {
-        Self {
-            data: Some(data),
-            error: None,
-            _marker: PhantomData,
-        }
-    }
-
-    pub fn err(error: String) -> Self {
-        Self {
-            data: None,
-            error: Some(error),
-            _marker: PhantomData,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RatesResponse<T> {
     #[serde(alias = "id")]
@@ -132,8 +102,8 @@ pub struct RatesData {
     #[serde(alias = "USD", default)]
     pub usd: Decimal,
 
-    #[serde(alias = "IDR", default)]
-    pub idr: Decimal,
+    #[serde(alias = "CAD", default)]
+    pub cad: Decimal,
 
     #[serde(alias = "EUR", default)]
     pub eur: Decimal,
@@ -141,20 +111,53 @@ pub struct RatesData {
     #[serde(alias = "GBP", default)]
     pub gbp: Decimal,
 
-    #[serde(alias = "JPY", default)]
-    pub jpy: Decimal,
-
     #[serde(alias = "CHF", default)]
     pub chf: Decimal,
 
-    #[serde(alias = "SGD", default)]
-    pub sgd: Decimal,
+    #[serde(alias = "RUB", default)]
+    pub rub: Decimal,
 
     #[serde(alias = "CNY", default)]
     pub cny: Decimal,
 
+    #[serde(alias = "JPY", default)]
+    pub jpy: Decimal,
+
+    #[serde(alias = "KRW", default)]
+    pub krw: Decimal,
+
+    #[serde(alias = "HKD", default)]
+    pub hkd: Decimal,
+
+    #[serde(alias = "IDR", default)]
+    pub idr: Decimal,
+
+    #[serde(alias = "MYR", default)]
+    pub myr: Decimal,
+
+    #[serde(alias = "SGD", default)]
+    pub sgd: Decimal,
+
+    #[serde(alias = "THB", default)]
+    pub thb: Decimal,
+
     #[serde(alias = "SAR", default)]
     pub sar: Decimal,
+
+    #[serde(alias = "AED", default)]
+    pub aed: Decimal,
+
+    #[serde(alias = "KWD", default)]
+    pub kwd: Decimal,
+
+    #[serde(alias = "INR", default)]
+    pub inr: Decimal,
+
+    #[serde(alias = "AUD", default)]
+    pub aud: Decimal,
+
+    #[serde(alias = "NZD", default)]
+    pub nzd: Decimal,
 
     #[serde(alias = "XAU", default)]
     pub xau: Decimal,
@@ -164,6 +167,27 @@ pub struct RatesData {
 
     #[serde(alias = "XPT", default)]
     pub xpt: Decimal,
+
+    #[serde(alias = "XPD", default)]
+    pub xpd: Decimal,
+
+    #[serde(alias = "XRH", default)]
+    pub xrh: Decimal,
+
+    #[serde(alias = "BTC", default)]
+    pub btc: Decimal,
+
+    #[serde(alias = "ETH", default)]
+    pub eth: Decimal,
+
+    #[serde(alias = "SOL", default)]
+    pub sol: Decimal,
+
+    #[serde(alias = "XRP", default)]
+    pub xrp: Decimal,
+
+    #[serde(alias = "ADA", default)]
+    pub ada: Decimal,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -36,6 +36,45 @@ impl ForexError {
     pub fn internal_error(err_msg: &str) -> Self {
         ForexError::InternalError(InternalError(anyhow!(err_msg.to_owned())))
     }
+
+    pub fn cause(&self) -> String {
+        match self {
+            ForexError::ClientError(err) => {
+                let source = err.0.source();
+                if let Some(err) = source {
+                    return format!("client error caused by: {}", err);
+                }
+                format!("client error caused by: null")
+            }
+            ForexError::InternalError(err) => {
+                let source = err.0.source();
+                if let Some(err) = source {
+                    return format!("internal error caused by: {}", err);
+                }
+                format!("internal error caused by: null")
+            }
+        }
+    }
+
+    pub fn detail(&self) -> String {
+        let error = self.to_string();
+        match self {
+            ForexError::ClientError(err) => {
+                let source = err.0.source();
+                if let Some(err) = source {
+                    return format!("{} \ncaused by: {}", error, err);
+                }
+                error
+            }
+            ForexError::InternalError(err) => {
+                let source = err.0.source();
+                if let Some(err) = source {
+                    return format!("{} \ncaused by: {}", error, err);
+                }
+                error
+            }
+        }
+    }
 }
 
 #[derive(Debug, Error)]

@@ -1,8 +1,17 @@
 use std::str::FromStr;
 
 use rust_decimal_macros::dec;
+use strum::IntoEnumIterator;
 
 use crate::forex::{Currency, Money};
+
+/// make sure variants of currency checked
+#[test]
+fn test_currency_items() {
+    let currency_variants_count = Currency::iter().count();
+    let expected_count = 30;
+    assert_eq!(currency_variants_count, expected_count);
+}
 
 #[test]
 fn test_currency_code() {
@@ -78,17 +87,4 @@ fn test_currency_from_money() {
     assert_eq!(ret, expected_sar);
     let ret = Currency::from(Money::new_money(Currency::SGD, dec!(1000)));
     assert_eq!(ret, expected_sgd);
-}
-
-#[test]
-fn test_currency_partial_eq_money() {
-    let money_usd = Money::new_money(Currency::USD, dec!(1000));
-    let money_idr = Money::new_money(Currency::IDR, dec!(1000));
-    let money_sgd = Money::new_money(Currency::SGD, dec!(1000));
-    let money_eur = Money::new_money(Currency::EUR, dec!(1000));
-
-    assert_eq!(money_usd, Currency::USD);
-    assert_eq!(money_eur, Currency::EUR);
-    assert_eq!(money_sgd, Currency::SGD);
-    assert_eq!(money_idr, Currency::IDR);
 }

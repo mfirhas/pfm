@@ -47,11 +47,11 @@ pub struct Response {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Rates {
-    #[serde(rename = "CHF", default)]
-    pub chf: Decimal,
+    #[serde(rename = "USD", default)]
+    pub usd: Decimal,
 
-    #[serde(rename = "CNY", default)]
-    pub cny: Decimal,
+    #[serde(rename = "CAD", default)]
+    pub cad: Decimal,
 
     #[serde(rename = "EUR", default)]
     pub eur: Decimal,
@@ -59,29 +59,83 @@ pub struct Rates {
     #[serde(rename = "GBP", default)]
     pub gbp: Decimal,
 
-    #[serde(rename = "IDR", default)]
-    pub idr: Decimal,
+    #[serde(rename = "CHF", default)]
+    pub chf: Decimal,
+
+    #[serde(rename = "RUB", default)]
+    pub rub: Decimal,
+
+    #[serde(rename = "CNY", default)]
+    pub cny: Decimal,
 
     #[serde(rename = "JPY", default)]
     pub jpy: Decimal,
 
-    #[serde(rename = "SAR", default)]
-    pub sar: Decimal,
+    #[serde(rename = "KRW", default)]
+    pub krw: Decimal,
+
+    #[serde(rename = "HKD", default)]
+    pub hkd: Decimal,
+
+    #[serde(rename = "IDR", default)]
+    pub idr: Decimal,
+
+    #[serde(rename = "MYR", default)]
+    pub myr: Decimal,
 
     #[serde(rename = "SGD", default)]
     pub sgd: Decimal,
 
-    #[serde(rename = "USD", default)]
-    pub usd: Decimal,
+    #[serde(rename = "THB", default)]
+    pub thb: Decimal,
 
-    #[serde(rename = "XAG", default)]
-    pub xag: Decimal,
+    #[serde(rename = "SAR", default)]
+    pub sar: Decimal,
+
+    #[serde(rename = "AED", default)]
+    pub aed: Decimal,
+
+    #[serde(rename = "KWD", default)]
+    pub kwd: Decimal,
+
+    #[serde(rename = "INR", default)]
+    pub inr: Decimal,
+
+    #[serde(rename = "AUD", default)]
+    pub aud: Decimal,
+
+    #[serde(rename = "NZD", default)]
+    pub nzd: Decimal,
 
     #[serde(rename = "XAU", default)]
     pub xau: Decimal,
 
+    #[serde(rename = "XAG", default)]
+    pub xag: Decimal,
+
     #[serde(rename = "XPT", default)]
     pub xpt: Decimal,
+
+    #[serde(rename = "XPD", default)]
+    pub xpd: Decimal,
+
+    #[serde(rename = "XRH", default)]
+    pub xrh: Decimal,
+
+    #[serde(rename = "BTC", default)]
+    pub btc: Decimal,
+
+    #[serde(rename = "ETH", default)]
+    pub eth: Decimal,
+
+    #[serde(rename = "SOL", default)]
+    pub sol: Decimal,
+
+    #[serde(rename = "XRP", default)]
+    pub xrp: Decimal,
+
+    #[serde(rename = "ADA", default)]
+    pub ada: Decimal,
 }
 
 impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
@@ -96,18 +150,36 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
                 ))?;
 
         let rates = RatesData {
-            idr: value.rates.idr,
             usd: value.rates.usd,
+            cad: value.rates.cad,
             eur: value.rates.eur,
             gbp: value.rates.gbp,
-            jpy: value.rates.jpy,
             chf: value.rates.chf,
-            sgd: value.rates.sgd,
+            rub: value.rates.rub,
             cny: value.rates.cny,
+            jpy: value.rates.jpy,
+            krw: value.rates.krw,
+            hkd: value.rates.hkd,
+            idr: value.rates.idr,
+            myr: value.rates.myr,
+            sgd: value.rates.sgd,
+            thb: value.rates.thb,
             sar: value.rates.sar,
+            aed: value.rates.aed,
+            kwd: value.rates.kwd,
+            inr: value.rates.inr,
+            aud: value.rates.aud,
+            nzd: value.rates.nzd,
             xau: value.rates.xau,
             xag: value.rates.xag,
             xpt: value.rates.xpt,
+            xpd: value.rates.xpd,
+            xrh: value.rates.xrh,
+            btc: value.rates.btc,
+            eth: value.rates.eth,
+            sol: value.rates.sol,
+            xrp: value.rates.xrp,
+            ada: value.rates.ada,
         };
 
         let base = Currency::from_str(&value.base_currency)
@@ -136,18 +208,36 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
                 ))?;
 
         let rates = RatesData {
-            idr: value.rates.idr,
             usd: value.rates.usd,
+            cad: value.rates.cad,
             eur: value.rates.eur,
             gbp: value.rates.gbp,
-            jpy: value.rates.jpy,
             chf: value.rates.chf,
-            sgd: value.rates.sgd,
+            rub: value.rates.rub,
             cny: value.rates.cny,
+            jpy: value.rates.jpy,
+            krw: value.rates.krw,
+            hkd: value.rates.hkd,
+            idr: value.rates.idr,
+            myr: value.rates.myr,
+            sgd: value.rates.sgd,
+            thb: value.rates.thb,
             sar: value.rates.sar,
+            aed: value.rates.aed,
+            kwd: value.rates.kwd,
+            inr: value.rates.inr,
+            aud: value.rates.aud,
+            nzd: value.rates.nzd,
             xau: value.rates.xau,
             xag: value.rates.xag,
             xpt: value.rates.xpt,
+            xpd: value.rates.xpd,
+            xrh: value.rates.xrh,
+            btc: value.rates.btc,
+            eth: value.rates.eth,
+            sol: value.rates.sol,
+            xrp: value.rates.xrp,
+            ada: value.rates.ada,
         };
 
         let base = Currency::from_str(&value.base_currency)

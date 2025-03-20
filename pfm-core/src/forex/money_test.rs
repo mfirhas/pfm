@@ -2,6 +2,14 @@ use core::panic;
 
 use super::money::MONEY_FORMAT_REGEX;
 
+/// make sure variants of money checked
+#[test]
+fn test_money_items() {
+    let money_variants_count = Money::iter().count();
+    let expected_count = 30;
+    assert_eq!(money_variants_count, expected_count);
+}
+
 #[test]
 fn test_money_format_regex() {
     // HAPPY PATH TEST CASES
@@ -89,6 +97,7 @@ fn test_money_format_regex() {
 use std::str::FromStr;
 
 use rust_decimal_macros::dec;
+use strum::IntoEnumIterator;
 
 use crate::forex::Currency;
 use crate::forex::Money;

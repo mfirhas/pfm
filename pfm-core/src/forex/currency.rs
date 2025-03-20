@@ -12,29 +12,90 @@ use super::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, EnumIter)]
 pub enum Currency {
+    //// fiat
+
+    // north america
     USD,
-    IDR,
+    CAD,
+
+    // europe
     EUR,
     GBP,
-    JPY,
     CHF,
-    SGD,
+    RUB,
+
+    // east asia
     CNY,
+    JPY,
+    KRW,
+    HKD,
+
+    // south-east asia
+    IDR,
+    MYR,
+    SGD,
+    THB,
+
+    // middle-east
     SAR,
+    AED,
+    KWD,
+
+    // south asia
+    INR,
+
+    // apac
+    AUD,
+    NZD,
+
+    //// precious metals
+    XAU, // troy ounce
+    XAG, // troy ounce
+    XPT, // troy ounce
+    XPD, // troy ounce
+    XRH, // troy ounce
+
+    //// crypto
+    BTC,
+    ETH,
+    SOL,
+    XRP,
+    ADA,
 }
 
 impl Currency {
     pub fn code(&self) -> &'static str {
         match self {
-            Self::IDR => CurrencyLib::IDR.code(),
             Self::USD => CurrencyLib::USD.code(),
+            Self::CAD => CurrencyLib::CAD.code(),
             Self::EUR => CurrencyLib::EUR.code(),
             Self::GBP => CurrencyLib::GBP.code(),
-            Self::JPY => CurrencyLib::JPY.code(),
             Self::CHF => CurrencyLib::CHF.code(),
-            Self::SGD => CurrencyLib::SGD.code(),
+            Self::RUB => CurrencyLib::RUB.code(),
             Self::CNY => CurrencyLib::CNY.code(),
+            Self::JPY => CurrencyLib::JPY.code(),
+            Self::KRW => CurrencyLib::KRW.code(),
+            Self::HKD => CurrencyLib::HKD.code(),
+            Self::IDR => CurrencyLib::IDR.code(),
+            Self::MYR => CurrencyLib::MYR.code(),
+            Self::SGD => CurrencyLib::SGD.code(),
+            Self::THB => CurrencyLib::THB.code(),
             Self::SAR => CurrencyLib::SAR.code(),
+            Self::AED => CurrencyLib::AED.code(),
+            Self::KWD => CurrencyLib::KWD.code(),
+            Self::INR => CurrencyLib::INR.code(),
+            Self::AUD => CurrencyLib::AUD.code(),
+            Self::NZD => CurrencyLib::NZD.code(),
+            Self::XAU => CurrencyLib::XAU.code(),
+            Self::XAG => CurrencyLib::XAG.code(),
+            Self::XPT => CurrencyLib::XPT.code(),
+            Self::XPD => CurrencyLib::XPD.code(),
+            Self::XRH => "XRH",
+            Self::BTC => "BTC",
+            Self::ETH => "ETH",
+            Self::SOL => "SOL",
+            Self::XRP => "XRP",
+            Self::ADA => "ADA",
         }
     }
 
@@ -51,23 +112,12 @@ impl FromStr for Currency {
     type Err = ForexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let curr: CurrencyLib = s
-            .parse()
+        let quoted_curr = format!("\"{}\"", s);
+        let curr = serde_json::from_str(&quoted_curr)
             .context("currency parsing from str")
             .as_client_err()?;
 
-        match curr {
-            CurrencyLib::IDR => Ok(Self::IDR),
-            CurrencyLib::USD => Ok(Self::USD),
-            CurrencyLib::EUR => Ok(Self::EUR),
-            CurrencyLib::GBP => Ok(Self::GBP),
-            CurrencyLib::JPY => Ok(Self::JPY),
-            CurrencyLib::CHF => Ok(Self::CHF),
-            CurrencyLib::SGD => Ok(Self::SGD),
-            CurrencyLib::CNY => Ok(Self::CNY),
-            CurrencyLib::SAR => Ok(Self::SAR),
-            _ => Err(ForexError::client_error("currency not supported")),
-        }
+        Ok(curr)
     }
 }
 
@@ -80,15 +130,36 @@ impl Default for Currency {
 impl From<Money> for Currency {
     fn from(value: Money) -> Self {
         match value {
-            Money::IDR(_) => Self::IDR,
             Money::USD(_) => Self::USD,
+            Money::CAD(_) => Self::CAD,
             Money::EUR(_) => Self::EUR,
             Money::GBP(_) => Self::GBP,
-            Money::JPY(_) => Self::JPY,
             Money::CHF(_) => Self::CHF,
-            Money::SGD(_) => Self::SGD,
+            Money::RUB(_) => Self::RUB,
             Money::CNY(_) => Self::CNY,
+            Money::JPY(_) => Self::JPY,
+            Money::KRW(_) => Self::KRW,
+            Money::HKD(_) => Self::HKD,
+            Money::IDR(_) => Self::IDR,
+            Money::MYR(_) => Self::MYR,
+            Money::SGD(_) => Self::SGD,
+            Money::THB(_) => Self::THB,
             Money::SAR(_) => Self::SAR,
+            Money::AED(_) => Self::AED,
+            Money::KWD(_) => Self::KWD,
+            Money::INR(_) => Self::INR,
+            Money::AUD(_) => Self::AUD,
+            Money::NZD(_) => Self::NZD,
+            Money::XAU(_) => Self::XAU,
+            Money::XAG(_) => Self::XAG,
+            Money::XPT(_) => Self::XPT,
+            Money::XPD(_) => Self::XPD,
+            Money::XRH(_) => Self::XRH,
+            Money::BTC(_) => Self::BTC,
+            Money::ETH(_) => Self::ETH,
+            Money::SOL(_) => Self::SOL,
+            Money::XRP(_) => Self::XRP,
+            Money::ADA(_) => Self::ADA,
         }
     }
 }
@@ -96,15 +167,36 @@ impl From<Money> for Currency {
 impl Display for Currency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let r = match self {
-            Self::IDR => CurrencyLib::IDR.code(),
             Self::USD => CurrencyLib::USD.code(),
+            Self::CAD => CurrencyLib::CAD.code(),
             Self::EUR => CurrencyLib::EUR.code(),
             Self::GBP => CurrencyLib::GBP.code(),
-            Self::JPY => CurrencyLib::JPY.code(),
             Self::CHF => CurrencyLib::CHF.code(),
-            Self::SGD => CurrencyLib::SGD.code(),
+            Self::RUB => CurrencyLib::RUB.code(),
             Self::CNY => CurrencyLib::CNY.code(),
+            Self::JPY => CurrencyLib::JPY.code(),
+            Self::KRW => CurrencyLib::KRW.code(),
+            Self::HKD => CurrencyLib::HKD.code(),
+            Self::IDR => CurrencyLib::IDR.code(),
+            Self::MYR => CurrencyLib::MYR.code(),
+            Self::SGD => CurrencyLib::SGD.code(),
+            Self::THB => CurrencyLib::THB.code(),
             Self::SAR => CurrencyLib::SAR.code(),
+            Self::AED => CurrencyLib::AED.code(),
+            Self::KWD => CurrencyLib::KWD.code(),
+            Self::INR => CurrencyLib::INR.code(),
+            Self::AUD => CurrencyLib::AUD.code(),
+            Self::NZD => CurrencyLib::NZD.code(),
+            Self::XAU => CurrencyLib::XAU.code(),
+            Self::XAG => CurrencyLib::XAG.code(),
+            Self::XPT => CurrencyLib::XPT.code(),
+            Self::XPD => CurrencyLib::XPD.code(),
+            Self::XRH => "XRH",
+            Self::BTC => "BTC",
+            Self::ETH => "ETH",
+            Self::SOL => "SOL",
+            Self::XRP => "XRP",
+            Self::ADA => "ADA",
         };
 
         write!(f, "{}", r)

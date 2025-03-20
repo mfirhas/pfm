@@ -1,7 +1,6 @@
 use crate::forex::*;
 use accounting::Accounting;
-use anyhow::{anyhow, Context};
-use entity::Rates;
+use anyhow::Context;
 use interface::AsClientError;
 use money::{ERROR_MONEY_FORMAT, MONEY_FORMAT_REGEX};
 use rust_decimal::Decimal;
@@ -54,38 +53,38 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
     money_display
 }
 
-pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currency) -> ForexResult<Money> {
-    if from == to {
-        return Ok(from);
-    }
+// pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currency) -> ForexResult<Money> {
+//     if from.currency() == to {
+//         return Ok(from);
+//     }
 
-    // 1. divide from with its rate relative to base currency.
-    let to_base = match from {
-        Money::IDR(amount) => amount / rates.rates.idr,
-        Money::USD(amount) => amount / rates.rates.usd,
-        Money::EUR(amount) => amount / rates.rates.eur,
-        Money::GBP(amount) => amount / rates.rates.gbp,
-        Money::JPY(amount) => amount / rates.rates.jpy,
-        Money::CHF(amount) => amount / rates.rates.chf,
-        Money::SGD(amount) => amount / rates.rates.sgd,
-        Money::CNY(amount) => amount / rates.rates.cny,
-        Money::SAR(amount) => amount / rates.rates.sar,
-    };
+//     // 1. divide from with its rate relative to base currency.
+//     let to_base = match from {
+//         Money::IDR(amount) => amount / rates.rates.idr,
+//         Money::USD(amount) => amount / rates.rates.usd,
+//         Money::EUR(amount) => amount / rates.rates.eur,
+//         Money::GBP(amount) => amount / rates.rates.gbp,
+//         Money::JPY(amount) => amount / rates.rates.jpy,
+//         Money::CHF(amount) => amount / rates.rates.chf,
+//         Money::SGD(amount) => amount / rates.rates.sgd,
+//         Money::CNY(amount) => amount / rates.rates.cny,
+//         Money::SAR(amount) => amount / rates.rates.sar,
+//     };
 
-    // 2. multiply the above result with the rate of target conversion relative to base currency.
-    let to_target = match to {
-        Currency::IDR => to_base * rates.rates.idr,
-        Currency::USD => to_base * rates.rates.usd,
-        Currency::EUR => to_base * rates.rates.eur,
-        Currency::GBP => to_base * rates.rates.gbp,
-        Currency::JPY => to_base * rates.rates.jpy,
-        Currency::CHF => to_base * rates.rates.chf,
-        Currency::SGD => to_base * rates.rates.sgd,
-        Currency::CNY => to_base * rates.rates.cny,
-        Currency::SAR => to_base * rates.rates.sar,
-    };
+//     // 2. multiply the above result with the rate of target conversion relative to base currency.
+//     let to_target = match to {
+//         Currency::IDR => to_base * rates.rates.idr,
+//         Currency::USD => to_base * rates.rates.usd,
+//         Currency::EUR => to_base * rates.rates.eur,
+//         Currency::GBP => to_base * rates.rates.gbp,
+//         Currency::JPY => to_base * rates.rates.jpy,
+//         Currency::CHF => to_base * rates.rates.chf,
+//         Currency::SGD => to_base * rates.rates.sgd,
+//         Currency::CNY => to_base * rates.rates.cny,
+//         Currency::SAR => to_base * rates.rates.sar,
+//     };
 
-    let result = Money::new_money(to, to_target);
+//     let result = Money::new_money(to, to_target);
 
-    Ok(result)
-}
+//     Ok(result)
+// }
