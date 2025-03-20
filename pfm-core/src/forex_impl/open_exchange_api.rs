@@ -4,6 +4,7 @@
 // 1,000 API requests per month
 // rate limit: 5 requests / second
 // might return 429 once reach limit.
+// Get historical exchange rates for any date available from the Open Exchange Rates API, currently going back to 1st January 1999.
 // gold price start exist on 2013-04-01
 
 use std::str::FromStr;
