@@ -51,23 +51,12 @@ impl FromStr for Currency {
     type Err = ForexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let curr: CurrencyLib = s
-            .parse()
+        let quoted_curr = format!("\"{}\"", s);
+        let curr = serde_json::from_str(&quoted_curr)
             .context("currency parsing from str")
             .as_client_err()?;
 
-        match curr {
-            CurrencyLib::IDR => Ok(Self::IDR),
-            CurrencyLib::USD => Ok(Self::USD),
-            CurrencyLib::EUR => Ok(Self::EUR),
-            CurrencyLib::GBP => Ok(Self::GBP),
-            CurrencyLib::JPY => Ok(Self::JPY),
-            CurrencyLib::CHF => Ok(Self::CHF),
-            CurrencyLib::SGD => Ok(Self::SGD),
-            CurrencyLib::CNY => Ok(Self::CNY),
-            CurrencyLib::SAR => Ok(Self::SAR),
-            _ => Err(ForexError::client_error("currency not supported")),
-        }
+        Ok(curr)
     }
 }
 

@@ -55,7 +55,7 @@ pub(crate) fn to_string(use_symbol: bool, money: Money) -> String {
 }
 
 pub(crate) fn convert_currency(rates: &Rates, from: Money, to: Currency) -> ForexResult<Money> {
-    if from == to {
+    if from.currency() == to {
         return Ok(from);
     }
 

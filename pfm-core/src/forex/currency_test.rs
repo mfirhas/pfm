@@ -88,16 +88,3 @@ fn test_currency_from_money() {
     let ret = Currency::from(Money::new_money(Currency::SGD, dec!(1000)));
     assert_eq!(ret, expected_sgd);
 }
-
-#[test]
-fn test_currency_partial_eq_money() {
-    let money_usd = Money::new_money(Currency::USD, dec!(1000));
-    let money_idr = Money::new_money(Currency::IDR, dec!(1000));
-    let money_sgd = Money::new_money(Currency::SGD, dec!(1000));
-    let money_eur = Money::new_money(Currency::EUR, dec!(1000));
-
-    assert_eq!(money_usd, Currency::USD);
-    assert_eq!(money_eur, Currency::EUR);
-    assert_eq!(money_sgd, Currency::SGD);
-    assert_eq!(money_idr, Currency::IDR);
-}

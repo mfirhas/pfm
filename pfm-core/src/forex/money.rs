@@ -44,7 +44,8 @@ pub enum Money {
 
 impl Money {
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
-        let curr = CurrencyLib::from_str(currency)
+        let quoted_curr = format!("\"{}\"", currency);
+        let curr = serde_json::from_str(&quoted_curr)
             .context("creating new Money with invalid currency")
             .as_client_err()?;
         let val = Decimal::from_str(amount)
@@ -52,16 +53,15 @@ impl Money {
             .as_client_err()?;
 
         match curr {
-            CurrencyLib::IDR => Ok(Self::IDR(val)),
-            CurrencyLib::USD => Ok(Self::USD(val)),
-            CurrencyLib::EUR => Ok(Self::EUR(val)),
-            CurrencyLib::GBP => Ok(Self::GBP(val)),
-            CurrencyLib::JPY => Ok(Self::JPY(val)),
-            CurrencyLib::CHF => Ok(Self::CHF(val)),
-            CurrencyLib::SGD => Ok(Self::SGD(val)),
-            CurrencyLib::CNY => Ok(Self::CNY(val)),
-            CurrencyLib::SAR => Ok(Self::SAR(val)),
-            _ => Err(ForexError::client_error("currency not supported yet")),
+            Currency::USD => Ok(Money::USD(val)),
+            Currency::IDR => Ok(Money::IDR(val)),
+            Currency::EUR => Ok(Money::EUR(val)),
+            Currency::GBP => Ok(Money::GBP(val)),
+            Currency::JPY => Ok(Money::JPY(val)),
+            Currency::CHF => Ok(Money::CHF(val)),
+            Currency::SGD => Ok(Money::SGD(val)),
+            Currency::CNY => Ok(Money::CNY(val)),
+            Currency::SAR => Ok(Money::SAR(val)),
         }
     }
 
@@ -183,7 +183,7 @@ impl Money {
     }
 
     pub(super) fn convert(rates: &Rates, from: Money, to: Currency) -> ForexResult<Money> {
-        if from == to {
+        if from.currency() == to {
             return Ok(from);
         }
 
@@ -232,22 +232,5 @@ impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ret = self.to_string(global::config().forex_use_symbol);
         write!(f, "{}", ret)
-    }
-}
-
-impl PartialEq<Currency> for Money {
-    fn eq(&self, other: &Currency) -> bool {
-        match (self, other) {
-            (Money::IDR(_), Currency::IDR) => true,
-            (Money::USD(_), Currency::USD) => true,
-            (Money::EUR(_), Currency::EUR) => true,
-            (Money::GBP(_), Currency::GBP) => true,
-            (Money::JPY(_), Currency::JPY) => true,
-            (Money::CHF(_), Currency::CHF) => true,
-            (Money::SGD(_), Currency::SGD) => true,
-            (Money::CNY(_), Currency::CNY) => true,
-            (Money::SAR(_), Currency::SAR) => true,
-            _ => false,
-        }
     }
 }
