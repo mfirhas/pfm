@@ -52,7 +52,7 @@ impl RatesResponse<Rates> {
                 base: Currency::default(),
                 rates: RatesData::default(),
             },
-            error: Some(err.to_string()),
+            error: Some(err.detail()),
         }
     }
 }
@@ -68,7 +68,7 @@ impl RatesResponse<HistoricalRates> {
                 base: Currency::default(),
                 rates: RatesData::default(),
             },
-            error: Some(err.to_string()),
+            error: Some(err.detail()),
         }
     }
 }
