@@ -165,6 +165,14 @@ pub trait ForexStorage {
     where
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync;
 
+    /// update some existing rates data with new ones
+    /// new_data contains money, the currency and the values.
+    async fn update_historical_rates_data(
+        &self,
+        date: DateTime<Utc>,
+        new_data: Vec<Money>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>>;
+
     /// get historical rates
     async fn get_historical(
         &self,

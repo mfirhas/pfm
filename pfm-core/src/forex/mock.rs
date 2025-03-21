@@ -12,6 +12,8 @@ use crate::forex::{
     Currency, ForexResult,
 };
 
+use super::Money;
+
 fn latest_rate() -> Rates {
     let latest_update = Utc.with_ymd_and_hms(2025, 3, 4, 2, 0, 0).unwrap();
     let base = Currency::USD;
@@ -757,6 +759,17 @@ impl ForexStorage for ForexStorageSuccessMock {
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
     {
         Ok(())
+    }
+
+    async fn update_historical_rates_data(
+        &self,
+        date: DateTime<Utc>,
+        new_data: Vec<Money>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+        Ok(RatesResponse::new(
+            "storage_get_historical_success".to_string(),
+            historical_rate(),
+        ))
     }
 
     async fn get_historical(
