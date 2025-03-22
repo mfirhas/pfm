@@ -1,6 +1,7 @@
 // global.rs contains global variables
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use configrs::config::Config as config_rs;
 use lazy_static::lazy_static;
@@ -24,8 +25,8 @@ const ERROR_PREFIX: &str = "[GLOBAL]";
 const STORAGE_FS_PERMISSION: u32 = 0o700;
 
 /// path to storage for server-side data.
-/// filled with absolute path to production storage location.
-const STORAGE_FS_DIR_PATH: &str = "TODO";
+/// this will be placed inside $HOME directory
+const STORAGE_FS_DIR_PATH: &str = "pfm";
 
 /// directory name for local development for server-side data, to be placed in workspace root
 const STORAGE_FS_DIR_NAME_DEV: &str = "test_dir";
@@ -130,7 +131,9 @@ fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
         let path = workspace_dir.join(STORAGE_FS_DIR_NAME_DEV);
         path
     } else {
-        PathBuf::from(STORAGE_FS_DIR_PATH)
+        let home_dir = dirs::home_dir().context("init storage fs getting home dir")?;
+        let path = home_dir.join(STORAGE_FS_DIR_PATH);
+        path
     };
 
     let root = utils::set_root(root_pb, STORAGE_FS_PERMISSION).map_err(|err| {
