@@ -13,7 +13,7 @@ use std::str::FromStr;
 use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
     interface::{AsInternalError, ForexHistoricalRates, ForexRates},
-    Currency, ForexError,
+    Currency, ForexError, ForexResult,
 };
 use anyhow::Context;
 use async_trait::async_trait;
@@ -253,6 +253,24 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     }
 }
 
+// status usage
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StatusResponse {
+    data: Data,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Data {
+    usage: Usage,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Usage {
+    requests: u32,
+    requests_quota: u32,
+    requests_remaining: u32,
+}
+
 #[derive(Clone)]
 pub struct Api {
     key: &'static str,
@@ -265,6 +283,26 @@ impl Api {
             key: api_key,
             client,
         }
+    }
+
+    pub async fn status(&self) -> ForexResult<StatusResponse> {
+        let endpoint = "https://openexchangerates.org/api/usage.json";
+        let params = [("app_id", self.key)];
+
+        let status: StatusResponse = self
+            .client
+            .get(endpoint)
+            .query(&params)
+            .send()
+            .await
+            .context("openexchangerates invoke status")
+            .as_internal_err()?
+            .json::<StatusResponse>()
+            .await
+            .context("openexchangerates parsing to json")
+            .as_internal_err()?;
+
+        Ok(status)
     }
 }
 
