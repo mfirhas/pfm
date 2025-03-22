@@ -20,12 +20,30 @@ use crate::forex::{
     entity::{HistoricalRates, RatesResponse},
     Currency, ForexError,
 };
+use crate::global;
 
 const SOURCE: &str = "currencyapi.com";
 
 const HISTORICAL_ENDPOINT: &str = "https://api.currencyapi.com/v3/historical";
 
 const ERROR_PREFIX: &str = "[FOREX][currencyapi.com]";
+
+#[derive(Debug, Deserialize)]
+pub struct QuotaInfo {
+    total: u32,
+    used: u32,
+    remaining: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Quotas {
+    month: QuotaInfo,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusResponse {
+    quotas: Quotas,
+}
 
 #[derive(Clone)]
 pub struct Api {
@@ -39,6 +57,26 @@ impl Api {
             key: api_key,
             client,
         }
+    }
+
+    pub async fn status(&self) -> ForexResult<StatusResponse> {
+        let endpoint = "https://api.currencyapi.com/v3/status";
+        let params = [("apikey", self.key)];
+
+        let status: StatusResponse = self
+            .client
+            .get(endpoint)
+            .query(&params)
+            .send()
+            .await
+            .context("openexchangerates invoke status")
+            .as_internal_err()?
+            .json::<StatusResponse>()
+            .await
+            .context("openexchangerates parsing to json")
+            .as_internal_err()?;
+
+        Ok(status)
     }
 }
 
