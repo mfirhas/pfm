@@ -272,12 +272,6 @@ impl ForexStorageImpl {
                 Money::XPT(value) => {
                     historical_rates.data.rates.xpt = value;
                 }
-                Money::XPD(value) => {
-                    historical_rates.data.rates.xpd = value;
-                }
-                Money::XRH(value) => {
-                    historical_rates.data.rates.xrh = value;
-                }
 
                 //// crypto
                 Money::BTC(value) => {

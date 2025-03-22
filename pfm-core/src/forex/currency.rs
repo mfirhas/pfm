@@ -52,8 +52,6 @@ pub enum Currency {
     XAU, // troy ounce
     XAG, // troy ounce
     XPT, // troy ounce
-    XPD, // troy ounce
-    XRH, // troy ounce
 
     //// crypto
     BTC,
@@ -89,8 +87,6 @@ impl Currency {
             Self::XAU => CurrencyLib::XAU.code(),
             Self::XAG => CurrencyLib::XAG.code(),
             Self::XPT => CurrencyLib::XPT.code(),
-            Self::XPD => CurrencyLib::XPD.code(),
-            Self::XRH => "XRH",
             Self::BTC => "BTC",
             Self::ETH => "ETH",
             Self::SOL => "SOL",
@@ -153,8 +149,6 @@ impl From<Money> for Currency {
             Money::XAU(_) => Self::XAU,
             Money::XAG(_) => Self::XAG,
             Money::XPT(_) => Self::XPT,
-            Money::XPD(_) => Self::XPD,
-            Money::XRH(_) => Self::XRH,
             Money::BTC(_) => Self::BTC,
             Money::ETH(_) => Self::ETH,
             Money::SOL(_) => Self::SOL,
@@ -190,8 +184,6 @@ impl Display for Currency {
             Self::XAU => CurrencyLib::XAU.code(),
             Self::XAG => CurrencyLib::XAG.code(),
             Self::XPT => CurrencyLib::XPT.code(),
-            Self::XPD => CurrencyLib::XPD.code(),
-            Self::XRH => "XRH",
             Self::BTC => "BTC",
             Self::ETH => "ETH",
             Self::SOL => "SOL",
