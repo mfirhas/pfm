@@ -8,8 +8,8 @@ use std::path::PathBuf;
 
 use crate::forex::entity::{HistoricalRates, Order, Rates, RatesList, RatesResponse};
 use crate::forex::interface::{AsInternalError, ForexStorage};
-use crate::forex::ForexError;
-use crate::forex::ForexResult;
+use crate::forex::{Currency, ForexResult};
+use crate::forex::{ForexError, Money};
 use crate::global::StorageFS;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -171,6 +171,161 @@ impl ForexStorageImpl {
         Self::set_permission(&historical_write).await?;
 
         Ok(())
+    }
+
+    async fn update_historical_rates_data(
+        &self,
+        date: DateTime<Utc>,
+        new_rates: Vec<Money>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+        let mut historical_rates = self
+            .get_historical(date)
+            .await
+            .context("storage update historical get historical")
+            .as_internal_err()?;
+
+        for v in new_rates {
+            match v {
+                // fiat
+
+                // north america
+                Money::USD(value) => {
+                    historical_rates.data.rates.usd = value;
+                }
+                Money::CAD(value) => {
+                    historical_rates.data.rates.cad = value;
+                }
+
+                // europe
+                Money::EUR(value) => {
+                    historical_rates.data.rates.eur = value;
+                }
+                Money::GBP(value) => {
+                    historical_rates.data.rates.gbp = value;
+                }
+                Money::CHF(value) => {
+                    historical_rates.data.rates.chf = value;
+                }
+                Money::RUB(value) => {
+                    historical_rates.data.rates.rub = value;
+                }
+
+                // east asia
+                Money::CNY(value) => {
+                    historical_rates.data.rates.cny = value;
+                }
+                Money::JPY(value) => {
+                    historical_rates.data.rates.jpy = value;
+                }
+                Money::KRW(value) => {
+                    historical_rates.data.rates.krw = value;
+                }
+                Money::HKD(value) => {
+                    historical_rates.data.rates.hkd = value;
+                }
+
+                // south-east asia
+                Money::IDR(value) => {
+                    historical_rates.data.rates.idr = value;
+                }
+                Money::MYR(value) => {
+                    historical_rates.data.rates.myr = value;
+                }
+                Money::SGD(value) => {
+                    historical_rates.data.rates.sgd = value;
+                }
+                Money::THB(value) => {
+                    historical_rates.data.rates.thb = value;
+                }
+
+                // middle-east
+                Money::SAR(value) => {
+                    historical_rates.data.rates.sar = value;
+                }
+                Money::AED(value) => {
+                    historical_rates.data.rates.aed = value;
+                }
+                Money::KWD(value) => {
+                    historical_rates.data.rates.kwd = value;
+                }
+
+                // south asia
+                Money::INR(value) => {
+                    historical_rates.data.rates.inr = value;
+                }
+
+                // apac
+                Money::AUD(value) => {
+                    historical_rates.data.rates.aud = value;
+                }
+                Money::NZD(value) => {
+                    historical_rates.data.rates.nzd = value;
+                }
+
+                //// precious metals
+                Money::XAU(value) => {
+                    historical_rates.data.rates.xau = value;
+                }
+                Money::XAG(value) => {
+                    historical_rates.data.rates.xag = value;
+                }
+                Money::XPT(value) => {
+                    historical_rates.data.rates.xpt = value;
+                }
+                Money::XPD(value) => {
+                    historical_rates.data.rates.xpd = value;
+                }
+                Money::XRH(value) => {
+                    historical_rates.data.rates.xrh = value;
+                }
+
+                //// crypto
+                Money::BTC(value) => {
+                    historical_rates.data.rates.btc = value;
+                }
+                Money::ETH(value) => {
+                    historical_rates.data.rates.eth = value;
+                }
+                Money::SOL(value) => {
+                    historical_rates.data.rates.sol = value;
+                }
+                Money::XRP(value) => {
+                    historical_rates.data.rates.xrp = value;
+                }
+                Money::ADA(value) => {
+                    historical_rates.data.rates.ada = value;
+                }
+            }
+        }
+
+        let json_string = serde_json::to_string_pretty(&historical_rates)
+            .context("storage update historical parse input into json string")
+            .as_internal_err()?;
+
+        let historical_write = self.fs.write().await;
+        let historical_write = historical_write.historical();
+        let historical_write = historical_write.join(generate_historical_file_path(date));
+
+        let mut file = File::create(&historical_write)
+            .await
+            .context("storage update historical create filepath")
+            .as_internal_err()?;
+        file.write_all(json_string.as_bytes())
+            .await
+            .context("storage update historical write content")
+            .as_internal_err()?;
+        file.flush()
+            .await
+            .context("storage update historical flush")
+            .as_internal_err()?;
+
+        let updated_historical_rates = self
+            .get_historical(date)
+            .await
+            .context("storage update historical get historical")
+            .as_internal_err()?;
+
+        Ok(updated_historical_rates)
     }
 
     async fn get_historical(
@@ -459,6 +614,14 @@ impl ForexStorage for ForexStorageImpl {
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
     {
         self.insert_historical(date, rates).await
+    }
+
+    async fn update_historical_rates_data(
+        &self,
+        date: DateTime<Utc>,
+        new_data: Vec<Money>,
+    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+        self.update_historical_rates_data(date, new_data).await
     }
 
     async fn get_historical(

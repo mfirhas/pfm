@@ -4,7 +4,10 @@
 // 1,000 API requests per month
 // rate limit: 5 requests / second
 // might return 429 once reach limit.
+// Get historical exchange rates for any date available from the Open Exchange Rates API, currently going back to 1st January 1999.
+// gold price start exist on 2013-04-01
 
+use anyhow::anyhow;
 use std::str::FromStr;
 
 use crate::forex::{
@@ -293,7 +296,13 @@ impl ForexRates for Api {
             .as_internal_err()?;
 
         let resp = serde_json::from_str::<Response>(&ret)
-            .context("openexchangerates parse latest rates to json")
+            .map_err(|err| {
+                anyhow!(
+                    "open_exchange_api parsing latest rates into json, error parsing: {}, \n Caused by: {}",
+                    &ret,
+                    err
+                )
+            })
             .as_internal_err()?;
 
         Ok(resp.try_into()?)
@@ -331,8 +340,13 @@ impl ForexHistoricalRates for Api {
             .context("openexchangerates fetch historical rates to json")
             .as_internal_err()?;
 
-        let resp = serde_json::from_str::<Response>(&ret)
-            .context("openexchangerates parse latest rates to json")
+        let resp = serde_json::from_str::<Response>(&ret).map_err(|err| {
+                anyhow!(
+                    "open_exchange_api parsing historical rates into json, error parsing: {}, \n Caused by: {}",
+                    &ret,
+                    err
+                )
+            })
             .as_internal_err()?;
 
         Ok(resp.try_into()?)
