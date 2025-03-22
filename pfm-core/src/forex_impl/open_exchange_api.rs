@@ -256,19 +256,19 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
 // status usage
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusResponse {
-    data: Data,
+    pub data: Data,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Data {
-    usage: Usage,
+    pub usage: Usage,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Usage {
-    requests: u32,
-    requests_quota: u32,
-    requests_remaining: u32,
+    pub requests: u32,
+    pub requests_quota: u32,
+    pub requests_remaining: u32,
 }
 
 #[derive(Clone)]

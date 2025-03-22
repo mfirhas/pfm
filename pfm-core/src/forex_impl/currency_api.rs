@@ -30,19 +30,19 @@ const ERROR_PREFIX: &str = "[FOREX][currencyapi.com]";
 
 #[derive(Debug, Deserialize)]
 pub struct QuotaInfo {
-    total: u32,
-    used: u32,
-    remaining: u32,
+    pub total: u32,
+    pub used: u32,
+    pub remaining: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Quotas {
-    month: QuotaInfo,
+    pub month: QuotaInfo,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct StatusResponse {
-    quotas: Quotas,
+    pub quotas: Quotas,
 }
 
 #[derive(Clone)]
