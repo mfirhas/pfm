@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["pfm-core", "pfm-cron", "pfm-http"]
+members = ["pfm-core", "pfm-cron", "pfm-http", "pfm-tool"]
