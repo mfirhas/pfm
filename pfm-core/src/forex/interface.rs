@@ -58,22 +58,8 @@ impl ForexError {
 
     pub fn detail(&self) -> String {
         let error = self.to_string();
-        match self {
-            ForexError::ClientError(err) => {
-                let source = err.0.source();
-                if let Some(err) = source {
-                    return format!("{} \ncaused by: {}", error, err);
-                }
-                error
-            }
-            ForexError::InternalError(err) => {
-                let source = err.0.source();
-                if let Some(err) = source {
-                    return format!("{} \ncaused by: {}", error, err);
-                }
-                error
-            }
-        }
+        let cause = self.cause();
+        format!("{} \n  Caused by: {}", error, cause)
     }
 }
 
