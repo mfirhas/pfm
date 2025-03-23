@@ -9,7 +9,7 @@ use crate::forex::{Currency, Money};
 #[test]
 fn test_currency_items() {
     let currency_variants_count = Currency::iter().count();
-    let expected_count = 30;
+    let expected_count = 28;
     assert_eq!(currency_variants_count, expected_count);
 }
 
