@@ -10,6 +10,7 @@ use anyhow::Context;
 use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
@@ -422,5 +423,40 @@ impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ret = self.to_string(global::config().forex_use_symbol);
         write!(f, "{}", ret)
+    }
+}
+
+impl From<Currency> for Money {
+    fn from(value: Currency) -> Self {
+        match value {
+            Currency::USD => Money::USD(dec!(0)),
+            Currency::CAD => Money::CAD(dec!(0)),
+            Currency::EUR => Money::EUR(dec!(0)),
+            Currency::GBP => Money::GBP(dec!(0)),
+            Currency::CHF => Money::CHF(dec!(0)),
+            Currency::RUB => Money::RUB(dec!(0)),
+            Currency::CNY => Money::CNY(dec!(0)),
+            Currency::JPY => Money::JPY(dec!(0)),
+            Currency::KRW => Money::KRW(dec!(0)),
+            Currency::HKD => Money::HKD(dec!(0)),
+            Currency::IDR => Money::IDR(dec!(0)),
+            Currency::MYR => Money::MYR(dec!(0)),
+            Currency::SGD => Money::SGD(dec!(0)),
+            Currency::THB => Money::THB(dec!(0)),
+            Currency::SAR => Money::SAR(dec!(0)),
+            Currency::AED => Money::AED(dec!(0)),
+            Currency::KWD => Money::KWD(dec!(0)),
+            Currency::INR => Money::INR(dec!(0)),
+            Currency::AUD => Money::AUD(dec!(0)),
+            Currency::NZD => Money::NZD(dec!(0)),
+            Currency::XAU => Money::XAU(dec!(0)),
+            Currency::XAG => Money::XAG(dec!(0)),
+            Currency::XPT => Money::XPT(dec!(0)),
+            Currency::BTC => Money::BTC(dec!(0)),
+            Currency::ETH => Money::ETH(dec!(0)),
+            Currency::SOL => Money::SOL(dec!(0)),
+            Currency::XRP => Money::XRP(dec!(0)),
+            Currency::ADA => Money::ADA(dec!(0)),
+        }
     }
 }

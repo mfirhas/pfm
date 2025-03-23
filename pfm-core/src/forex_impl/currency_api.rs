@@ -171,12 +171,6 @@ pub struct Data {
     #[serde(rename = "XPT", default)]
     pub xpt: RateData,
 
-    #[serde(rename = "XPD", default)]
-    pub xpd: RateData,
-
-    #[serde(rename = "XRH", default)]
-    pub xrh: RateData,
-
     #[serde(rename = "BTC", default)]
     pub btc: RateData,
 
@@ -240,8 +234,6 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
                 xau: value.api_response.rates.xau.value,
                 xag: value.api_response.rates.xag.value,
                 xpt: value.api_response.rates.xpt.value,
-                xpd: value.api_response.rates.xpd.value,
-                xrh: value.api_response.rates.xrh.value,
                 btc: value.api_response.rates.btc.value,
                 eth: value.api_response.rates.eth.value,
                 sol: value.api_response.rates.sol.value,
@@ -264,11 +256,6 @@ impl ForexHistoricalRates for Api {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 
         let currencies = Currency::to_comma_separated_list_str();
-        let currencies = currencies
-            .split(',')
-            .filter(|&c| c != "XRH") // this api doesn't accept xrh
-            .collect::<Vec<&str>>()
-            .join(",");
 
         let params = [
             ("apikey", self.key),

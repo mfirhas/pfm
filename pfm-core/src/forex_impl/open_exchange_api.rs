@@ -119,12 +119,6 @@ pub struct Rates {
     #[serde(rename = "XPT", default)]
     pub xpt: Decimal,
 
-    #[serde(rename = "XPD", default)]
-    pub xpd: Decimal,
-
-    #[serde(rename = "XRH", default)]
-    pub xrh: Decimal,
-
     #[serde(rename = "BTC", default)]
     pub btc: Decimal,
 
@@ -176,8 +170,6 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
             xau: value.rates.xau,
             xag: value.rates.xag,
             xpt: value.rates.xpt,
-            xpd: value.rates.xpd,
-            xrh: value.rates.xrh,
             btc: value.rates.btc,
             eth: value.rates.eth,
             sol: value.rates.sol,
@@ -234,8 +226,6 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             xau: value.rates.xau,
             xag: value.rates.xag,
             xpt: value.rates.xpt,
-            xpd: value.rates.xpd,
-            xrh: value.rates.xrh,
             btc: value.rates.btc,
             eth: value.rates.eth,
             sol: value.rates.sol,
