@@ -20,12 +20,30 @@ use crate::forex::{
     entity::{HistoricalRates, RatesResponse},
     Currency, ForexError,
 };
+use crate::global;
 
 const SOURCE: &str = "currencyapi.com";
 
 const HISTORICAL_ENDPOINT: &str = "https://api.currencyapi.com/v3/historical";
 
 const ERROR_PREFIX: &str = "[FOREX][currencyapi.com]";
+
+#[derive(Debug, Deserialize)]
+pub struct QuotaInfo {
+    pub total: u32,
+    pub used: u32,
+    pub remaining: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Quotas {
+    pub month: QuotaInfo,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusResponse {
+    pub quotas: Quotas,
+}
 
 #[derive(Clone)]
 pub struct Api {
@@ -39,6 +57,26 @@ impl Api {
             key: api_key,
             client,
         }
+    }
+
+    pub async fn status(&self) -> ForexResult<StatusResponse> {
+        let endpoint = "https://api.currencyapi.com/v3/status";
+        let params = [("apikey", self.key)];
+
+        let status: StatusResponse = self
+            .client
+            .get(endpoint)
+            .query(&params)
+            .send()
+            .await
+            .context("openexchangerates invoke status")
+            .as_internal_err()?
+            .json::<StatusResponse>()
+            .await
+            .context("openexchangerates parsing to json")
+            .as_internal_err()?;
+
+        Ok(status)
     }
 }
 
@@ -133,12 +171,6 @@ pub struct Data {
     #[serde(rename = "XPT", default)]
     pub xpt: RateData,
 
-    #[serde(rename = "XPD", default)]
-    pub xpd: RateData,
-
-    #[serde(rename = "XRH", default)]
-    pub xrh: RateData,
-
     #[serde(rename = "BTC", default)]
     pub btc: RateData,
 
@@ -202,8 +234,6 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
                 xau: value.api_response.rates.xau.value,
                 xag: value.api_response.rates.xag.value,
                 xpt: value.api_response.rates.xpt.value,
-                xpd: value.api_response.rates.xpd.value,
-                xrh: value.api_response.rates.xrh.value,
                 btc: value.api_response.rates.btc.value,
                 eth: value.api_response.rates.eth.value,
                 sol: value.api_response.rates.sol.value,
@@ -226,11 +256,6 @@ impl ForexHistoricalRates for Api {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 
         let currencies = Currency::to_comma_separated_list_str();
-        let currencies = currencies
-            .split(',')
-            .filter(|&c| c != "XRH") // this api doesn't accept xrh
-            .collect::<Vec<&str>>()
-            .join(",");
 
         let params = [
             ("apikey", self.key),

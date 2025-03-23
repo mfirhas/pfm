@@ -21,6 +21,7 @@ where
         let workspace_dir = find_workspace_root()?;
         let dev_config_file = workspace_dir.join(".env");
         let ret = cfg
+            .with_overwrite()
             .with_env(&dev_config_file)
             .build::<CFG>()
             .map_err(|err| {

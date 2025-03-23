@@ -78,8 +78,6 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
                 xau: value.api_response.rates.currencies().xau,
                 xag: value.api_response.rates.currencies().xag,
                 xpt: value.api_response.rates.currencies().xpt,
-                xpd: value.api_response.rates.currencies().xpd,
-                xrh: value.api_response.rates.currencies().xrh,
                 btc: value.api_response.rates.currencies().btc,
                 eth: value.api_response.rates.currencies().eth,
                 sol: value.api_response.rates.currencies().sol,
@@ -128,8 +126,6 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
                 xau: value.api_response.rates.currencies().xau,
                 xag: value.api_response.rates.currencies().xag,
                 xpt: value.api_response.rates.currencies().xpt,
-                xpd: value.api_response.rates.currencies().xpd,
-                xrh: value.api_response.rates.currencies().xrh,
                 btc: value.api_response.rates.currencies().btc,
                 eth: value.api_response.rates.currencies().eth,
                 sol: value.api_response.rates.currencies().sol,
@@ -213,12 +209,6 @@ pub enum Rates {
     #[serde(rename = "xpt")]
     XPT(RatesData),
 
-    #[serde(rename = "xpd")]
-    XPD(RatesData),
-
-    #[serde(rename = "xrh")]
-    XRH(RatesData),
-
     #[serde(rename = "btc")]
     BTC(RatesData),
 
@@ -261,8 +251,6 @@ impl Rates {
             Rates::XAU(currencies) => currencies,
             Rates::XAG(currencies) => currencies,
             Rates::XPT(currencies) => currencies,
-            Rates::XPD(currencies) => currencies,
-            Rates::XRH(currencies) => currencies,
             Rates::BTC(currencies) => currencies,
             Rates::ETH(currencies) => currencies,
             Rates::SOL(currencies) => currencies,

@@ -168,12 +168,6 @@ pub struct RatesData {
     #[serde(alias = "XPT", default)]
     pub xpt: Decimal,
 
-    #[serde(alias = "XPD", default)]
-    pub xpd: Decimal,
-
-    #[serde(alias = "XRH", default)]
-    pub xrh: Decimal,
-
     #[serde(alias = "BTC", default)]
     pub btc: Decimal,
 

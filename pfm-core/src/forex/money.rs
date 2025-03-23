@@ -10,6 +10,7 @@ use anyhow::Context;
 use iso_currency::Currency as CurrencyLib;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
@@ -71,8 +72,6 @@ pub enum Money {
     XAU(Decimal), // troy ounce
     XAG(Decimal), // troy ounce
     XPT(Decimal), // troy ounce
-    XPD(Decimal), // troy ounce
-    XRH(Decimal), // troy ounce
 
     //// crypto
     BTC(Decimal),
@@ -116,8 +115,6 @@ impl Money {
             Currency::XAU => Ok(Money::XAU(val)),
             Currency::XAG => Ok(Money::XAG(val)),
             Currency::XPT => Ok(Money::XPT(val)),
-            Currency::XPD => Ok(Money::XPD(val)),
-            Currency::XRH => Ok(Money::XRH(val)),
             Currency::BTC => Ok(Money::BTC(val)),
             Currency::ETH => Ok(Money::ETH(val)),
             Currency::SOL => Ok(Money::SOL(val)),
@@ -151,8 +148,6 @@ impl Money {
             Currency::XAU => Money::XAU(amount),
             Currency::XAG => Money::XAG(amount),
             Currency::XPT => Money::XPT(amount),
-            Currency::XPD => Money::XPD(amount),
-            Currency::XRH => Money::XRH(amount),
             Currency::BTC => Money::BTC(amount),
             Currency::ETH => Money::ETH(amount),
             Currency::SOL => Money::SOL(amount),
@@ -186,8 +181,6 @@ impl Money {
             Self::XAU(_) => Currency::XAU,
             Self::XAG(_) => Currency::XAG,
             Self::XPT(_) => Currency::XPT,
-            Self::XPD(_) => Currency::XPD,
-            Self::XRH(_) => Currency::XRH,
             Self::BTC(_) => Currency::BTC,
             Self::ETH(_) => Currency::ETH,
             Self::SOL(_) => Currency::SOL,
@@ -221,8 +214,6 @@ impl Money {
             Self::XAU(val) => *val,
             Self::XAG(val) => *val,
             Self::XPT(val) => *val,
-            Self::XPD(val) => *val,
-            Self::XRH(val) => *val,
             Self::BTC(val) => *val,
             Self::ETH(val) => *val,
             Self::SOL(val) => *val,
@@ -256,8 +247,6 @@ impl Money {
             Self::XAU(_) => CurrencyLib::XAU.code().to_string(),
             Self::XAG(_) => CurrencyLib::XAG.code().to_string(),
             Self::XPT(_) => CurrencyLib::XPT.code().to_string(),
-            Self::XPD(_) => CurrencyLib::XPD.code().to_string(),
-            Self::XRH(_) => "XRH".to_string(),
             Self::BTC(_) => "BTC".to_string(),
             Self::ETH(_) => "ETH".to_string(),
             Self::SOL(_) => "SOL".to_string(),
@@ -291,8 +280,6 @@ impl Money {
             Self::XAU(_) => CurrencyLib::XAU.symbol().to_string(),
             Self::XAG(_) => CurrencyLib::XAG.symbol().to_string(),
             Self::XPT(_) => CurrencyLib::XPT.symbol().to_string(),
-            Self::XPD(_) => CurrencyLib::XPD.symbol().to_string(),
-            Self::XRH(_) => "Rh".to_string(),
             Self::BTC(_) => "₿".to_string(),
             Self::ETH(_) => "Ξ".to_string(),
             Self::SOL(_) => "◎".to_string(),
@@ -378,8 +365,6 @@ impl Money {
             Money::XAU(amount) => amount / rates.xau,
             Money::XAG(amount) => amount / rates.xag,
             Money::XPT(amount) => amount / rates.xpt,
-            Money::XPD(amount) => amount / rates.xpd,
-            Money::XRH(amount) => amount / rates.xrh,
             Money::BTC(amount) => amount / rates.btc,
             Money::ETH(amount) => amount / rates.eth,
             Money::SOL(amount) => amount / rates.sol,
@@ -412,8 +397,6 @@ impl Money {
             Currency::XAU => to_base * rates.xau,
             Currency::XAG => to_base * rates.xag,
             Currency::XPT => to_base * rates.xpt,
-            Currency::XPD => to_base * rates.xpd,
-            Currency::XRH => to_base * rates.xrh,
             Currency::BTC => to_base * rates.btc,
             Currency::ETH => to_base * rates.eth,
             Currency::SOL => to_base * rates.sol,
@@ -440,5 +423,40 @@ impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ret = self.to_string(global::config().forex_use_symbol);
         write!(f, "{}", ret)
+    }
+}
+
+impl From<Currency> for Money {
+    fn from(value: Currency) -> Self {
+        match value {
+            Currency::USD => Money::USD(dec!(0)),
+            Currency::CAD => Money::CAD(dec!(0)),
+            Currency::EUR => Money::EUR(dec!(0)),
+            Currency::GBP => Money::GBP(dec!(0)),
+            Currency::CHF => Money::CHF(dec!(0)),
+            Currency::RUB => Money::RUB(dec!(0)),
+            Currency::CNY => Money::CNY(dec!(0)),
+            Currency::JPY => Money::JPY(dec!(0)),
+            Currency::KRW => Money::KRW(dec!(0)),
+            Currency::HKD => Money::HKD(dec!(0)),
+            Currency::IDR => Money::IDR(dec!(0)),
+            Currency::MYR => Money::MYR(dec!(0)),
+            Currency::SGD => Money::SGD(dec!(0)),
+            Currency::THB => Money::THB(dec!(0)),
+            Currency::SAR => Money::SAR(dec!(0)),
+            Currency::AED => Money::AED(dec!(0)),
+            Currency::KWD => Money::KWD(dec!(0)),
+            Currency::INR => Money::INR(dec!(0)),
+            Currency::AUD => Money::AUD(dec!(0)),
+            Currency::NZD => Money::NZD(dec!(0)),
+            Currency::XAU => Money::XAU(dec!(0)),
+            Currency::XAG => Money::XAG(dec!(0)),
+            Currency::XPT => Money::XPT(dec!(0)),
+            Currency::BTC => Money::BTC(dec!(0)),
+            Currency::ETH => Money::ETH(dec!(0)),
+            Currency::SOL => Money::SOL(dec!(0)),
+            Currency::XRP => Money::XRP(dec!(0)),
+            Currency::ADA => Money::ADA(dec!(0)),
+        }
     }
 }

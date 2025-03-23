@@ -150,12 +150,6 @@ where
             Currency::XPT => {
                 new_rates.push(Money::XPT(ret.data.rates.xpt));
             }
-            Currency::XPD => {
-                new_rates.push(Money::XPD(ret.data.rates.xpd));
-            }
-            Currency::XRH => {
-                new_rates.push(Money::XRH(ret.data.rates.xrh));
-            }
 
             //// crypto
             Currency::BTC => {
