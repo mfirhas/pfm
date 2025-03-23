@@ -4,6 +4,8 @@ pub use currency::Currency;
 mod currency_test;
 
 pub mod entity;
+#[cfg(test)]
+mod entity_test;
 
 pub mod interface;
 pub use interface::{ForexError, ForexResult};
