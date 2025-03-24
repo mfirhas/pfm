@@ -173,6 +173,55 @@ impl ForexStorageImpl {
         Ok(())
     }
 
+    async fn insert_historical_batch(
+        &self,
+        rates: Vec<RatesResponse<HistoricalRates>>,
+    ) -> ForexResult<()> {
+        let historical_write = self.fs.write().await;
+        let historical_write = historical_write.historical();
+
+        for rate in rates {
+            let date = rate.data.date;
+
+            let file_full_path = historical_write.join(generate_historical_file_path(date));
+
+            let year_dir = file_full_path.parent();
+            if let Some(dir) = year_dir {
+                if !dir.is_dir() {
+                    tokio::fs::create_dir_all(dir)
+                        .await
+                        .context("storage insert historical batch create year dir")
+                        .as_internal_err()?;
+                }
+            } else {
+                return Err(ForexError::internal_error(
+                    "storage insert historical batch create year dir",
+                ));
+            };
+
+            let json_string = serde_json::to_string_pretty(&rate)
+                .context("storage insert historical batch parse input into json string")
+                .as_internal_err()?;
+
+            let mut file = File::create(&file_full_path)
+                .await
+                .context("storage insert historical batch create filepath")
+                .as_internal_err()?;
+            file.write_all(json_string.as_bytes())
+                .await
+                .context("storage insert historical batch write content")
+                .as_internal_err()?;
+            file.flush()
+                .await
+                .context("storage insert historical batch flush")
+                .as_internal_err()?;
+
+            Self::set_permission(&file_full_path).await?;
+        }
+
+        Ok(())
+    }
+
     async fn update_historical_rates_data(
         &self,
         date: DateTime<Utc>,
@@ -612,6 +661,13 @@ impl ForexStorage for ForexStorageImpl {
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync,
     {
         self.insert_historical(date, rates).await
+    }
+
+    async fn insert_historical_batch(
+        &self,
+        rates: Vec<RatesResponse<HistoricalRates>>,
+    ) -> ForexResult<()> {
+        self.insert_historical_batch(rates).await
     }
 
     async fn update_historical_rates_data(

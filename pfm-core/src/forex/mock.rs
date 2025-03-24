@@ -733,6 +733,13 @@ impl ForexStorage for ForexStorageSuccessMock {
         Ok(())
     }
 
+    async fn insert_historical_batch(
+        &self,
+        rates: Vec<RatesResponse<HistoricalRates>>,
+    ) -> ForexResult<()> {
+        Ok(())
+    }
+
     async fn update_historical_rates_data(
         &self,
         date: DateTime<Utc>,

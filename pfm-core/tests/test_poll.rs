@@ -153,6 +153,8 @@ pub async fn test_currencybeacon_timeseries_rates() {
         .await;
     dbg!(&ret);
 
-    assert!(ret.as_ref().unwrap().error.is_none());
-    assert_eq!(ret.as_ref().unwrap().data.len(), 4);
+    for v in ret.as_ref().unwrap() {
+        assert!(v.error.is_none());
+    }
+    assert_eq!(ret.as_ref().unwrap().len(), 4);
 }

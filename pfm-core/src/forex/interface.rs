@@ -129,7 +129,7 @@ pub trait ForexTimeseriesRates {
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<Vec<HistoricalRates>>>;
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>>;
 }
 ///////////////
 
@@ -152,7 +152,7 @@ pub trait ForexStorage {
     async fn get_latest(&self) -> ForexResult<RatesResponse<Rates>>;
 
     /// insert historical rates
-    /// @date: the datetime in UTC when the data fetched.
+    /// @date: the datetime in UTC the date of rate.
     /// @rates: the rates to be saved.
     async fn insert_historical<T>(
         &self,
@@ -161,6 +161,12 @@ pub trait ForexStorage {
     ) -> ForexResult<()>
     where
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync;
+
+    //// insert historical in batch
+    async fn insert_historical_batch(
+        &self,
+        rates: Vec<RatesResponse<HistoricalRates>>,
+    ) -> ForexResult<()>;
 
     /// update some existing rates data with new ones
     /// new_data contains money, the currency and the values.
