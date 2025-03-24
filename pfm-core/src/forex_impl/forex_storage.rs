@@ -178,11 +178,14 @@ impl ForexStorageImpl {
         date: DateTime<Utc>,
         new_rates: Vec<Money>,
     ) -> ForexResult<RatesResponse<HistoricalRates>> {
-        let mut historical_rates = self
-            .get_historical(date)
-            .await
-            .context("storage update historical get historical")
-            .as_internal_err()?;
+        let mut historical_rates = {
+            let before_historical_rates = self
+                .get_historical(date)
+                .await
+                .context("storage update historical get historical")
+                .as_internal_err()?;
+            before_historical_rates
+        };
 
         for v in new_rates {
             match v {
@@ -296,8 +299,8 @@ impl ForexStorageImpl {
             .context("storage update historical parse input into json string")
             .as_internal_err()?;
 
-        let historical_write = self.fs.write().await;
-        let historical_write = historical_write.historical();
+        let historical_write_guard = self.fs.write().await;
+        let historical_write = historical_write_guard.historical();
         let historical_write = historical_write.join(generate_historical_file_path(date));
 
         let mut file = File::create(&historical_write)
@@ -312,6 +315,7 @@ impl ForexStorageImpl {
             .await
             .context("storage update historical flush")
             .as_internal_err()?;
+        drop(historical_write_guard);
 
         let updated_historical_rates = self
             .get_historical(date)

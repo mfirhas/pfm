@@ -26,11 +26,12 @@ async fn main() {
     };
     println!("{}", start_date);
 
-    // let from = start_date;
-    let from = Utc.with_ymd_and_hms(2003, 9, 29, 0, 0, 0).unwrap();
+    let from = start_date;
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    // let from = Utc.with_ymd_and_hms(2003, 9, 29, 0, 0, 0).unwrap();
     let to = Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap();
     let storage = ForexStorageImpl::new(global::storage_fs());
-    let apiname = ApisName::CurrencyAPI;
+    let apiname = ApisName::OpenExchangeRatesAPI;
     let forex_api = select_api(apiname);
     let ret = fetch_historical_data(forex_api, storage, from, to).await;
     println!("{:?}", ret);
@@ -66,7 +67,7 @@ pub enum ApisName {
 
 #[derive(Clone)]
 pub enum Apis {
-    ExchangeAPI(ExchangeAPI), // rate limit 5 reqs/sec
+    ExchangeAPI(ExchangeAPI),
     CurrencyAPI(CurrencyAPI),
     OpenExchangeRatesAPI(OpenExchangeRatesAPI),
 }
