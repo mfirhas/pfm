@@ -120,6 +120,17 @@ pub trait ForexHistoricalRates {
         base: Currency,
     ) -> ForexResult<RatesResponse<HistoricalRates>>;
 }
+
+#[async_trait]
+pub trait ForexTimeseriesRates {
+    /// get historical rates in range of dates
+    async fn timeseries_rates(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+        base: Currency,
+    ) -> ForexResult<RatesResponse<Vec<HistoricalRates>>>;
+}
 ///////////////
 
 /////////////// INVOKED FROM HTTP and CRON SERVICE, and APP.

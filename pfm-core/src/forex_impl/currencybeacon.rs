@@ -1,16 +1,13 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
-use crate::{
-    forex::{
-        entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-        interface::{AsInternalError, ForexHistoricalRates, ForexRates},
-        Currency, ForexError, ForexResult,
-    },
-    global,
+use crate::forex::{
+    entity::{HistoricalRates, Rates, RatesData, RatesResponse},
+    interface::{AsInternalError, ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
+    Currency, ForexError, ForexResult,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -27,6 +24,7 @@ Rate limit: // TODO ask currencybeacon for rate limit
 
 const LATEST_ENDPOINT: &str = "https://api.currencybeacon.com/v1/latest";
 const HISTORICAL_ENDPOINT: &str = "https://api.currencybeacon.com/v1/historical";
+const TIMESERIES_ENDPOINT: &str = "https://api.currencybeacon.com/v1/timeseries";
 const SOURCE: &str = "currencybeacon.com";
 const END_OF_DAY_HOUR: &str = "T23:59:59Z";
 
@@ -152,6 +150,63 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     }
 }
 
+// (Currency, ...), Currency is base currency
+impl TryFrom<(Currency, TimeseriesResponse)> for RatesResponse<Vec<HistoricalRates>> {
+    type Error = ForexError;
+
+    fn try_from(value: (Currency, TimeseriesResponse)) -> Result<Self, Self::Error> {
+        let mut historical_rates_list: Vec<HistoricalRates> = vec![];
+        for (date_str, r) in value.1.response {
+            let date_time_str = format!("{}{}", date_str, END_OF_DAY_HOUR);
+            let date = date_time_str
+                .parse::<DateTime<Utc>>()
+                .context("currencybeacon parse historical rates datetime")
+                .as_internal_err()?;
+            let historical_rates = HistoricalRates {
+                date,
+                base: value.0,
+                rates: RatesData {
+                    usd: r.usd.unwrap_or_default(),
+                    cad: r.cad.unwrap_or_default(),
+                    eur: r.eur.unwrap_or_default(),
+                    gbp: r.gbp.unwrap_or_default(),
+                    chf: r.chf.unwrap_or_default(),
+                    rub: r.rub.unwrap_or_default(),
+                    cny: r.cny.unwrap_or_default(),
+                    jpy: r.jpy.unwrap_or_default(),
+                    krw: r.krw.unwrap_or_default(),
+                    hkd: r.hkd.unwrap_or_default(),
+                    idr: r.idr.unwrap_or_default(),
+                    myr: r.myr.unwrap_or_default(),
+                    sgd: r.sgd.unwrap_or_default(),
+                    thb: r.thb.unwrap_or_default(),
+                    sar: r.sar.unwrap_or_default(),
+                    aed: r.aed.unwrap_or_default(),
+                    kwd: r.kwd.unwrap_or_default(),
+                    inr: r.inr.unwrap_or_default(),
+                    aud: r.aud.unwrap_or_default(),
+                    nzd: r.nzd.unwrap_or_default(),
+                    xau: r.xau.unwrap_or_default(),
+                    xag: r.xag.unwrap_or_default(),
+                    xpt: r.xpt.unwrap_or_default(),
+                    btc: r.btc.unwrap_or_default(),
+                    eth: r.eth.unwrap_or_default(),
+                    sol: r.sol.unwrap_or_default(),
+                    xrp: r.xrp.unwrap_or_default(),
+                    ada: r.ada.unwrap_or_default(),
+                },
+            };
+
+            historical_rates_list.push(historical_rates);
+        }
+
+        // sort ASC
+        historical_rates_list.sort_by_key(|rates| rates.date);
+
+        Ok(RatesResponse::new(SOURCE.into(), historical_rates_list))
+    }
+}
+
 // --- latest and historical rates response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
@@ -234,6 +289,107 @@ pub struct ResponseRates {
 
 // --- END
 
+// --- timeseries dto
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TimeseriesResponse {
+    #[serde(rename = "meta")]
+    pub meta: Meta,
+
+    /// object of date(YYYY-MM-DD) to its rates
+    #[serde(rename = "response")]
+    pub response: HashMap<String, ExchangeRates>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExchangeRates {
+    #[serde(rename = "USD")]
+    pub usd: Option<Decimal>,
+
+    #[serde(rename = "CAD")]
+    pub cad: Option<Decimal>,
+
+    #[serde(rename = "EUR")]
+    pub eur: Option<Decimal>,
+
+    #[serde(rename = "GBP")]
+    pub gbp: Option<Decimal>,
+
+    #[serde(rename = "CHF")]
+    pub chf: Option<Decimal>,
+
+    #[serde(rename = "RUB")]
+    pub rub: Option<Decimal>,
+
+    #[serde(rename = "CNY")]
+    pub cny: Option<Decimal>,
+
+    #[serde(rename = "JPY")]
+    pub jpy: Option<Decimal>,
+
+    #[serde(rename = "KRW")]
+    pub krw: Option<Decimal>,
+
+    #[serde(rename = "HKD")]
+    pub hkd: Option<Decimal>,
+
+    #[serde(rename = "IDR")]
+    pub idr: Option<Decimal>,
+
+    #[serde(rename = "MYR")]
+    pub myr: Option<Decimal>,
+
+    #[serde(rename = "SGD")]
+    pub sgd: Option<Decimal>,
+
+    #[serde(rename = "THB")]
+    pub thb: Option<Decimal>,
+
+    #[serde(rename = "SAR")]
+    pub sar: Option<Decimal>,
+
+    #[serde(rename = "AED")]
+    pub aed: Option<Decimal>,
+
+    #[serde(rename = "KWD")]
+    pub kwd: Option<Decimal>,
+
+    #[serde(rename = "INR")]
+    pub inr: Option<Decimal>,
+
+    #[serde(rename = "AUD")]
+    pub aud: Option<Decimal>,
+
+    #[serde(rename = "NZD")]
+    pub nzd: Option<Decimal>,
+
+    // Precious metals
+    #[serde(rename = "XAU")]
+    pub xau: Option<Decimal>,
+
+    #[serde(rename = "XAG")]
+    pub xag: Option<Decimal>,
+
+    #[serde(rename = "XPT")]
+    pub xpt: Option<Decimal>,
+
+    // Crypto
+    #[serde(rename = "BTC")]
+    pub btc: Option<Decimal>,
+
+    #[serde(rename = "ETH")]
+    pub eth: Option<Decimal>,
+
+    #[serde(rename = "SOL")]
+    pub sol: Option<Decimal>,
+
+    #[serde(rename = "XRP")]
+    pub xrp: Option<Decimal>,
+
+    #[serde(rename = "ADA")]
+    pub ada: Option<Decimal>,
+}
+// --- END
+
 #[async_trait]
 impl ForexRates for Api {
     async fn rates(&self, base: Currency) -> ForexResult<RatesResponse<Rates>> {
@@ -309,6 +465,55 @@ impl ForexHistoricalRates for Api {
                 )
             })
             .as_internal_err()?;
+
+        Ok(resp.try_into()?)
+    }
+}
+
+#[async_trait]
+impl ForexTimeseriesRates for Api {
+    async fn timeseries_rates(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+        base: Currency,
+    ) -> ForexResult<RatesResponse<Vec<HistoricalRates>>> {
+        let symbols = Currency::to_comma_separated_list_str();
+        let from = start_date.format("%Y-%m-%d").to_string();
+        let to = end_date.format("%Y-%m-%d").to_string();
+
+        let params = [
+            ("api_key", self.key),
+            ("base", base.code()),
+            ("start_date", from.as_str()),
+            ("end_date", to.as_str()),
+            ("symbols", symbols.as_str()),
+        ];
+
+        let ret_str = self
+            .client
+            .get(TIMESERIES_ENDPOINT)
+            .query(&params)
+            .send()
+            .await
+            .context("currencybeacon invoking timeseries api")
+            .as_internal_err()?
+            .text()
+            .await
+            .context("currencybeacon fetching timeseries resp in text")
+            .as_internal_err()?;
+
+        let resp = serde_json::from_str::<TimeseriesResponse>(&ret_str)
+            .map_err(|err| {
+                anyhow!(
+                    "currencybeacon failed parsing timeseries into JSON: {}, {}",
+                    &ret_str,
+                    err
+                )
+            })
+            .as_internal_err()?;
+
+        let resp = (base, resp);
 
         Ok(resp.try_into()?)
     }
