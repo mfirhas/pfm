@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use pfm_core::{
     forex::{
-        interface::ForexStorage,
+        interface::{ForexStorage, ForexTimeseriesRates},
         service::{poll_historical_rates, poll_rates},
         Money,
     },
@@ -135,4 +135,24 @@ pub async fn test_currencybeacon_historical_rates() {
     assert!(&ret.is_ok());
 
     assert!(ret.as_ref().unwrap().error.is_none());
+}
+
+/// test currencybeacon timeseries api
+#[tokio::test]
+pub async fn test_currencybeacon_timeseries_rates() {
+    let api = forex_impl::currencybeacon::Api::new(
+        &global::config().forex_currencybeacon_api_key,
+        global::http_client(),
+    );
+
+    let start_date = Utc.with_ymd_and_hms(2017, 1, 2, 0, 0, 0).unwrap();
+    let end_date = Utc.with_ymd_and_hms(2017, 1, 5, 0, 0, 0).unwrap();
+
+    let ret = api
+        .timeseries_rates(start_date, end_date, global::BASE_CURRENCY)
+        .await;
+    dbg!(&ret);
+
+    assert!(ret.as_ref().unwrap().error.is_none());
+    assert_eq!(ret.as_ref().unwrap().data.len(), 4);
 }
