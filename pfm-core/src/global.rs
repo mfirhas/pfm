@@ -252,6 +252,9 @@ pub struct Config {
     /// API key for https://openexchangerates.org
     #[serde(alias = "CORE_FOREX_OPEN_EXCHANGE_API_KEY")]
     pub forex_open_exchange_api_key: String,
+
+    #[serde(alias = "CORE_FOREX_CURRENCYBEACON")]
+    pub forex_currencybeacon_api_key: String,
 }
 
 #[cfg(test)]

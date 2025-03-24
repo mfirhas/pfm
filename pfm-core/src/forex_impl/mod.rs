@@ -13,5 +13,8 @@ pub mod open_exchange_api;
 // #[cfg(test)]
 // mod open_exchange_api_test;
 
+/// https://currencybeacon.com/api-documentation
+pub mod currencybeacon;
+
 /// SERVER side storage for cron and http services
 pub mod forex_storage;
