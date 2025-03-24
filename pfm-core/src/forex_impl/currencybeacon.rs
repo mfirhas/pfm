@@ -482,6 +482,12 @@ impl ForexTimeseriesRates for Api {
         end_date: DateTime<Utc>,
         base: Currency,
     ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+        if start_date > end_date {
+            return Err(ForexError::client_error(
+                "start date cannot be bigger than end date",
+            ));
+        }
+
         let symbols = Currency::to_comma_separated_list_str();
         let from = start_date.format("%Y-%m-%d").to_string();
         let to = end_date.format("%Y-%m-%d").to_string();
