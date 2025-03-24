@@ -129,7 +129,7 @@ pub trait ForexTimeseriesRates {
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<Vec<HistoricalRates>>>;
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>>;
 }
 ///////////////
 

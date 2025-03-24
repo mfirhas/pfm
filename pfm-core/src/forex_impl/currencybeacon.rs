@@ -150,12 +150,14 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
     }
 }
 
+struct RatesResponseList(Vec<RatesResponse<HistoricalRates>>);
+
 // (Currency, ...), Currency is base currency
-impl TryFrom<(Currency, TimeseriesResponse)> for RatesResponse<Vec<HistoricalRates>> {
+impl TryFrom<(Currency, TimeseriesResponse)> for RatesResponseList {
     type Error = ForexError;
 
     fn try_from(value: (Currency, TimeseriesResponse)) -> Result<Self, Self::Error> {
-        let mut historical_rates_list: Vec<HistoricalRates> = vec![];
+        let mut rates_response_list: Vec<RatesResponse<HistoricalRates>> = vec![];
         for (date_str, r) in value.1.response {
             let date_time_str = format!("{}{}", date_str, END_OF_DAY_HOUR);
             let date = date_time_str
@@ -197,13 +199,15 @@ impl TryFrom<(Currency, TimeseriesResponse)> for RatesResponse<Vec<HistoricalRat
                 },
             };
 
-            historical_rates_list.push(historical_rates);
+            let rates_response = RatesResponse::new(SOURCE.into(), historical_rates);
+
+            rates_response_list.push(rates_response);
         }
 
         // sort ASC
-        historical_rates_list.sort_by_key(|rates| rates.date);
+        rates_response_list.sort_by_key(|rates| rates.data.date);
 
-        Ok(RatesResponse::new(SOURCE.into(), historical_rates_list))
+        Ok(RatesResponseList(rates_response_list))
     }
 }
 
@@ -477,7 +481,7 @@ impl ForexTimeseriesRates for Api {
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<Vec<HistoricalRates>>> {
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
         let symbols = Currency::to_comma_separated_list_str();
         let from = start_date.format("%Y-%m-%d").to_string();
         let to = end_date.format("%Y-%m-%d").to_string();
@@ -515,6 +519,8 @@ impl ForexTimeseriesRates for Api {
 
         let resp = (base, resp);
 
-        Ok(resp.try_into()?)
+        let resp = RatesResponseList::try_from(resp)?.0;
+
+        Ok(resp)
     }
 }
