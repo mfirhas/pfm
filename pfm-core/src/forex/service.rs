@@ -75,7 +75,9 @@ where
     FX: ForexHistoricalRates,
     FS: ForexStorage,
 {
-    let ret = forex.historical_rates(date, global::BASE_CURRENCY).await?;
+    let historical_data = storage.get_historical(date).await?;
+    let base = historical_data.data.base;
+    let ret = forex.historical_rates(date, base).await?;
     let mut new_rates: Vec<Money> = vec![];
     for c in currencies_to_update {
         match c {
