@@ -253,8 +253,11 @@ pub struct Config {
     #[serde(alias = "CORE_FOREX_OPEN_EXCHANGE_API_KEY")]
     pub forex_open_exchange_api_key: String,
 
-    #[serde(alias = "CORE_FOREX_CURRENCYBEACON")]
+    #[serde(alias = "CORE_FOREX_CURRENCYBEACON_API_KEY")]
     pub forex_currencybeacon_api_key: String,
+
+    #[serde(alias = "CORE_FOREX_TRADERMADE_API_KEY")]
+    pub forex_tradermade_api_key: String,
 }
 
 #[cfg(test)]

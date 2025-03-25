@@ -16,5 +16,8 @@ pub mod open_exchange_api;
 /// https://currencybeacon.com/api-documentation
 pub mod currencybeacon;
 
+/// https://tradermade.com/
+pub mod tradermade;
+
 /// SERVER side storage for cron and http services
 pub mod forex_storage;

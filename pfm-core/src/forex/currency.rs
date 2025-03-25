@@ -102,6 +102,18 @@ impl Currency {
             .join(",");
         ret
     }
+
+    pub fn to_comma_separated_pair_list_str(base: Currency) -> String {
+        Currency::iter()
+            .filter(|&c| c != base)
+            .map(|c| format!("{}{}", base.code(), format!("{:?}", c)))
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+
+    pub fn currencies_count() -> usize {
+        Currency::iter().count() as usize
+    }
 }
 
 impl FromStr for Currency {

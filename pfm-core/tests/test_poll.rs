@@ -1,13 +1,15 @@
 use chrono::{TimeZone, Utc};
 use pfm_core::{
     forex::{
-        interface::{ForexStorage, ForexTimeseriesRates},
+        self,
+        interface::{ForexHistoricalRates, ForexStorage, ForexTimeseriesRates},
         service::{poll_historical_rates, poll_rates},
         Money,
     },
     forex_impl::{
         self,
         forex_storage::{self, ForexStorageImpl},
+        tradermade,
     },
     global::{self, BASE_CURRENCY},
 };
@@ -157,4 +159,35 @@ pub async fn test_currencybeacon_timeseries_rates() {
         assert!(v.error.is_none());
     }
     assert_eq!(ret.as_ref().unwrap().len(), 4);
+}
+
+#[tokio::test]
+pub async fn test_tradermade_latest_api() {
+    let api = tradermade::Api::new(
+        &global::config().forex_tradermade_api_key,
+        global::http_client(),
+    );
+
+    let ret = forex::interface::ForexRates::rates(&api, global::BASE_CURRENCY).await;
+
+    dbg!(&ret);
+
+    assert!(ret.as_ref().unwrap().error.is_none());
+    assert!(ret.is_ok());
+}
+
+#[tokio::test]
+pub async fn test_tradermade_historical_api() {
+    let api = tradermade::Api::new(
+        &global::config().forex_tradermade_api_key,
+        global::http_client(),
+    );
+
+    let date = Utc.with_ymd_and_hms(2022, 2, 4, 0, 0, 0).unwrap();
+
+    let ret = api.historical_rates(date, global::BASE_CURRENCY).await;
+
+    dbg!(&ret);
+    assert!(ret.as_ref().is_ok());
+    assert!(ret.as_ref().unwrap().error.is_none());
 }
