@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use rust_decimal_macros::dec;
 
 use crate::global;
 
@@ -20,6 +21,11 @@ where
 
     let ret = {
         let res = Money::convert(&latest_rates.data.rates, from, to)?;
+        if res.amount() == dec!(0) {
+            return Err(ForexError::internal_error(
+                "service convert rate not available at the moment",
+            ));
+        }
         let date = latest_rates.data.latest_update;
 
         ConversionResponse {
@@ -43,6 +49,15 @@ where
 
     for x in from {
         let ret = convert(storage, x, to).await?;
+        if ret.money.amount() == dec!(0) {
+            return Err(ForexError::internal_error(
+                format!(
+                    "service batch_convert rate for {} is not available at the moment",
+                    to.code()
+                )
+                .as_str(),
+            ));
+        }
 
         results.push(ret);
     }
