@@ -110,6 +110,10 @@ impl Currency {
             .collect::<Vec<_>>()
             .join(",")
     }
+
+    pub fn currencies_count() -> usize {
+        Currency::iter().count() as usize
+    }
 }
 
 impl FromStr for Currency {
