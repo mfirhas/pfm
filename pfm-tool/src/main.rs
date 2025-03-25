@@ -220,8 +220,8 @@ where
 }
 
 async fn do_fetch_timeseries_and_store() {
-    let start_date = Utc.with_ymd_and_hms(2000, 1, 1, 0, 0, 0).unwrap();
-    let end_date = Utc.with_ymd_and_hms(2024, 12, 31, 23, 59, 59).unwrap();
+    let start_date = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+    let end_date = Utc.with_ymd_and_hms(2025, 3, 24, 23, 59, 59).unwrap();
     // let end_date = Utc.with_ymd_and_hms(1999, 12, 31, 23, 59, 59).unwrap();
     let ranges = split_date_range_yearly(start_date, end_date, 5);
     for range in ranges {
