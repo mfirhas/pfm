@@ -88,3 +88,19 @@ fn test_currency_from_money() {
     let ret = Currency::from(Money::new_money(Currency::SGD, dec!(1000)));
     assert_eq!(ret, expected_sgd);
 }
+
+#[test]
+fn test_to_comma_separated_list_str() {
+    let ret = Currency::to_comma_separated_list_str();
+    let expected = "USD,CAD,EUR,GBP,CHF,RUB,CNY,JPY,KRW,HKD,IDR,MYR,SGD,THB,SAR,AED,KWD,INR,AUD,NZD,XAU,XAG,XPT,BTC,ETH,SOL,XRP,ADA";
+    println!("{ret}");
+    assert_eq!(ret.as_str(), expected);
+}
+
+#[test]
+fn test_to_comma_separated_pair_list_str() {
+    let ret = Currency::to_comma_separated_pair_list_str(Currency::USD);
+    let expected = "USDCAD,USDEUR,USDGBP,USDCHF,USDRUB,USDCNY,USDJPY,USDKRW,USDHKD,USDIDR,USDMYR,USDSGD,USDTHB,USDSAR,USDAED,USDKWD,USDINR,USDAUD,USDNZD,USDXAU,USDXAG,USDXPT,USDBTC,USDETH,USDSOL,USDXRP,USDADA";
+    println!("{ret}");
+    assert_eq!(ret.as_str(), expected);
+}
