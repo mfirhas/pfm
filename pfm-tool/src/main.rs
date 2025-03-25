@@ -1,10 +1,11 @@
-use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Utc, Weekday};
-use pfm_core::forex::interface::{ForexHistoricalRates, ForexStorage};
+use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Utc, Weekday};
+use pfm_core::forex::interface::{ForexHistoricalRates, ForexStorage, ForexTimeseriesRates};
 use pfm_core::forex::{service, ForexError};
 use pfm_core::forex_impl::forex_storage::ForexStorageImpl;
 use pfm_core::global;
 use pfm_core::{
     forex::ForexResult, forex_impl::currency_api::Api as CurrencyAPI,
+    forex_impl::currencybeacon::Api as CurrencyBeaconAPI,
     forex_impl::exchange_api::Api as ExchangeAPI,
     forex_impl::open_exchange_api::Api as OpenExchangeRatesAPI,
 };
@@ -12,6 +13,14 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() {
+    // fetch historical data to populate historical data split into its rate limit
+    // do_fetch_historical_data().await;
+
+    // fetch timeseries data and store them
+    // do_fetch_timeseries_and_store().await;
+}
+
+async fn do_fetch_historical_data() {
     let storage = ForexStorageImpl::new(global::storage_fs());
     let latest_historical =
         ForexStorage::get_historical_list(&storage, 1, 1, pfm_core::forex::entity::Order::DESC)
@@ -208,4 +217,61 @@ where
     }
 
     Ok(())
+}
+
+async fn do_fetch_timeseries_and_store() {
+    let start_date = Utc.with_ymd_and_hms(2000, 1, 1, 0, 0, 0).unwrap();
+    let end_date = Utc.with_ymd_and_hms(2024, 12, 31, 23, 59, 59).unwrap();
+    // let end_date = Utc.with_ymd_and_hms(1999, 12, 31, 23, 59, 59).unwrap();
+    let ranges = split_date_range_yearly(start_date, end_date, 5);
+    for range in ranges {
+        let from = range.0;
+        let to = range.1;
+        println!("fetching historical data from {} till {}", from, to);
+        fetch_timeseries_and_store(from, to).await;
+        tokio::time::sleep(Duration::from_secs(62)).await;
+    }
+}
+
+async fn fetch_timeseries_and_store(start_date: DateTime<Utc>, end_date: DateTime<Utc>) {
+    let storage_impl = ForexStorageImpl::new(global::storage_fs());
+    let forex_api = CurrencyBeaconAPI::new(
+        &global::config().forex_currencybeacon_api_key,
+        global::http_client(),
+    );
+    let ret = forex_api
+        .timeseries_rates(start_date, end_date, global::BASE_CURRENCY)
+        .await;
+    let rates = ret.unwrap();
+    let stored = ForexStorage::insert_historical_batch(&storage_impl, rates).await;
+    dbg!(&stored);
+    stored.unwrap();
+}
+
+fn split_date_range_yearly(
+    start_date: DateTime<Utc>,
+    end_date: DateTime<Utc>,
+    max_years: u32,
+) -> Vec<(DateTime<Utc>, DateTime<Utc>)> {
+    let mut ranges = Vec::new();
+    let max_months = Months::new(max_years * 12);
+
+    let mut current_start = start_date;
+
+    while current_start < end_date {
+        // Calculate end date by adding max_months (but subtract 1 second to avoid overlap)
+        let mut current_end = (current_start + max_months) - Duration::from_secs(1);
+
+        // Don't let the end date exceed the original end_date
+        if current_end > end_date {
+            current_end = end_date;
+        }
+
+        ranges.push((current_start, current_end));
+
+        // Move to the next second after current_end for the next range
+        current_start = current_end + Duration::from_secs(1);
+    }
+
+    ranges
 }
