@@ -20,6 +20,7 @@ Latest Rates
 Historical Rates
 Rate limit: // TODO ask currencybeacon for rate limit
 "End-of-day rates are available historically for all days going back to 1st January, 1996."
+"The timeseries endpoint only supports a 7 year range at a time, please split your query into multie ranges"
 */
 
 const LATEST_ENDPOINT: &str = "https://api.currencybeacon.com/v1/latest";
