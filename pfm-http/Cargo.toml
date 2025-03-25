@@ -14,4 +14,5 @@ lazy_static = "1"
 configrs = "0.1"
 anyhow = "1"
 thiserror = "1"
+ring = { workspace = true }
 

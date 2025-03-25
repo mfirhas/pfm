@@ -1,3 +1,6 @@
 [workspace]
 resolver = "2"
 members = ["pfm-core", "pfm-cron", "pfm-http", "pfm-tool"]
+
+[workspace.dependencies]
+ring = "0.17.14"
