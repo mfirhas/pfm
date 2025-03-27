@@ -4,34 +4,31 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.12.15", features = ["json"] }
-chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tokio = { workspace = true }
+reqwest = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 ring = { workspace = true }
 
-uuid = { version = "1", features = ["v4", "serde", "fast-rng"] }
-lazy_static = "1"
-configrs = "0.1"
-anyhow = "1"
-thiserror = "1"
-regex = "1"
-strum = "0.27"
-strum_macros = "0.27"
-dirs = "6.0"
+uuid = { workspace = true }
+lazy_static = { workspace = true }
+configrs = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+regex = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+dirs = { workspace = true }
 
-async-trait = "0.1"
+async-trait = { workspace = true }
 
 # rust_decimal = { version = "1.36", features = ["serde-arbitrary-precision"] }
-rust_decimal = "1.36"
-rust_decimal_macros = "1.36"
-accounting = { version = "0.2.0", features = ["decimal"] }
-iso_currency = { version = "0.5.3", features = ["iterator"]}
-rusty-money = { version = "0.4", features = ["iso"] }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+accounting = { workspace = true }
+iso_currency = { workspace = true }
+rusty-money = { workspace = true }
 
-[dev-dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 
