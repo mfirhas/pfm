@@ -12,3 +12,4 @@ configrs = {workspace = true}
 chrono = {workspace = true}
 uuid = {workspace = true}
 tokio-cron-scheduler = {workspace = true}
+quinn-proto ={ workspace = true}

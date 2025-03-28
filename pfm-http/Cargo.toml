@@ -15,4 +15,4 @@ configrs = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 ring = { workspace = true }
-
+quinn-proto ={ workspace = true}
