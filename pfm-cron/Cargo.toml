@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 pfm-core ={ path = "../pfm-core" }
-tokio = { version = "1", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
-anyhow = "1"
-configrs = "0.1"
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1", features = ["v4", "serde", "fast-rng"] }
-tokio-cron-scheduler = { version = "0.13", features = ["english", "signal"]}
+tokio = {workspace = true}
+serde = {workspace = true}
+anyhow = {workspace = true}
+configrs = {workspace = true}
+chrono = {workspace = true}
+uuid = {workspace = true}
+tokio-cron-scheduler = {workspace = true}

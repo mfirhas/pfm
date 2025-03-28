@@ -3,4 +3,33 @@ resolver = "2"
 members = ["pfm-core", "pfm-cron", "pfm-http", "pfm-tool"]
 
 [workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12.15", default-features = false, features = ["rustls-tls", "json"] }
+axum = { version = "0.7" }
 ring = "0.17.14"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+
+uuid = { version = "1", features = ["v4", "serde", "fast-rng"] }
+lazy_static = "1"
+configrs = "0.1"
+anyhow = "1"
+thiserror = "1"
+regex = "1"
+strum = "0.27"
+strum_macros = "0.27"
+dirs = "6.0"
+
+async-trait = "0.1"
+
+# rust_decimal = { version = "1.36", features = ["serde-arbitrary-precision"] }
+rust_decimal = "1.36"
+rust_decimal_macros = "1.36"
+accounting = { version = "0.2.0", features = ["decimal"] }
+iso_currency = { version = "0.5.3", features = ["iterator"]}
+rusty-money = { version = "0.4", features = ["iso"] }
+
+# pfm-cron
+tokio-cron-scheduler = { version = "0.13", features = ["english", "signal"]}

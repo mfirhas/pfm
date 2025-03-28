@@ -6,13 +6,13 @@ edition = "2021"
 [dependencies]
 pfm-core ={ path = "../pfm-core" }
 
-tokio = { version = "1", features = ["full"] }
-axum = { version = "0.7" }
-chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1", features = ["derive"] }
-lazy_static = "1"
-configrs = "0.1"
-anyhow = "1"
-thiserror = "1"
+tokio = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+lazy_static = { workspace = true }
+configrs = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
 ring = { workspace = true }
 

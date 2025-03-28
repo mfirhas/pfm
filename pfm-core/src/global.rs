@@ -26,7 +26,7 @@ const STORAGE_FS_PERMISSION: u32 = 0o700;
 
 /// path to storage for server-side data.
 /// this will be placed inside $HOME directory
-const STORAGE_FS_DIR_PATH: &str = "pfm";
+const STORAGE_FS_DIR_PATH: &str = "/home/mfirhas/pfm/pfm-data";
 
 /// directory name for local development for server-side data, to be placed in workspace root
 const STORAGE_FS_DIR_NAME_DEV: &str = "test_dir";
@@ -131,9 +131,7 @@ fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
         let path = workspace_dir.join(STORAGE_FS_DIR_NAME_DEV);
         path
     } else {
-        let home_dir = dirs::home_dir().context("init storage fs getting home dir")?;
-        let path = home_dir.join(STORAGE_FS_DIR_PATH);
-        path
+        PathBuf::from(STORAGE_FS_DIR_PATH)
     };
 
     let root = utils::set_root(root_pb, STORAGE_FS_PERMISSION).map_err(|err| {
