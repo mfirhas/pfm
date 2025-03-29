@@ -5,7 +5,7 @@ use crate::{
     forex::{
         entity::ConversionResponse,
         interface::ForexStorage,
-        service::{batch_convert, convert, poll_historical_rates, poll_rates},
+        service::{batch_convert, convert, convert_historical, poll_historical_rates, poll_rates},
         Currency, Money,
     },
     global,
@@ -26,6 +26,25 @@ async fn test_convert() {
     let ret = ret.unwrap();
     // expected data come from forex_mock
     let expected = Money::new_money(Currency::SAR, dec!(4762.0152292578498482026199809));
+    assert_eq!(ret.money, expected);
+}
+
+#[tokio::test]
+async fn test_convert_historical() {
+    let fs = global::storage_fs();
+    let storage = super::mock::ForexStorageSuccessMock;
+
+    let from = Money::new_money(crate::forex::Currency::GBP, dec!(1000));
+    let to = Currency::SAR;
+    let date = Utc.with_ymd_and_hms(2022, 12, 25, 0, 0, 0).unwrap();
+    let ret = convert_historical(&storage, from, to, date).await;
+    dbg!(&ret);
+
+    assert!(ret.is_ok());
+
+    let ret = ret.unwrap();
+    // expected data come from forex_mock
+    let expected = Money::new_money(Currency::SAR, dec!(4533.0433702899590250394500024));
     assert_eq!(ret.money, expected);
 }
 

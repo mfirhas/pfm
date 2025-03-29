@@ -15,8 +15,10 @@ where
     FS: ForexStorage,
 {
     let latest_rates = storage.get_latest().await?;
-    if let Some(err) = latest_rates.error {
-        return Err(ForexError::internal_error(&err));
+    if let Some(_) = latest_rates.error {
+        return Err(ForexError::internal_error(
+            "latest rates for this time not available at the moment, please try again later",
+        ));
     }
 
     let ret = {
@@ -35,6 +37,29 @@ where
     };
 
     Ok(ret)
+}
+
+pub async fn convert_historical(
+    storage: &impl ForexStorage,
+    from: Money,
+    to: Currency,
+    date: DateTime<Utc>,
+) -> ForexResult<ConversionResponse> {
+    let historical_rates = storage.get_historical(date).await?;
+    if let Some(_) = historical_rates.error {
+        return Err(ForexError::internal_error(
+            "historical rates for this date not available, please contact the web master",
+        ));
+    }
+    let converted_money = Money::convert(&historical_rates.data.rates, from, to)?;
+    if converted_money.amount() == dec!(0) {
+        return Err(ForexError::internal_error("service convert historical rate not available for this date, try again or another date, or contact web master"));
+    }
+
+    Ok(ConversionResponse {
+        last_update: historical_rates.data.date,
+        money: converted_money,
+    })
 }
 
 pub async fn batch_convert<FS>(
