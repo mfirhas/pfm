@@ -26,7 +26,7 @@ async fn test_convert() {
     let ret = ret.unwrap();
     // expected data come from forex_mock
     let expected = Money::new_money(Currency::SAR, dec!(4762.0152292578498482026199809));
-    assert_eq!(ret.money, expected);
+    assert_eq!(ret.result, expected);
 }
 
 #[tokio::test]
@@ -45,7 +45,7 @@ async fn test_convert_historical() {
     let ret = ret.unwrap();
     // expected data come from forex_mock
     let expected = Money::new_money(Currency::SAR, dec!(4533.0433702899590250394500024));
-    assert_eq!(ret.money, expected);
+    assert_eq!(ret.result, expected);
 }
 
 #[tokio::test]
@@ -66,34 +66,39 @@ async fn test_batch_convert() {
     // expected data come from forex_mock
     let expected_conversions = vec![
         ConversionResponse {
-            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+            date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
-            money: Money::SAR(dec!(4762.0152292578498482026199809)),
+            from: from_gbp,
+            result: Money::SAR(dec!(4762.0152292578498482026199809)),
         },
         ConversionResponse {
-            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+            date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
-            money: Money::SAR(dec!(15001.548000)),
+            from: from_usd,
+            result: Money::SAR(dec!(15001.548000)),
         },
         ConversionResponse {
-            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+            date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
-            money: Money::SAR(dec!(5.2401981046108984873336978311)),
+            from: from_idr,
+            result: Money::SAR(dec!(5.2401981046108984873336978311)),
         },
         ConversionResponse {
-            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+            date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
-            money: Money::SAR(dec!(4186.4940892803322058872777200)),
+            from: from_chf,
+            result: Money::SAR(dec!(4186.4940892803322058872777200)),
         },
         ConversionResponse {
-            last_update: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
+            date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
-            money: Money::SAR(dec!(3625.2651561342823236183774170)),
+            from: from_sgd,
+            result: Money::SAR(dec!(3625.2651561342823236183774170)),
         },
     ];
 
@@ -101,7 +106,7 @@ async fn test_batch_convert() {
     assert_eq!(ret.as_ref().unwrap().len(), 5);
     let ret = ret.unwrap();
     for (i, v) in expected_conversions.iter().enumerate() {
-        assert_eq!(ret[i].money, v.money);
+        assert_eq!(ret[i].result, v.result);
     }
 }
 

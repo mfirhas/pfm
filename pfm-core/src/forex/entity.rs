@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -187,10 +185,13 @@ pub struct RatesData {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConversionResponse {
     /// latest update of the currency of conversion target.
-    pub last_update: DateTime<Utc>,
+    pub date: DateTime<Utc>,
+
+    /// convert from
+    pub from: Money,
 
     /// conversion result.
-    pub money: Money,
+    pub result: Money,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -352,10 +352,10 @@ async fn convert_and_sum(
             ERROR_PREFIX
         )));
     }
-    ret.sort_by(|x, y| y.last_update.cmp(&x.last_update));
+    ret.sort_by(|x, y| y.date.cmp(&x.date));
 
-    let sum = ret.iter().map(|v| v.money.amount()).sum::<Decimal>();
+    let sum = ret.iter().map(|v| v.result.amount()).sum::<Decimal>();
 
-    Ok((sum, ret[0].last_update))
+    Ok((sum, ret[0].date))
 }
 /////////////////////////////////////// APIs(END) ///////////////////////////////////////

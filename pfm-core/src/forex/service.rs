@@ -31,8 +31,9 @@ where
         let date = latest_rates.data.latest_update;
 
         ConversionResponse {
-            last_update: date,
-            money: res,
+            date,
+            from,
+            result: res,
         }
     };
 
@@ -57,8 +58,9 @@ pub async fn convert_historical(
     }
 
     Ok(ConversionResponse {
-        last_update: historical_rates.data.date,
-        money: converted_money,
+        date: historical_rates.data.date,
+        from,
+        result: converted_money,
     })
 }
 
@@ -74,7 +76,7 @@ where
 
     for x in from {
         let ret = convert(storage, x, to).await?;
-        if ret.money.amount() == dec!(0) {
+        if ret.result.amount() == dec!(0) {
             return Err(ForexError::internal_error(
                 format!(
                     "service batch_convert rate for {} is not available at the moment",
