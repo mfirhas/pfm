@@ -674,6 +674,189 @@ fn historical_rate_list(
     }
 }
 
+fn historical_range() -> Vec<RatesResponse<HistoricalRates>> {
+    let mut historical_rates_list: Vec<RatesResponse<HistoricalRates>> = vec![
+        RatesResponse {
+            id: Uuid::parse_str("d06e8e1c-6d64-4bd4-98d6-2758bcbf2d5f").unwrap(),
+            source: "openexchangerates.org".to_string(),
+            poll_date: "2025-03-04T06:31:27.111458Z"
+                .parse::<DateTime<Utc>>()
+                .unwrap(),
+            data: HistoricalRates {
+                date: "2022-12-25T23:59:39Z".parse::<DateTime<Utc>>().unwrap(),
+                base: Currency::USD,
+                rates: RatesData {
+                    usd: dec!(1.0),
+                    idr: dec!(15588.665563),
+                    eur: dec!(0.941531),
+                    gbp: dec!(0.829531),
+                    jpy: dec!(132.80956357),
+                    chf: dec!(0.93335),
+                    sgd: dec!(1.350445),
+                    cny: dec!(6.98946),
+                    sar: dec!(3.7603),
+                    xau: dec!(0.00055331),
+                    xag: dec!(0.04211858),
+                    xpt: dec!(0.0009742),
+
+                    // Additional fields
+                    cad: dec!(1.25),
+                    rub: dec!(92.5),
+                    krw: dec!(1315.75),
+                    hkd: dec!(7.83),
+                    myr: dec!(4.68),
+                    thb: dec!(36.15),
+                    aed: dec!(3.67),
+                    kwd: dec!(0.31),
+                    inr: dec!(82.85),
+                    aud: dec!(1.52),
+                    nzd: dec!(1.62),
+                    btc: dec!(0.000023),
+                    eth: dec!(0.00031),
+                    sol: dec!(0.0045),
+                    xrp: dec!(1.1),
+                    ada: dec!(3.2),
+                },
+            },
+            error: None,
+        },
+        RatesResponse {
+            id: Uuid::parse_str("7185a19d-55bf-40d6-993d-2d3ee54d0ca4").unwrap(),
+            source: "openexchangerates.org".to_string(),
+            poll_date: "2025-03-04T06:31:00.874617Z"
+                .parse::<DateTime<Utc>>()
+                .unwrap(),
+            data: HistoricalRates {
+                date: "2021-12-20T23:59:59Z".parse::<DateTime<Utc>>().unwrap(),
+                base: Currency::USD,
+                rates: RatesData {
+                    usd: dec!(1.0),
+                    idr: dec!(14388.75),
+                    eur: dec!(0.886746),
+                    gbp: dec!(0.75709),
+                    jpy: dec!(113.66591667),
+                    chf: dec!(0.92178),
+                    sgd: dec!(1.36721),
+                    cny: dec!(6.3757),
+                    sar: dec!(3.754026),
+                    xau: dec!(0.00055823),
+                    xag: dec!(0.04492115),
+                    xpt: dec!(0.00106659),
+
+                    // Additional fields
+                    cad: dec!(1.25),
+                    rub: dec!(92.5),
+                    krw: dec!(1315.75),
+                    hkd: dec!(7.83),
+                    myr: dec!(4.68),
+                    thb: dec!(36.15),
+                    aed: dec!(3.67),
+                    kwd: dec!(0.31),
+                    inr: dec!(82.85),
+                    aud: dec!(1.52),
+                    nzd: dec!(1.62),
+                    btc: dec!(0.000023),
+                    eth: dec!(0.00031),
+                    sol: dec!(0.0045),
+                    xrp: dec!(1.1),
+                    ada: dec!(3.2),
+                },
+            },
+            error: None,
+        },
+        RatesResponse {
+            id: Uuid::parse_str("a31994fe-25bd-41ad-9d05-0684c849d87e").unwrap(),
+            source: "openexchangerates.org".to_string(),
+            poll_date: "2025-03-04T06:30:08.520417Z"
+                .parse::<DateTime<Utc>>()
+                .unwrap(),
+            data: HistoricalRates {
+                date: "2021-07-07T23:59:59Z".parse::<DateTime<Utc>>().unwrap(),
+                base: Currency::USD,
+                rates: RatesData {
+                    usd: dec!(1.0),
+                    idr: dec!(14512.7),
+                    eur: dec!(0.847952),
+                    gbp: dec!(0.724652),
+                    jpy: dec!(110.63599465),
+                    chf: dec!(0.925721),
+                    sgd: dec!(1.349139),
+                    cny: dec!(6.473),
+                    sar: dec!(3.750498),
+                    xau: dec!(0.00055449),
+                    xag: dec!(0.03825484),
+                    xpt: dec!(0.00091912),
+
+                    // Additional fields
+                    cad: dec!(1.25),
+                    rub: dec!(92.5),
+                    krw: dec!(1315.75),
+                    hkd: dec!(7.83),
+                    myr: dec!(4.68),
+                    thb: dec!(36.15),
+                    aed: dec!(3.67),
+                    kwd: dec!(0.31),
+                    inr: dec!(82.85),
+                    aud: dec!(1.52),
+                    nzd: dec!(1.62),
+                    btc: dec!(0.000023),
+                    eth: dec!(0.00031),
+                    sol: dec!(0.0045),
+                    xrp: dec!(1.1),
+                    ada: dec!(3.2),
+                },
+            },
+            error: None,
+        },
+        RatesResponse {
+            id: Uuid::parse_str("198fab12-d078-40bf-b403-057019155971").unwrap(),
+            source: "openexchangerates.org".to_string(),
+            poll_date: "2025-03-04T01:35:06.452147Z"
+                .parse::<DateTime<Utc>>()
+                .unwrap(),
+            data: HistoricalRates {
+                date: "2020-01-01T23:59:58Z".parse::<DateTime<Utc>>().unwrap(),
+                base: Currency::USD,
+                rates: RatesData {
+                    usd: dec!(1.0),
+                    idr: dec!(13893.633074),
+                    eur: dec!(0.891348),
+                    gbp: dec!(0.754603),
+                    jpy: dec!(108.72525),
+                    chf: dec!(0.967795),
+                    sgd: dec!(1.345237),
+                    cny: dec!(6.9632),
+                    sar: dec!(3.75137),
+                    xau: dec!(0.00065859),
+                    xag: dec!(0.05588309),
+                    xpt: dec!(0.00103628),
+
+                    // Additional fields
+                    cad: dec!(1.25),
+                    rub: dec!(92.5),
+                    krw: dec!(1315.75),
+                    hkd: dec!(7.83),
+                    myr: dec!(4.68),
+                    thb: dec!(36.15),
+                    aed: dec!(3.67),
+                    kwd: dec!(0.31),
+                    inr: dec!(82.85),
+                    aud: dec!(1.52),
+                    nzd: dec!(1.62),
+                    btc: dec!(0.000023),
+                    eth: dec!(0.00031),
+                    sol: dec!(0.0045),
+                    xrp: dec!(1.1),
+                    ada: dec!(3.2),
+                },
+            },
+            error: None,
+        },
+    ];
+
+    historical_rates_list
+}
+
 pub(crate) struct ForexApiSuccessMock;
 
 #[async_trait]
@@ -759,6 +942,14 @@ impl ForexStorage for ForexStorageSuccessMock {
             "storage_get_historical_success".to_string(),
             historical_rate(),
         ))
+    }
+
+    async fn get_historical_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+        Ok(historical_range())
     }
 
     async fn get_latest_list(

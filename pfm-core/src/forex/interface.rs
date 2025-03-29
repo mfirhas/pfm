@@ -182,6 +182,13 @@ pub trait ForexStorage {
         date: DateTime<Utc>,
     ) -> ForexResult<RatesResponse<HistoricalRates>>;
 
+    /// get historical rates in range of dates
+    async fn get_historical_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>>;
+
     /// get list of latest rates returning list and has next or not
     async fn get_latest_list(
         &self,

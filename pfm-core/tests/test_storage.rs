@@ -1,4 +1,6 @@
-use chrono::{TimeZone, Utc};
+use core::panic;
+
+use chrono::{TimeDelta, TimeZone, Utc};
 use pfm_core::{
     forex::{
         interface::{ForexStorage, ForexTimeseriesRates},
@@ -51,4 +53,39 @@ pub async fn test_storage_insert_batch() {
     let storage_impl = ForexStorageImpl::new(global::storage_fs());
     let ret = ForexStorage::insert_historical_batch(&storage_impl, ret.unwrap()).await;
     dbg!(&ret);
+}
+
+#[tokio::test]
+pub async fn test_storage_get_historical_range() {
+    let storage = ForexStorageImpl::new(global::storage_fs());
+    let start_date = Utc.with_ymd_and_hms(2005, 01, 01, 0, 0, 0).unwrap();
+    let end_date = Utc.with_ymd_and_hms(2010, 12, 31, 23, 59, 59).unwrap();
+    let ret = ForexStorage::get_historical_range(&storage, start_date, end_date).await;
+    // dbg!(&ret);
+    // dbg!(&ret.as_ref().unwrap()[200..205]);
+    let count_years =
+        |start_date: chrono::DateTime<Utc>, end_date: chrono::DateTime<Utc>| -> usize {
+            let mut count = 0 as usize;
+            let mut date = start_date;
+            while date <= end_date {
+                count += 1;
+                date = date + TimeDelta::days(1);
+            }
+            count
+        };
+    dbg!(&ret.as_ref().unwrap()[2189..2191]);
+    println!(
+        "num of days from the range: {}",
+        ret.as_ref().unwrap().len()
+    );
+    assert_eq!(
+        ret.as_ref().unwrap().len(),
+        count_years(start_date, end_date)
+    );
+    // assert all data are within date range(inclusive)
+    for v in ret.as_ref().unwrap() {
+        if v.data.date < start_date || v.data.date > end_date {
+            panic!("historical range contains date smaller than start date, or bigger than end date: {}",v.data.date);
+        }
+    }
 }

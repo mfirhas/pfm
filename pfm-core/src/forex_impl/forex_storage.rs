@@ -13,9 +13,9 @@ use crate::forex::{ForexError, Money};
 use crate::global::StorageFS;
 use anyhow::Context;
 use async_trait::async_trait;
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
-use tokio::fs::{self, File};
+use tokio::fs::{self, read_dir, File};
 use tokio::io::AsyncWriteExt;
 
 const ERROR_PREFIX: &str = "[FOREX][storage_impl]";
@@ -395,6 +395,100 @@ impl ForexStorageImpl {
         Ok(rates)
     }
 
+    async fn get_historical_range(
+        &self,
+        start_date: DateTime<Utc>,
+        end_date: DateTime<Utc>,
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+        let start_year = start_date.year();
+        let end_year = end_date.year();
+
+        let mut resp = vec![];
+
+        let historical_read = self.fs.read().await;
+        let historical_read_path = historical_read.historical();
+        let mut entries = read_dir(historical_read_path)
+            .await
+            .context("get historical range reading historical path")
+            .as_internal_err()?;
+        while let Some(historical_entry) = entries
+            .next_entry()
+            .await
+            .context("get historical range iterating over historical entries")
+            .as_internal_err()?
+        {
+            let metadata = historical_entry
+                .metadata()
+                .await
+                .context("get historical range reading entry metadata")
+                .as_internal_err()?;
+            if !metadata.is_dir() {
+                return Err(ForexError::internal_error(
+                    "some historical directory contents contain non directory",
+                ));
+            }
+            let year_dir = historical_entry
+                .file_name()
+                .to_string_lossy()
+                .trim()
+                .parse::<i32>()
+                .context("get historical range converting historical entry file name to year i32")
+                .as_internal_err()?;
+
+            // year on directory not within date range
+            if year_dir < start_year || year_dir > end_year {
+                continue;
+            }
+
+            let mut year_entries = read_dir(historical_entry.path())
+                .await
+                .context("get historical range reading historical subentry")
+                .as_internal_err()?;
+            while let Some(sub_historical_entry) = year_entries
+                .next_entry()
+                .await
+                .context("get historical range iterating over historical sub entries")
+                .as_internal_err()?
+            {
+                let sub_meta = sub_historical_entry
+                    .metadata()
+                    .await
+                    .context("get historical range read sub meta")
+                    .as_internal_err()?;
+                if !sub_meta.is_file() {
+                    return Err(ForexError::internal_error(
+                        "some sub historical entries content are not files",
+                    ));
+                }
+                let file_date: DateTime<Utc> = parse_historical_file_path(
+                    sub_historical_entry.file_name().to_string_lossy().trim(),
+                )
+                .ok_or(ForexError::internal_error(
+                    "get historical range parsing filename",
+                ))?;
+
+                if file_date < start_date || file_date > end_date {
+                    continue;
+                }
+
+                // read the content of the file
+                let content = fs::read_to_string(sub_historical_entry.path())
+                    .await
+                    .context("get historical range read file content")
+                    .as_internal_err()?;
+                let rates: RatesResponse<HistoricalRates> = serde_json::from_str(&content)
+                    .context("get historical range parse content to json")
+                    .as_internal_err()?;
+
+                resp.push(rates);
+            }
+        }
+
+        resp.sort_by_key(|v| v.data.date);
+
+        Ok(resp)
+    }
+
     async fn get_latest_list(
         &self,
         page: u32,
@@ -587,6 +681,23 @@ fn generate_historical_file_path(date: DateTime<Utc>) -> String {
     format!("{}/{}", year, filename)
 }
 
+fn parse_historical_file_path(filename: &str) -> Option<DateTime<Utc>> {
+    if !filename.starts_with("historical-") || !filename.ends_with("Z.json") {
+        return None;
+    }
+
+    // Extract only the date part (YYYY-MM-DD)
+    let date_part = &filename["historical-".len()..filename.len() - "Z.json".len()];
+
+    // Split into year, month, and day
+    let mut parts = date_part.split('-');
+    let year: i32 = parts.next()?.parse().ok()?;
+    let month: u32 = parts.next()?.parse().ok()?;
+    let day: u32 = parts.next()?.parse().ok()?;
+
+    let date = Utc.with_ymd_and_hms(year, month, day, 0, 0, 0).single()?;
+    Some(date)
+}
 #[cfg(test)]
 mod forex_storage_impl_tests {
     use chrono::TimeZone;
@@ -632,6 +743,14 @@ mod forex_storage_impl_tests {
         assert_eq!(ret.has_prev, false);
         assert_eq!(ret.has_next, true);
         assert_eq!(ret.rates_list, expected);
+    }
+
+    #[test]
+    fn test_parse_historical_file_path() {
+        let filename = "historical-2023-04-11Z.json";
+        let expected = Utc.with_ymd_and_hms(2023, 4, 11, 0, 0, 0).unwrap();
+        let ret = parse_historical_file_path(filename).unwrap();
+        assert_eq!(ret, expected);
     }
 }
 
@@ -683,6 +802,14 @@ impl ForexStorage for ForexStorageImpl {
         date: DateTime<Utc>,
     ) -> ForexResult<RatesResponse<HistoricalRates>> {
         self.get_historical(date).await
+    }
+
+    async fn get_historical_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+        self.get_historical_range(start, end).await
     }
 
     async fn get_latest_list(
