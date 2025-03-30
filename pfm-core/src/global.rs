@@ -78,8 +78,8 @@ lazy_static! {
 
         #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
-            let dir_name = "pfm";
-            let location = "/var/lib";
+            let dir_name = "pfm-data";
+            let location = "/var/lib/pfm";
             let storage_dir_path = PathBuf::from(location).join(dir_name);
             return storage_dir_path;
         }
