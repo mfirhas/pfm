@@ -1,0 +1,229 @@
+use std::str::FromStr;
+
+use axum::{
+    extract::{FromRequest, Query, Request, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use chrono::{DateTime, Duration, NaiveDate, TimeDelta, TimeZone, Utc};
+use pfm_core::forex::{
+    entity::{HistoricalRates, Rates, RatesData, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates, ForexStorage},
+    Currency, Money,
+};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+
+use crate::{AppContext, AppError, HttpResponse};
+use pfm_core::forex::service;
+
+// deserialize date from YYYY-MM-DD into YYYY-MM-DDThh:mm:ssZ utc
+fn deserialize_optional_date<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s {
+        Some(value) => {
+            if let Ok(date) = NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
+                let dt = Utc.from_utc_datetime(
+                    &date
+                        .and_hms_opt(0, 0, 0)
+                        .ok_or_else(|| serde::de::Error::custom("Invalid time conversion"))?,
+                );
+                return Ok(Some(dt));
+            }
+            Err(serde::de::Error::custom(
+                "Invalid date format, expected YYYY-MM-DD",
+            ))
+        }
+        None => Ok(None),
+    }
+}
+
+fn deserialize_date<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = String::deserialize(deserializer)?;
+    let date = NaiveDate::parse_from_str(&s, "%Y-%m-%d")
+        .map_err(|_| serde::de::Error::custom("Invalid date format, expected YYYY-MM-DD"))?;
+
+    let dt = Utc.from_utc_datetime(
+        &date
+            .and_hms_opt(0, 0, 0)
+            .ok_or_else(|| serde::de::Error::custom("Invalid time conversion"))?,
+    );
+
+    Ok(dt)
+}
+
+// --------- convert handler ---------
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ConvertQuery {
+    #[serde(rename = "from")]
+    pub from: String,
+
+    #[serde(rename = "to")]
+    pub to: Currency,
+
+    /// optional date for historical conversion
+    #[serde(
+        rename = "date",
+        default,
+        deserialize_with = "deserialize_optional_date"
+    )]
+    pub date: Option<DateTime<Utc>>,
+}
+
+/// GET /forex/convert
+/// convert using latest or historical rates.
+/// query 1: `from` money format ISO 4217 <CURRENCY_CODE> <AMOUNT>, amount may be separated by comma for thousands and dot for fractionals, e.g. ?from=USD 1,000
+/// query 2: `to` currency of target conversion: e.g. ?to=USD
+/// query 3(OPTIONAL); `date`(YYYY-MM-DD) for historical convert. e.g. ?date=2020-02-02
+pub(crate) async fn convert_handler(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    Query(params): Query<ConvertQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    match params.date {
+        Some(date) => {
+            let from_money = Money::from_str(&params.from)?;
+            let to_currency = params.to;
+            let ret =
+                service::convert_historical(&ctx.forex_storage, from_money, to_currency, date)
+                    .await
+                    .map(|ret| HttpResponse::new(ret))?;
+
+            Ok((StatusCode::OK, Json(ret)))
+        }
+        None => {
+            let from_money = Money::from_str(&params.from)?;
+            let to_currency = params.to;
+            let ret = service::convert(&ctx.forex_storage, from_money, to_currency)
+                .await
+                .map(|ret| HttpResponse::new(ret))?;
+
+            Ok((StatusCode::OK, Json(ret)))
+        }
+    }
+}
+// --------- END ---------
+
+// --------- rates handler ---------
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct RatesQuery {
+    /// optional date for historical rates
+    #[serde(
+        rename = "date",
+        default,
+        deserialize_with = "deserialize_optional_date"
+    )]
+    pub date: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct RatesDTO {
+    pub message: String,
+    pub rates_date: DateTime<Utc>,
+    pub rates: RatesData,
+}
+
+impl From<RatesResponse<Rates>> for RatesDTO {
+    fn from(value: RatesResponse<Rates>) -> Self {
+        RatesDTO {
+            message: "Latest rates".to_string(),
+            rates_date: value.data.latest_update,
+            rates: value.data.rates,
+        }
+    }
+}
+
+impl From<RatesResponse<HistoricalRates>> for RatesDTO {
+    fn from(value: RatesResponse<HistoricalRates>) -> Self {
+        RatesDTO {
+            message: "Historical rates".to_string(),
+            rates_date: value.data.date,
+            rates: value.data.rates,
+        }
+    }
+}
+
+/// GET /forex/rates
+/// get latest and historical rates
+/// query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
+pub(crate) async fn get_rates(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    Query(params): Query<RatesQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    match params.date {
+        // get historical rates
+        Some(date) => Ok((
+            StatusCode::OK,
+            Json(
+                ctx.forex_storage
+                    .get_historical(date)
+                    .await
+                    .map(|ret| HttpResponse::new(RatesDTO::from(ret)))?,
+            ),
+        )),
+        // get latest rates
+        None => Ok((
+            StatusCode::OK,
+            Json(
+                ctx.forex_storage
+                    .get_latest()
+                    .await
+                    .map(|ret| HttpResponse::new(RatesDTO::from(ret)))?,
+            ),
+        )),
+    }
+}
+// --------- END ---------
+
+// --------- timeseries ---------
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct TimeseriesQuery {
+    #[serde(rename = "start", deserialize_with = "deserialize_date")]
+    start: DateTime<Utc>,
+
+    #[serde(rename = "end", deserialize_with = "deserialize_date")]
+    end: DateTime<Utc>,
+}
+
+fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
+    if params.start > params.end {
+        return Some(AppError::BadRequest(
+            "start must not bigger than end".to_string(),
+        ));
+    }
+
+    const MAX_RANGE: i64 = 5;
+    const ONE_YEAR: i64 = 366;
+    if params.end - params.start > Duration::days(MAX_RANGE * ONE_YEAR) {
+        return Some(AppError::BadRequest(format!(
+            "Max timeseries range is {} years",
+            MAX_RANGE
+        )));
+    }
+
+    None
+}
+
+pub(crate) async fn get_timeseries(
+    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    Query(params): Query<TimeseriesQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    if let Some(err) = validate_timeseries_params(&params) {
+        return Err(err);
+    }
+    Ok((
+        StatusCode::OK,
+        Json(
+            ctx.forex_storage
+                .get_historical_range(params.start, params.end)
+                .await
+                .map(|ret| HttpResponse::new(ret))?,
+        ),
+    ))
+}
+// --------- END ---------
