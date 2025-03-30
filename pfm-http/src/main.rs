@@ -1,6 +1,11 @@
 use std::marker::PhantomData;
 
-use axum::{http::StatusCode, response::IntoResponse, routing::get, Json, Router};
+use axum::{
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::get,
+    Json, Router,
+};
 use pfm_core::{forex::ForexError, utils::get_config};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -20,7 +25,14 @@ pub struct HttpResponse<T> {
 }
 
 impl<T> HttpResponse<T> {
-    pub fn new(data: T) -> Self {
+    pub fn Ok(
+        data: T,
+        headers: Option<HeaderMap>,
+    ) -> (StatusCode, Option<HeaderMap>, Json<HttpResponse<T>>) {
+        (StatusCode::OK, headers, Json(Self::new(data)))
+    }
+
+    fn new(data: T) -> Self {
         Self {
             data: Some(data),
             error: None,
@@ -28,7 +40,7 @@ impl<T> HttpResponse<T> {
         }
     }
 
-    pub fn err(error: String) -> Self {
+    fn err(error: String) -> Self {
         Self {
             data: None,
             error: Some(error),

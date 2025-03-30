@@ -111,19 +111,16 @@ pub(crate) async fn convert_handler(
             let to_currency = params.to;
             let ret =
                 service::convert_historical(&ctx.forex_storage, from_money, to_currency, date)
-                    .await
-                    .map(|ret| HttpResponse::new(ret))?;
+                    .await?;
 
-            Ok((StatusCode::OK, Json(ret)))
+            Ok(HttpResponse::Ok(ret, None))
         }
         None => {
             let from_money = Money::from_str(&params.from)?;
             let to_currency = params.to;
-            let ret = service::convert(&ctx.forex_storage, from_money, to_currency)
-                .await
-                .map(|ret| HttpResponse::new(ret))?;
+            let ret = service::convert(&ctx.forex_storage, from_money, to_currency).await?;
 
-            Ok((StatusCode::OK, Json(ret)))
+            Ok(HttpResponse::Ok(ret, None))
         }
     }
 }
@@ -177,24 +174,14 @@ pub(crate) async fn get_rates(
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
         // get historical rates
-        Some(date) => Ok((
-            StatusCode::OK,
-            Json(
-                ctx.forex_storage
-                    .get_historical(date)
-                    .await
-                    .map(|ret| HttpResponse::new(RatesDTO::from(ret)))?,
-            ),
+        Some(date) => Ok(HttpResponse::Ok(
+            RatesDTO::from(ctx.forex_storage.get_historical(date).await?),
+            None,
         )),
         // get latest rates
-        None => Ok((
-            StatusCode::OK,
-            Json(
-                ctx.forex_storage
-                    .get_latest()
-                    .await
-                    .map(|ret| HttpResponse::new(RatesDTO::from(ret)))?,
-            ),
+        None => Ok(HttpResponse::Ok(
+            RatesDTO::from(ctx.forex_storage.get_latest().await?),
+            None,
         )),
     }
 }
@@ -236,14 +223,14 @@ pub(crate) async fn get_timeseries(
     if let Some(err) = validate_timeseries_params(&params) {
         return Err(err);
     }
-    Ok((
-        StatusCode::OK,
-        Json(
-            ctx.forex_storage
-                .get_historical_range(params.start, params.end)
-                .await
-                .map(|ret| HttpResponse::new(ret))?,
-        ),
+    Ok(HttpResponse::Ok(
+        ctx.forex_storage
+            .get_historical_range(params.start, params.end)
+            .await?
+            .into_iter()
+            .map(|rate| RatesDTO::from(rate))
+            .collect::<Vec<RatesDTO>>(),
+        None,
     ))
 }
 // --------- END ---------
