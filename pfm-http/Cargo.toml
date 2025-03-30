@@ -8,6 +8,7 @@ pfm-core ={ path = "../pfm-core" }
 
 tokio = { workspace = true }
 axum = { workspace = true }
+tower = {workspace = true}
 chrono = { workspace = true }
 serde = { workspace = true }
 lazy_static = { workspace = true }

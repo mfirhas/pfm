@@ -1,14 +1,17 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Instant};
 
 use axum::{
-    http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    body::Body,
+    http::{HeaderMap, HeaderValue, Request, StatusCode},
+    middleware::Next,
+    response::{IntoResponse, Response},
     routing::get,
     Json, Router,
 };
 use pfm_core::{forex::ForexError, utils::get_config};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tower::{Layer, ServiceBuilder};
 
 mod handler;
 
@@ -49,6 +52,20 @@ impl<T> HttpResponse<T> {
     }
 }
 
+async fn processing_time(req: Request<Body>, next: Next) -> Response {
+    let start = Instant::now();
+    let mut response = next.run(req).await;
+    let end = start.elapsed().as_millis();
+
+    if let Ok(server_processing_time) = HeaderValue::from_str(&end.to_string()) {
+        response
+            .headers_mut()
+            .insert("Server-Timing", server_processing_time);
+    }
+
+    response
+}
+
 #[tokio::main]
 async fn main() {
     let cfg = get_config::<Config>("HTTP_").expect("failed getting config");
@@ -78,7 +95,8 @@ async fn main() {
     let routes_group = Router::new()
         .nest("/", root)
         .nest("/forex", forex_routes)
-        .with_state(app_ctx);
+        .with_state(app_ctx)
+        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(processing_time)));
 
     let addr = ("127.0.0.1", cfg.http_port);
 
