@@ -1,14 +1,10 @@
 // global.rs contains global variables
 
 use anyhow::anyhow;
-use anyhow::Context;
 use anyhow::Result;
-use configrs::config::Config as config_rs;
 use lazy_static::lazy_static;
 use reqwest::Client;
 use serde::Deserialize;
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::{fmt::Debug, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 
@@ -23,13 +19,6 @@ const ERROR_PREFIX: &str = "[GLOBAL]";
 // 0 = no permissions for group
 // 0 = no permissions for others
 const STORAGE_FS_PERMISSION: u32 = 0o700;
-
-/// path to storage for server-side data.
-/// this will be placed inside $HOME directory
-const STORAGE_FS_DIR_PATH: &str = "/home/mfirhas/pfm/pfm-data";
-
-/// directory name for local development for server-side data, to be placed in workspace root
-const STORAGE_FS_DIR_NAME_DEV: &str = "test_dir";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
 ///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) /////////////////////////////////////
@@ -44,10 +33,6 @@ const CLIENT_STORAGE_FS_DIR_PATH: &str = "TODO";
 /// path to storage for client-side data for development, placed in workspace root
 const CLIENT_STORAGE_FS_DIR_PATH_DEV: &str = "test_dir_client";
 ///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) (END) /////////////////////////////////////
-
-/// .env file for local development, to be placed in workspace root
-/// create this file in workspace root.
-const DEV_ENV_FILE_PATH: &str = ".env";
 
 /// Get instantiated global http client object.
 pub fn http_client() -> Client {
@@ -69,12 +54,36 @@ pub fn client_storage_fs() -> ClientStorageFS {
 }
 
 pub const BASE_CURRENCY: Currency = Currency::USD;
+
 lazy_static! {
     static ref CONFIG: Config = init_config().expect("failed init core config");
     static ref HTTP_CLIENT: Client = init_http_client().expect("failed init core http client");
     static ref STORAGE_FS: StorageFS = init_storage_fs().expect("failed init storage fs");
     static ref CLIENT_STORAGE_FS: ClientStorageFS =
         init_client_storage_fs().expect("failed init client storage fs");
+    /// Directory for server-side storage.
+    /// For local development, using project's workspace root in test_dir/
+    static ref STORAGE_DIR_PATH: PathBuf = {
+        if cfg!(debug_assertions) {
+            let local_dev_path = "test_dir";
+            let workspace_dir = utils::find_workspace_root().expect("init storage dir path error");
+            let path = workspace_dir.join(local_dev_path);
+            return path;
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            panic!("Sorry, development and server on Windows not supported at the moment.");
+        }
+
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        {
+            let dir_name = "pfm";
+            let location = "/var/lib";
+            let storage_dir_path = PathBuf::from(location).join(dir_name);
+            return storage_dir_path;
+        }
+    };
 }
 
 fn init_http_client() -> Result<reqwest::Client, anyhow::Error> {
@@ -126,13 +135,7 @@ impl ServerFS {
 }
 
 fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
-    let root_pb = if cfg!(debug_assertions) {
-        let workspace_dir = utils::find_workspace_root()?;
-        let path = workspace_dir.join(STORAGE_FS_DIR_NAME_DEV);
-        path
-    } else {
-        PathBuf::from(STORAGE_FS_DIR_PATH)
-    };
+    let root_pb = STORAGE_DIR_PATH.clone();
 
     let root = utils::set_root(root_pb, STORAGE_FS_PERMISSION).map_err(|err| {
         anyhow!(
@@ -261,6 +264,7 @@ pub struct Config {
 #[cfg(test)]
 mod global_tests {
     use super::*;
+    use std::{fs, os::unix::fs::PermissionsExt};
 
     #[test]
     fn test_config() {
