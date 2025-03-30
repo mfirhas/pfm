@@ -102,7 +102,7 @@ async fn ping() -> impl IntoResponse {
 }
 
 #[derive(Debug, Error, Serialize)]
-enum AppError {
+pub enum AppError {
     #[error("Invalid input: {0}")]
     BadRequest(String),
 

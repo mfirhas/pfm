@@ -1,12 +1,13 @@
 use std::str::FromStr;
 
 use axum::{
-    extract::{FromRequest, Query, Request, State},
-    http::StatusCode,
+    async_trait,
+    extract::{FromRequestParts, Query, State},
+    http::{request::Parts, StatusCode},
     response::IntoResponse,
     Json,
 };
-use chrono::{DateTime, Duration, NaiveDate, TimeDelta, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use pfm_core::forex::{
     entity::{HistoricalRates, Rates, RatesData, RatesResponse},
     interface::{ForexHistoricalRates, ForexRates, ForexStorage},
@@ -16,6 +17,25 @@ use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 
 use crate::{AppContext, AppError, HttpResponse};
 use pfm_core::forex::service;
+
+/// custom query to handle if query params are missing.
+pub struct CustomQuery<T>(pub T);
+
+#[async_trait]
+impl<S, T> FromRequestParts<S> for CustomQuery<T>
+where
+    T: DeserializeOwned + Send + Sync,
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        Query::<T>::from_request_parts(parts, _state)
+            .await
+            .map(|Query(params)| CustomQuery(params))
+            .map_err(|_| AppError::BadRequest(format!("Missing or invalid query parameters")))
+    }
+}
 
 // deserialize date from YYYY-MM-DD into YYYY-MM-DDThh:mm:ssZ utc
 fn deserialize_optional_date<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
@@ -83,7 +103,7 @@ pub struct ConvertQuery {
 /// query 3(OPTIONAL); `date`(YYYY-MM-DD) for historical convert. e.g. ?date=2020-02-02
 pub(crate) async fn convert_handler(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-    Query(params): Query<ConvertQuery>,
+    CustomQuery(params): CustomQuery<ConvertQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
         Some(date) => {
@@ -153,7 +173,7 @@ impl From<RatesResponse<HistoricalRates>> for RatesDTO {
 /// query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
 pub(crate) async fn get_rates(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-    Query(params): Query<RatesQuery>,
+    CustomQuery(params): CustomQuery<RatesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
         // get historical rates
@@ -211,7 +231,7 @@ fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
 
 pub(crate) async fn get_timeseries(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-    Query(params): Query<TimeseriesQuery>,
+    CustomQuery(params): CustomQuery<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     if let Some(err) = validate_timeseries_params(&params) {
         return Err(err);
