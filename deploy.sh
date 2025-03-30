@@ -46,6 +46,9 @@ echo "Binary $BINARY_NAME updated successfully!"
 
 echo "Restarting service..."
 sudo systemctl restart $BINARY_NAME
+
+echo "$BINARY_NAME status:"
+sudo systemctl status $BINARY_NAME
 EOF
 
 echo "Successfully deployed"
