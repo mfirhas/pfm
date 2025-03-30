@@ -38,9 +38,9 @@ async fn do_fetch_historical_data() {
     let from = start_date;
     tokio::time::sleep(Duration::from_secs(5)).await;
     // let from = Utc.with_ymd_and_hms(2003, 9, 29, 0, 0, 0).unwrap();
-    let to = Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap();
+    let to = Utc.with_ymd_and_hms(2025, 3, 29, 23, 59, 59).unwrap();
     let storage = ForexStorageImpl::new(global::storage_fs());
-    let apiname = ApisName::OpenExchangeRatesAPI;
+    let apiname = ApisName::CurrencyBeaconAPI;
     let forex_api = select_api(apiname);
     let ret = fetch_historical_data(forex_api, storage, from, to).await;
     println!("{:?}", ret);
@@ -65,6 +65,13 @@ fn select_api(apiname: ApisName) -> Apis {
             );
             Apis::OpenExchangeRatesAPI(oxrapi)
         }
+        ApisName::CurrencyBeaconAPI => {
+            let currencybeaconapi = CurrencyBeaconAPI::new(
+                &global::config().forex_currencybeacon_api_key,
+                global::http_client(),
+            );
+            Apis::CurrencyBeacon(currencybeaconapi)
+        }
     }
 }
 
@@ -72,6 +79,7 @@ pub enum ApisName {
     ExchangeAPI,
     CurrencyAPI,
     OpenExchangeRatesAPI,
+    CurrencyBeaconAPI,
 }
 
 #[derive(Clone)]
@@ -79,19 +87,17 @@ pub enum Apis {
     ExchangeAPI(ExchangeAPI),
     CurrencyAPI(CurrencyAPI),
     OpenExchangeRatesAPI(OpenExchangeRatesAPI),
+    CurrencyBeacon(CurrencyBeaconAPI),
 }
 
-fn weekdays(from: DateTime<Utc>, to: DateTime<Utc>) -> Vec<DateTime<Utc>> {
+fn alldays(from: DateTime<Utc>, to: DateTime<Utc>) -> Vec<DateTime<Utc>> {
     let start_date = from;
     let end_date = to;
     let mut dates: Vec<DateTime<Utc>> = vec![];
 
     let mut current_date = start_date;
     while current_date <= end_date {
-        let day = current_date.weekday();
-        if day != Weekday::Sat && day != Weekday::Sun {
-            dates.push(current_date);
-        }
+        dates.push(current_date);
         if let Some(d) = current_date.checked_add_signed(TimeDelta::days(1)) {
             current_date = d;
         } else {
@@ -143,6 +149,22 @@ async fn fetch_historical_data(
             .await;
             ret
         }
+        Apis::CurrencyBeacon(api) => {
+            let quota_remaining = 1000 as u32;
+            let rate_limit = 5;
+            let seconds_per_batch = 5;
+            let ret = fetch_historical_rates_data(
+                api,
+                storage,
+                from,
+                to,
+                quota_remaining,
+                rate_limit,
+                seconds_per_batch,
+            )
+            .await;
+            ret
+        }
         _ => return Err(ForexError::internal_error("not implemented yet")),
     }
 }
@@ -160,27 +182,27 @@ where
     A: ForexHistoricalRates + Clone + Send + Sync + 'static,
     S: ForexStorage + Clone + Send + Sync + 'static,
 {
-    let weekdays = weekdays(from, to);
+    let alldays = alldays(from, to);
     if quota_remaining <= 0 {
         return Err(ForexError::internal_error("no quota remained"));
     }
 
-    let total_requests = std::cmp::min(weekdays.len() as u32, quota_remaining);
+    let total_requests = std::cmp::min(alldays.len() as u32, quota_remaining);
     let sleep = seconds_per_batch as u64;
 
     let mut completed_requests = 0;
-    let mut weekday_index = 0;
+    let mut allday_index = 0;
 
-    while completed_requests < total_requests && weekday_index < weekdays.len() {
+    while completed_requests < total_requests && allday_index < alldays.len() {
         let batch_size = std::cmp::min(total_requests - completed_requests, rate_limit);
-        let batch_size = std::cmp::min(batch_size, weekdays.len() as u32 - weekday_index as u32);
+        let batch_size = std::cmp::min(batch_size, alldays.len() as u32 - allday_index as u32);
 
         let mut handles = Vec::new();
         for _ in 0..batch_size {
             let api_clone = forex_api.clone();
             let storage_clone = storage.clone();
-            let date = weekdays[weekday_index];
-            let index = weekday_index;
+            let date = alldays[allday_index];
+            let index = allday_index;
 
             handles.push(tokio::spawn(async move {
                 let ret = service::poll_historical_rates(
@@ -192,7 +214,7 @@ where
                 .await;
                 println!("{}. Result date {}: {:?}", index, date, ret);
             }));
-            weekday_index += 1;
+            allday_index += 1;
         }
 
         for handle in handles {
