@@ -113,14 +113,14 @@ pub(crate) async fn convert_handler(
                 service::convert_historical(&ctx.forex_storage, from_money, to_currency, date)
                     .await?;
 
-            Ok(HttpResponse::Ok(ret, None))
+            Ok(HttpResponse::ok(ret, None))
         }
         None => {
             let from_money = Money::from_str(&params.from)?;
             let to_currency = params.to;
             let ret = service::convert(&ctx.forex_storage, from_money, to_currency).await?;
 
-            Ok(HttpResponse::Ok(ret, None))
+            Ok(HttpResponse::ok(ret, None))
         }
     }
 }
@@ -174,12 +174,12 @@ pub(crate) async fn get_rates(
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
         // get historical rates
-        Some(date) => Ok(HttpResponse::Ok(
+        Some(date) => Ok(HttpResponse::ok(
             RatesDTO::from(ctx.forex_storage.get_historical(date).await?),
             None,
         )),
         // get latest rates
-        None => Ok(HttpResponse::Ok(
+        None => Ok(HttpResponse::ok(
             RatesDTO::from(ctx.forex_storage.get_latest().await?),
             None,
         )),
@@ -223,7 +223,7 @@ pub(crate) async fn get_timeseries(
     if let Some(err) = validate_timeseries_params(&params) {
         return Err(err);
     }
-    Ok(HttpResponse::Ok(
+    Ok(HttpResponse::ok(
         ctx.forex_storage
             .get_historical_range(params.start, params.end)
             .await?
