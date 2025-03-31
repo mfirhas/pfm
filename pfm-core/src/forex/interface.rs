@@ -205,3 +205,9 @@ pub trait ForexStorage {
         order: Order,
     ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>>;
 }
+
+#[async_trait]
+pub trait ForexStorageDeletion {
+    /// clear all inside forex latest directory except latest one
+    async fn clear_latest(&self) -> ForexResult<()>;
+}

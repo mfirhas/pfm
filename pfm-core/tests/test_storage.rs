@@ -3,7 +3,7 @@ use core::panic;
 use chrono::{TimeDelta, TimeZone, Utc};
 use pfm_core::{
     forex::{
-        interface::{ForexStorage, ForexTimeseriesRates},
+        interface::{ForexStorage, ForexStorageDeletion, ForexTimeseriesRates},
         Money,
     },
     forex_impl::{self, forex_storage::ForexStorageImpl},
@@ -88,4 +88,11 @@ pub async fn test_storage_get_historical_range() {
             panic!("historical range contains date smaller than start date, or bigger than end date: {}",v.data.date);
         }
     }
+}
+
+#[tokio::test]
+pub async fn test_storage_clear_latest() {
+    let storage = ForexStorageImpl::new(global::storage_fs());
+    let ret = storage.clear_latest().await;
+    dbg!(&ret);
 }
