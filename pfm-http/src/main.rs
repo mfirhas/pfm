@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, time::Instant};
+use std::marker::PhantomData;
 
 use axum::{
     body::Body,
@@ -11,7 +11,7 @@ use axum::{
 use pfm_core::{forex::ForexError, utils::get_config};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tower::{Layer, ServiceBuilder};
+use tower::ServiceBuilder;
 
 mod handler;
 
@@ -28,7 +28,7 @@ pub struct HttpResponse<T> {
 }
 
 impl<T> HttpResponse<T> {
-    pub fn Ok(
+    pub fn ok(
         data: T,
         headers: Option<HeaderMap>,
     ) -> (StatusCode, Option<HeaderMap>, Json<HttpResponse<T>>) {
@@ -53,7 +53,7 @@ impl<T> HttpResponse<T> {
 }
 
 async fn processing_time(req: Request<Body>, next: Next) -> Response {
-    let start = Instant::now();
+    let start = tokio::time::Instant::now();
     let mut response = next.run(req).await;
     let end = start.elapsed().as_millis();
 
