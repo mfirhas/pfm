@@ -33,8 +33,10 @@ set -e
 
 echo "Current user: $(whoami)"
 
-echo "Moving current binary to rollback path"
-mv $BINARY_PATH $ROLLBACK_BINARY_PATH
+if [ -f "$BINARY_PATH" ]; then
+    echo "Moving current binary to rollback path"
+    mv $BINARY_PATH $ROLLBACK_BINARY_PATH
+fi
 
 echo "Moving new binary into current binary"
 mv $NEW_BINARY_PATH $BINARY_PATH
