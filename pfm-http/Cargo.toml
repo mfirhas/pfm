@@ -8,6 +8,7 @@ pfm-core ={ path = "../pfm-core" }
 
 tokio = { workspace = true }
 axum = { workspace = true }
+tower = {workspace = true}
 chrono = { workspace = true }
 serde = { workspace = true }
 lazy_static = { workspace = true }
@@ -16,3 +17,4 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 ring = { workspace = true }
 quinn-proto ={ workspace = true}
+async-trait = {workspace = true}

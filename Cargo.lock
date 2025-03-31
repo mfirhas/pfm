@@ -1177,6 +1177,7 @@ name = "pfm-http"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "chrono",
  "configrs",
@@ -1187,6 +1188,7 @@ dependencies = [
  "serde",
  "thiserror 1.0.69",
  "tokio",
+ "tower",
 ]
 
 [[package]]

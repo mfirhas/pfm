@@ -63,7 +63,7 @@ pub async fn test_storage_get_historical_range() {
     let ret = ForexStorage::get_historical_range(&storage, start_date, end_date).await;
     // dbg!(&ret);
     // dbg!(&ret.as_ref().unwrap()[200..205]);
-    let count_years =
+    let count_days =
         |start_date: chrono::DateTime<Utc>, end_date: chrono::DateTime<Utc>| -> usize {
             let mut count = 0 as usize;
             let mut date = start_date;
@@ -80,7 +80,7 @@ pub async fn test_storage_get_historical_range() {
     );
     assert_eq!(
         ret.as_ref().unwrap().len(),
-        count_years(start_date, end_date)
+        count_days(start_date, end_date)
     );
     // assert all data are within date range(inclusive)
     for v in ret.as_ref().unwrap() {

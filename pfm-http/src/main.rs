@@ -1,25 +1,19 @@
-use std::{error::Error, marker::PhantomData, str::FromStr};
+use std::{marker::PhantomData, time::Instant};
 
-use anyhow::anyhow;
 use axum::{
-    extract::{Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::{delete, get, post, put},
+    body::Body,
+    http::{HeaderMap, HeaderValue, Request, StatusCode},
+    middleware::Next,
+    response::{IntoResponse, Response},
+    routing::get,
     Json, Router,
 };
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
-use pfm_core::{
-    forex::{
-        currency::Currency, entity::ConversionResponse, entity::Order, interface::ForexError,
-        interface::ForexHistoricalRates, interface::ForexRates, interface::ForexStorage, Money,
-    },
-    forex_impl::forex_storage::ForexStorageImpl,
-    forex_impl::open_exchange_api::Api,
-    utils::get_config,
-};
-use serde::{Deserialize, Deserializer, Serialize};
+use pfm_core::{forex::ForexError, utils::get_config};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tower::{Layer, ServiceBuilder};
+
+mod handler;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HttpResponse<T> {
@@ -34,7 +28,14 @@ pub struct HttpResponse<T> {
 }
 
 impl<T> HttpResponse<T> {
-    pub fn new(data: T) -> Self {
+    pub fn Ok(
+        data: T,
+        headers: Option<HeaderMap>,
+    ) -> (StatusCode, Option<HeaderMap>, Json<HttpResponse<T>>) {
+        (StatusCode::OK, headers, Json(Self::new(data)))
+    }
+
+    fn new(data: T) -> Self {
         Self {
             data: Some(data),
             error: None,
@@ -42,13 +43,27 @@ impl<T> HttpResponse<T> {
         }
     }
 
-    pub fn err(error: String) -> Self {
+    fn err(error: String) -> Self {
         Self {
             data: None,
             error: Some(error),
             _marker: PhantomData,
         }
     }
+}
+
+async fn processing_time(req: Request<Body>, next: Next) -> Response {
+    let start = Instant::now();
+    let mut response = next.run(req).await;
+    let end = start.elapsed().as_millis();
+
+    if let Ok(server_processing_time) = HeaderValue::from_str(&end.to_string()) {
+        response
+            .headers_mut()
+            .insert("Server-Timing", server_processing_time);
+    }
+
+    response
 }
 
 #[tokio::main]
@@ -73,20 +88,15 @@ async fn main() {
     let root = Router::new().route("/ping", get(ping));
 
     let forex_routes = Router::new()
-        .route(
-            "/convert",
-            get(convert_handler::<Api, Api, ForexStorageImpl>),
-        )
-        .route("/batch-convert", get(batch_convert_handler))
-        .route("/latest", get(get_latest_rates_handler))
-        .route("/historical", get(get_historical_rates_handler))
-        .route("/latest-list", get(get_latest_list_handler))
-        .route("/historical-list", get(get_historical_list_handler));
+        .route("/convert", get(handler::convert_handler))
+        .route("/rates", get(handler::get_rates))
+        .route("/timeseries", get(handler::get_timeseries));
 
     let routes_group = Router::new()
         .nest("/", root)
         .nest("/forex", forex_routes)
-        .with_state(app_ctx);
+        .with_state(app_ctx)
+        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(processing_time)));
 
     let addr = ("127.0.0.1", cfg.http_port);
 
@@ -122,7 +132,7 @@ async fn ping() -> impl IntoResponse {
 }
 
 #[derive(Debug, Error, Serialize)]
-enum AppError {
+pub enum AppError {
     #[error("Invalid input: {0}")]
     BadRequest(String),
 
@@ -150,152 +160,4 @@ impl From<ForexError> for AppError {
             ForexError::InternalError(v) => Self::InternalServerError(v.to_string()),
         }
     }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ConvertQuery {
-    #[serde(rename = "from")]
-    pub from: String,
-
-    #[serde(rename = "to")]
-    pub to: String,
-}
-
-async fn convert_handler<FX, FHX, FS>(
-    State(ctx): State<AppContext<FX, FHX, FS>>,
-    Query(params): Query<ConvertQuery>,
-) -> Result<impl IntoResponse, AppError>
-where
-    FX: ForexRates,
-    FHX: ForexHistoricalRates,
-    FS: ForexStorage,
-{
-    let money = Money::from_str(&params.from)?;
-    let currency = Currency::from_str(&params.to)?;
-    let ret = pfm_core::forex::service::convert(&ctx.forex_storage, money, currency)
-        .await
-        .map(|ret| HttpResponse::new(ret))?;
-
-    Ok((StatusCode::OK, Json(ret)))
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BatchConvertQuery {
-    /// separated by `;`, e.g. ?from=USD 1;USD 1,000;
-    #[serde(deserialize_with = "from_seq")]
-    pub from: Vec<String>,
-
-    pub to: Currency,
-}
-
-fn from_seq<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = <String>::deserialize(deserializer)?;
-
-    s.split(';')
-        .map(|i| String::from_str(i))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(serde::de::Error::custom)
-}
-
-async fn batch_convert_handler<FX, FHX, FS>(
-    State(ctx): State<AppContext<FX, FHX, FS>>,
-    Query(params): Query<BatchConvertQuery>,
-) -> Result<impl IntoResponse, AppError>
-where
-    FX: ForexRates,
-    FHX: ForexHistoricalRates,
-    FS: ForexStorage,
-{
-    let input = {
-        let mut vecs: Vec<Money> = vec![];
-        for x in params.from {
-            let money = Money::from_str(&x)?;
-            vecs.push(money);
-        }
-        vecs
-    };
-
-    let ret = pfm_core::forex::service::batch_convert(&ctx.forex_storage, input, params.to)
-        .await
-        .map(|ret| HttpResponse::new(ret))?;
-
-    Ok((StatusCode::OK, Json(ret)))
-}
-
-async fn get_latest_rates_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-) -> Result<impl IntoResponse, AppError> {
-    Ok((
-        StatusCode::OK,
-        Json(
-            ctx.forex_storage
-                .get_latest()
-                .await
-                .map(|ret| HttpResponse::new(ret))?,
-        ),
-    ))
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct GetHistoricalRatesQuery {
-    date: String,
-}
-
-async fn get_historical_rates_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-    Query(query): Query<GetHistoricalRatesQuery>,
-) -> Result<impl IntoResponse, AppError> {
-    let date = NaiveDate::parse_from_str(&query.date, "%Y-%m-%d").unwrap();
-    let date = NaiveDateTime::new(date, NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-    let date = Utc.from_utc_datetime(&date);
-
-    Ok((
-        StatusCode::OK,
-        Json(
-            ctx.forex_storage
-                .get_historical(date)
-                .await
-                .map(|ret| HttpResponse::new(ret))?,
-        ),
-    ))
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct GetListQuery {
-    page: u32,
-    size: u32,
-    order: Order,
-}
-
-async fn get_latest_list_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-    Query(query): Query<GetListQuery>,
-) -> Result<impl IntoResponse, AppError> {
-    Ok((
-        StatusCode::OK,
-        Json(
-            ctx.forex_storage
-                .get_latest_list(query.page, query.size, query.order)
-                .await
-                .map(|ret| HttpResponse::new(ret))?,
-        ),
-    ))
-}
-
-async fn get_historical_list_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
-    Query(query): Query<GetListQuery>,
-) -> Result<impl IntoResponse, AppError> {
-    Ok((
-        StatusCode::OK,
-        Json(
-            ctx.forex_storage
-                .get_historical_list(query.page, query.size, query.order)
-                .await
-                .map(|ret| HttpResponse::new(ret))?,
-        ),
-    ))
 }

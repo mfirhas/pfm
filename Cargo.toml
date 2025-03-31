@@ -6,6 +6,7 @@ members = ["pfm-core", "pfm-cron", "pfm-http", "pfm-tool"]
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12.15", default-features = false, features = ["rustls-tls", "json"] }
 axum = { version = "0.7" }
+tower = "0.5"
 ring = "0.17.14"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
