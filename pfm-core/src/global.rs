@@ -78,8 +78,11 @@ lazy_static! {
 
         #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
+            let default_location = format!("{}/pfm", dirs::home_dir().expect("failed initializing production pfm data path").to_string_lossy().to_string());
+            // APP_DATA_PATH is set from env var in prod to determine where pfm data to be stored.
+            // set APP_DATA_PATH to path to pfm, e.g. /home/myuser/pfm, or /Users/myuser/pfm
+            let location = std::env::var("APP_DATA_PATH").unwrap_or(default_location);
             let dir_name = "pfm-data";
-            let location = "/var/lib/pfm";
             let storage_dir_path = PathBuf::from(location).join(dir_name);
             return storage_dir_path;
         }

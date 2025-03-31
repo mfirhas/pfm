@@ -35,10 +35,15 @@ async fn main() {
     .await
     .expect("cron registering poll_latest_rates_job");
 
-    let scheduler =
-        job::poll_historical_rates_job(&scheduler, &cron_config, forex_api, forex_storage)
-            .await
-            .expect("cron registering poll_historical_rates_job");
+    let scheduler = job::poll_historical_rates_job(
+        &scheduler,
+        &cron_config,
+        forex_api,
+        forex_storage.clone(),
+        forex_storage,
+    )
+    .await
+    .expect("cron registering poll_historical_rates_job");
     // END
 
     scheduler.start().await.expect("failed starting scheduler");

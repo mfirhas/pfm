@@ -33,14 +33,19 @@ set -e
 
 echo "Current user: $(whoami)"
 
-echo "Moving current binary to rollback path"
-mv $BINARY_PATH $ROLLBACK_BINARY_PATH
+if [ -f "$BINARY_PATH" ]; then
+    echo "Moving current binary to rollback path"
+    mv $BINARY_PATH $ROLLBACK_BINARY_PATH
+fi
 
 echo "Moving new binary into current binary"
 mv $NEW_BINARY_PATH $BINARY_PATH
 
+echo "Change owner to pfm"
+sudo chown pfm:pfm $BINARY_PATH
+
 echo "Set executable of new binary"
-chmod +x $BINARY_PATH
+sudo chmod +x $BINARY_PATH
 
 echo "Binary $BINARY_NAME updated successfully!"
 

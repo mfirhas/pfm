@@ -7,7 +7,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::forex::entity::{HistoricalRates, Order, Rates, RatesList, RatesResponse};
-use crate::forex::interface::{AsInternalError, ForexStorage};
+use crate::forex::interface::{AsInternalError, ForexStorage, ForexStorageDeletion};
 use crate::forex::{Currency, ForexResult};
 use crate::forex::{ForexError, Money};
 use crate::global::StorageFS;
@@ -613,6 +613,54 @@ impl ForexStorageImpl {
         Ok(resp)
     }
 
+    // deletions impls
+    async fn clear_latest(&self) -> ForexResult<()> {
+        let latest_write = self.fs.write().await;
+        let latest_write = latest_write.latest();
+
+        let mut entries = fs::read_dir(latest_write)
+            .await
+            .context("storage clear latest read dir")
+            .as_internal_err()?;
+        let mut files = Vec::new();
+
+        // Collect all files with filenames
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .context("storage clear latest read dir")
+            .as_internal_err()?
+        {
+            let metadata = entry
+                .metadata()
+                .await
+                .context("storage clear latest read dir")
+                .as_internal_err()?;
+            if metadata.is_file() {
+                let filename = entry.file_name().to_string_lossy().into_owned();
+                files.push((filename, entry));
+            }
+        }
+
+        // Sort files by filename (ascending order)
+        files.sort_by(|a, b| a.0.cmp(&b.0));
+
+        // Keep only the latest (last in sorted order), delete the rest
+        if let Some((latest_filename, _)) = files.last() {
+            println!("Keeping: {}", latest_filename);
+        }
+
+        for (filename, entry) in files.iter().take(files.len().saturating_sub(1)) {
+            println!("Deleting: {}", filename);
+            fs::remove_file(entry.path())
+                .await
+                .context("storage clear latest read dir")
+                .as_internal_err()?;
+        }
+
+        Ok(())
+    }
+
     fn paginate_rates_list<T>(rates: &[T], page: u32, size: u32) -> RatesList<T>
     where
         T: Clone,
@@ -828,5 +876,12 @@ impl ForexStorage for ForexStorageImpl {
         order: Order,
     ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>> {
         self.get_historical_list(page, size, order).await
+    }
+}
+
+#[async_trait]
+impl ForexStorageDeletion for ForexStorageImpl {
+    async fn clear_latest(&self) -> ForexResult<()> {
+        self.clear_latest().await
     }
 }

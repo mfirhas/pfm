@@ -38,7 +38,7 @@ async fn do_fetch_historical_data() {
     let from = start_date;
     tokio::time::sleep(Duration::from_secs(5)).await;
     // let from = Utc.with_ymd_and_hms(2003, 9, 29, 0, 0, 0).unwrap();
-    let to = Utc.with_ymd_and_hms(2025, 3, 29, 23, 59, 59).unwrap();
+    let to = Utc.with_ymd_and_hms(2025, 3, 30, 23, 59, 59).unwrap();
     let storage = ForexStorageImpl::new(global::storage_fs());
     let apiname = ApisName::CurrencyBeaconAPI;
     let forex_api = select_api(apiname);

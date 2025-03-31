@@ -3,7 +3,8 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, TimeDelta, Utc};
 use pfm_core::{
     forex::{
-        self, interface::ForexHistoricalRates, interface::ForexRates, interface::ForexStorage,
+        self,
+        interface::{ForexHistoricalRates, ForexRates, ForexStorage, ForexStorageDeletion},
         Currency,
     },
     global,
@@ -33,6 +34,7 @@ where
 
     let latest_rates_job_id = latest_rates_job.guid();
     if !cron_cfg.cron_enable_poll_rates {
+        println!("cron poll_latest_rates_job is disabled, removing from job scheduler");
         scheduler
             .remove(&latest_rates_job_id)
             .await
@@ -40,6 +42,7 @@ where
         return Ok(scheduler);
     }
 
+    println!("cron poll_latest_rates_job add into job scheduler");
     scheduler
         .add(latest_rates_job)
         .await
@@ -48,19 +51,22 @@ where
 }
 
 async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, base: Currency) {
+    println!("cron job poll_latest_rates_job invoked");
     let _ = forex::service::poll_rates(&fx, &fs, base).await;
 }
 
-/// run at every 01:00 AM UTC
-pub(crate) async fn poll_historical_rates_job<'a, API, STORAGE>(
+/// run at every 01:10 AM UTC
+pub(crate) async fn poll_historical_rates_job<'a, API, STORAGE, STORAGE_DELETION>(
     scheduler: &'a JobScheduler,
     cron_cfg: &Config,
     forex_api: API,
     forex_storage: STORAGE,
+    forex_storage_deletion: STORAGE_DELETION,
 ) -> Result<&'a JobScheduler, anyhow::Error>
 where
     API: ForexHistoricalRates + Clone + Send + Sync + 'static,
     STORAGE: ForexStorage + Clone + Send + Sync + 'static,
+    STORAGE_DELETION: ForexStorageDeletion + Clone + Send + Sync + 'static,
 {
     let historical_rates_job = Job::new_async(
         &cron_cfg.crontab_poll_historical_rates,
@@ -71,6 +77,7 @@ where
             Box::pin(poll_historical_rates_handler(
                 forex_api.clone(),
                 forex_storage.clone(),
+                forex_storage_deletion.clone(),
                 date,
                 global::BASE_CURRENCY,
             ))
@@ -80,6 +87,7 @@ where
 
     let historical_rates_job_id = historical_rates_job.guid();
     if !cron_cfg.cron_enable_poll_historical_rates {
+        println!("cron poll_historical_rates_job is disabled, removing from job scheduler");
         scheduler
             .remove(&historical_rates_job_id)
             .await
@@ -87,6 +95,7 @@ where
         return Ok(scheduler);
     }
 
+    println!("cron poll_historical_rates_job add into job scheduler");
     scheduler
         .add(historical_rates_job)
         .await
@@ -97,9 +106,12 @@ where
 async fn poll_historical_rates_handler(
     fx: impl ForexHistoricalRates,
     fs: impl ForexStorage,
+    fs_deletion: impl ForexStorageDeletion,
     date: DateTime<Utc>,
     base: Currency,
 ) {
+    println!("cron job poll_historical_rates_job invoked");
+    let _ = fs_deletion.clear_latest().await;
     let _ = forex::service::poll_historical_rates(&fx, &fs, date, base).await;
 }
 // ----------------------------- END -----------------------------
