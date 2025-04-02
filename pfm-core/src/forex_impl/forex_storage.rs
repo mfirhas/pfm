@@ -24,7 +24,7 @@ const LATEST_FILENAME_FORMAT: &str = "latest-{YYYY}-{MM}-{DD}T{hh}:{mm}:{ss}Z.js
 
 const HISTORICAL_FILENAME_FORMAT: &str = "historical-{YYYY}-{MM}-{DD}Z.json";
 
-const FILE_PERMISSION: u32 = 0o600;
+const FILE_PERMISSION: u32 = 0o640;
 
 #[derive(Clone)]
 pub struct ForexStorageImpl {
@@ -37,7 +37,7 @@ impl ForexStorageImpl {
     }
 
     async fn set_permission(pathbuf: &PathBuf) -> ForexResult<()> {
-        // Set permissions to 600 (owner read/write only)
+        // Set permissions to 640 (owner read/write only)
         let mut perms = fs::metadata(&pathbuf)
             .await
             .context("forex storage read metadata")

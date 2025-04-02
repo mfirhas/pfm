@@ -18,7 +18,7 @@ const ERROR_PREFIX: &str = "[GLOBAL]";
 // 7 = read (4) + write (2) + execute (1) for owner
 // 0 = no permissions for group
 // 0 = no permissions for others
-const STORAGE_FS_PERMISSION: u32 = 0o700;
+const STORAGE_FS_PERMISSION: u32 = 0o750;
 ///////////////////////////////////// STORAGE FILESYSTEM FOR SERVER (END) /////////////////////////////////////
 
 ///////////////////////////////////// STORAGE FILESYSTEM FOR CLIENT(CLI) /////////////////////////////////////
