@@ -39,6 +39,7 @@ fi
 
 echo "Changing owner of $PFM_DATA"
 sudo chown pfm:pfm $PFM_DATA
+sudo chmod -R 750 $PFM_DATA
 
 EOF
 
