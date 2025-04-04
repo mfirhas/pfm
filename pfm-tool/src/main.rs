@@ -1,6 +1,6 @@
 use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Utc, Weekday};
 use pfm_core::forex::interface::{ForexHistoricalRates, ForexStorage, ForexTimeseriesRates};
-use pfm_core::forex::{service, ForexError};
+use pfm_core::forex::{service, Currency, ForexError, Money};
 use pfm_core::forex_impl::forex_storage::ForexStorageImpl;
 use pfm_core::global;
 use pfm_core::{
@@ -9,6 +9,9 @@ use pfm_core::{
     forex_impl::exchange_api::Api as ExchangeAPI,
     forex_impl::open_exchange_api::Api as OpenExchangeRatesAPI,
 };
+use rust_decimal_macros::dec;
+use std::collections::HashMap;
+use std::path::Path;
 use std::time::Duration;
 
 #[tokio::main]
@@ -18,6 +21,9 @@ async fn main() {
 
     // fetch timeseries data and store them
     // do_fetch_timeseries_and_store().await;
+
+    // read csv data of crypto prices
+    // do_update_crypto_data().await;
 }
 
 async fn do_fetch_historical_data() {
@@ -296,4 +302,159 @@ fn split_date_range_yearly(
     }
 
     ranges
+}
+
+// csv parser
+// Parsing data from coinmarketcap.com
+// This will parse the rates data from csv and convert into (date, Vec<Money>)
+use rust_decimal::Decimal;
+use serde::Deserialize;
+use std::error::Error;
+use std::fs::{self, File};
+use std::io::BufReader;
+
+#[derive(Debug, Deserialize)]
+struct CryptoRecord {
+    #[serde(rename = "timeOpen")]
+    time_open: String,
+    #[serde(rename = "timeClose")]
+    time_close: String,
+    #[serde(rename = "timeHigh")]
+    time_high: String,
+    #[serde(rename = "timeLow")]
+    time_low: String,
+    name: String,
+    open: Decimal,
+    high: Decimal,
+    low: Decimal,
+    close: Decimal,
+    volume: Decimal,
+    marketCap: Decimal,
+    timestamp: String,
+}
+
+fn read_csv(
+    currency: Currency,
+    file_path: &str,
+) -> Result<HashMap<(Currency, DateTime<Utc>), Decimal>, Box<dyn Error>> {
+    let file = File::open(file_path)?;
+    let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(b';')
+        .from_reader(BufReader::new(file));
+
+    let mut ret: Vec<((Currency, DateTime<Utc>), Decimal)> = vec![];
+    for result in rdr.deserialize() {
+        let record: CryptoRecord = result?;
+        let date = record
+            .timestamp
+            .parse::<DateTime<Utc>>()?
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string()
+            .parse()?;
+        let usd_crypto_rate = dec!(1) / record.close;
+        let data = ((currency, date), usd_crypto_rate);
+        ret.push(data);
+    }
+
+    let map = ret.into_iter().collect();
+    Ok(map)
+}
+
+fn iterate_and_parse(
+    currency: Currency,
+    dir: impl AsRef<Path>,
+) -> Result<HashMap<(Currency, DateTime<Utc>), Decimal>, Box<dyn Error>> {
+    let mut aggregated_data = HashMap::new();
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() {
+            match read_csv(currency, path.to_str().ok_or("Invalid path")?) {
+                Ok(data) => aggregated_data.extend(data),
+                Err(e) => eprintln!("Failed to read {:?}: {}", path, e),
+            }
+        }
+    }
+
+    Ok(aggregated_data)
+}
+
+async fn do_update_crypto_data() {
+    let forex_storage = ForexStorageImpl::new(global::storage_fs());
+    let start_date = Utc.with_ymd_and_hms(2010, 1, 1, 0, 0, 0).unwrap();
+    let end_date = Utc.with_ymd_and_hms(2025, 4, 2, 23, 59, 59).unwrap();
+
+    let csv_btc = (
+        Currency::BTC,
+        "/Users/mfirhas/pfm_backup/crypto_prices_history/btc",
+    );
+    let csv_eth = (
+        Currency::ETH,
+        "/Users/mfirhas/pfm_backup/crypto_prices_history/eth",
+    );
+    let csv_sol = (
+        Currency::SOL,
+        "/Users/mfirhas/pfm_backup/crypto_prices_history/sol",
+    );
+    let csv_xrp = (
+        Currency::XRP,
+        "/Users/mfirhas/pfm_backup/crypto_prices_history/xrp",
+    );
+    let csv_ada = (
+        Currency::ADA,
+        "/Users/mfirhas/pfm_backup/crypto_prices_history/ada",
+    );
+
+    let mut crypto_data = HashMap::new();
+    let btc_data = iterate_and_parse(csv_btc.0, csv_btc.1).unwrap();
+    let eth_data = iterate_and_parse(csv_eth.0, csv_eth.1).unwrap();
+    let sol_data = iterate_and_parse(csv_sol.0, csv_sol.1).unwrap();
+    let xrp_data = iterate_and_parse(csv_xrp.0, csv_xrp.1).unwrap();
+    let ada_data = iterate_and_parse(csv_ada.0, csv_ada.1).unwrap();
+    crypto_data.extend(btc_data);
+    crypto_data.extend(eth_data);
+    crypto_data.extend(sol_data);
+    crypto_data.extend(xrp_data);
+    crypto_data.extend(ada_data);
+
+    let mut ret = ForexStorage::get_historical_range(&forex_storage, start_date, end_date)
+        .await
+        .unwrap();
+    for rate in ret.iter_mut() {
+        if rate.data.rates.btc.is_zero() {
+            rate.data.rates.btc = *crypto_data
+                .get(&(Currency::BTC, rate.data.date))
+                .unwrap_or(&dec!(0));
+        }
+
+        if rate.data.rates.eth.is_zero() {
+            rate.data.rates.eth = *crypto_data
+                .get(&(Currency::ETH, rate.data.date))
+                .unwrap_or(&dec!(0));
+        }
+
+        if rate.data.rates.sol.is_zero() {
+            rate.data.rates.sol = *crypto_data
+                .get(&(Currency::SOL, rate.data.date))
+                .unwrap_or(&dec!(0));
+        }
+
+        if rate.data.rates.xrp.is_zero() {
+            rate.data.rates.xrp = *crypto_data
+                .get(&(Currency::XRP, rate.data.date))
+                .unwrap_or(&dec!(0));
+        }
+
+        if rate.data.rates.ada.is_zero() {
+            rate.data.rates.ada = *crypto_data
+                .get(&(Currency::ADA, rate.data.date))
+                .unwrap_or(&dec!(0));
+        }
+
+        ForexStorage::insert_historical(&forex_storage, rate.data.date, &rate)
+            .await
+            .unwrap();
+    }
 }
