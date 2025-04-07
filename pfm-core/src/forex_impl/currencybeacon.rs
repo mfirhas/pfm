@@ -2,12 +2,16 @@ use std::{collections::HashMap, str::FromStr};
 
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
+use rust_decimal_macros::dec;
 
-use crate::forex::{
-    entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-    interface::{AsInternalError, ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
-    Currency, ForexError, ForexResult,
+use crate::{
+    forex::{
+        entity::{HistoricalRates, Rates, RatesData, RatesResponse},
+        interface::{AsInternalError, ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
+        Currency, ForexError, ForexResult, Money,
+    },
+    global::{self, BASE_CURRENCY},
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -42,12 +46,156 @@ impl Api {
             client: http_client,
         }
     }
+
+    /// currencybeacon doesn't provide price for Solana, so fetch it from other source instead.
+
+    /// fetch from twelvedata.com /exchange_rate
+    async fn latest_solana(&self, base: Currency) -> ForexResult<Decimal> {
+        const TWELVEDATA_LATEST_ENDPOINT: &str = "https://api.twelvedata.com/exchange_rate";
+        let api_key = &global::config().forex_twelvedata_api_key;
+        let symbol = format!("{}/SOL", base);
+        let params = [("apikey", api_key.as_str()), ("symbol", &symbol)];
+
+        #[derive(Debug, Serialize, Deserialize)]
+        struct SolanaResponse {
+            symbol: String,
+            rate: Decimal,
+            timestamp: i64,
+        }
+
+        let ret_text = global::http_client()
+            .get(TWELVEDATA_LATEST_ENDPOINT)
+            .query(&params)
+            .send()
+            .await
+            .context("currencybeacon twelvedata latest solana invoking api")
+            .as_internal_err()?
+            .text()
+            .await
+            .context("currencybeacon twelvedata latest solana string response")
+            .as_internal_err()?;
+
+        let ret: SolanaResponse = serde_json::from_str(&ret_text)
+            .map_err(|err| {
+                anyhow!(
+                    "currencybeacon twelvedata parsing latest json: {}, err: {}",
+                    &ret_text,
+                    err
+                )
+            })
+            .as_internal_err()?;
+
+        Ok(ret.rate)
+    }
+
+    /// fetch from twelvedata.com /time_series
+    async fn historical_solana(&self, base: Currency, date: DateTime<Utc>) -> ForexResult<Decimal> {
+        const TWELVEDATA_TIMESERIES_ENDPOINT: &str = "https://api.twelvedata.com/time_series";
+        let api_key = &global::config().forex_twelvedata_api_key;
+        // symbol for time_series endpoint doesn't provide USD/BTC, use this instead and calculate from it.
+        let symbol = format!("SOL/{}", base);
+        let date = date.format("%Y-%m-%d").to_string();
+        let params = [
+            ("apikey", api_key.as_str()),
+            ("symbol", &symbol),
+            ("interval", "1day"),
+            ("date", date.as_str()),
+        ];
+
+        #[derive(Debug, Serialize, Deserialize)]
+        struct SolanaTimeseriesResponse {
+            values: Vec<PriceData>,
+        }
+
+        #[derive(Debug, Serialize, Deserialize)]
+        struct PriceData {
+            datetime: String,
+            open: Decimal,
+            high: Decimal,
+            low: Decimal,
+            close: Decimal,
+        }
+
+        let ret_text = global::http_client()
+            .get(TWELVEDATA_TIMESERIES_ENDPOINT)
+            .query(&params)
+            .send()
+            .await
+            .context("currencybeacon twelvedata historical solana invoking api")
+            .as_internal_err()?
+            .text()
+            .await
+            .context("currencybeacon twelvedata historical solana string response")
+            .as_internal_err()?;
+
+        let ret: SolanaTimeseriesResponse = serde_json::from_str(&ret_text)
+            .map_err(|err| {
+                anyhow!(
+                    "currencybeacon twelvedata parsing historical json: {}, err: {}",
+                    &ret_text,
+                    err
+                )
+            })
+            .as_internal_err()?;
+
+        if ret.values.is_empty() {
+            return Err(ForexError::internal_error(
+                "currencybeacon twelvedata historical returned price is empty",
+            ));
+        } else {
+            let price_data = &ret.values[0];
+            if &price_data.datetime != &date {
+                return Err(ForexError::internal_error(&format!("currencybeacon twelvedata historical returned mismatch date, expected: {}, got: {}", &date, &price_data.datetime)));
+            }
+
+            // rate is for SOL/base, so to get 1 base = X SOL, divide 1 with SOL price
+            let usd_sol = dec!(1).checked_div(price_data.close).unwrap_or_default();
+
+            Ok(usd_sol)
+        }
+    }
 }
 
-impl TryFrom<Response> for RatesResponse<Rates> {
+#[cfg(test)]
+mod api_tests {
+    use chrono::{TimeZone, Utc};
+
+    use crate::{forex::Currency, global};
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_solana_latest_price() {
+        let base = Currency::USD;
+        let api = super::Api {
+            key: &global::config().forex_twelvedata_api_key,
+            client: global::http_client(),
+        };
+
+        let ret = api.latest_solana(base).await;
+        dbg!(&ret);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_solana_historical_price() {
+        let base = Currency::USD;
+        let api = super::Api {
+            key: &global::config().forex_twelvedata_api_key,
+            client: global::http_client(),
+        };
+        let date = Utc.with_ymd_and_hms(2022, 8, 1, 0, 0, 0).unwrap();
+
+        let ret = api.historical_solana(base, date).await;
+        dbg!(&ret);
+    }
+}
+
+impl TryFrom<(Response, Decimal)> for RatesResponse<Rates> {
     type Error = ForexError;
 
-    fn try_from(value: Response) -> Result<Self, Self::Error> {
+    fn try_from(
+        (value, twelvedata_solana_price): (Response, Decimal),
+    ) -> Result<Self, Self::Error> {
         let date = value
             .response
             .date
@@ -58,6 +206,18 @@ impl TryFrom<Response> for RatesResponse<Rates> {
         let base = Currency::from_str(&value.response.base.as_str())
             .context("currencybeacon parse base currency")
             .as_internal_err()?;
+
+        // check solana price if exist, else use twelvedata price
+        let solana_price = match value.response.rates.sol {
+            Some(currencybeacon_solana_price) => {
+                if currencybeacon_solana_price.is_zero() {
+                    twelvedata_solana_price
+                } else {
+                    currencybeacon_solana_price
+                }
+            }
+            None => twelvedata_solana_price,
+        };
 
         let rates = Rates {
             latest_update: date,
@@ -88,7 +248,7 @@ impl TryFrom<Response> for RatesResponse<Rates> {
                 xpt: value.response.rates.xpt.unwrap_or_default(),
                 btc: value.response.rates.btc.unwrap_or_default(),
                 eth: value.response.rates.eth.unwrap_or_default(),
-                sol: value.response.rates.sol.unwrap_or_default(),
+                sol: solana_price,
                 xrp: value.response.rates.xrp.unwrap_or_default(),
                 ada: value.response.rates.ada.unwrap_or_default(),
             },
@@ -98,10 +258,12 @@ impl TryFrom<Response> for RatesResponse<Rates> {
     }
 }
 
-impl TryFrom<Response> for RatesResponse<HistoricalRates> {
+impl TryFrom<(Response, Decimal)> for RatesResponse<HistoricalRates> {
     type Error = ForexError;
 
-    fn try_from(value: Response) -> Result<Self, Self::Error> {
+    fn try_from(
+        (value, twelvedata_solana_price): (Response, Decimal),
+    ) -> Result<Self, Self::Error> {
         let date_time_str = format!("{}{}", value.response.date, END_OF_DAY_HOUR);
         let date = date_time_str
             .parse::<DateTime<Utc>>()
@@ -111,6 +273,18 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
         let base = Currency::from_str(&value.response.base.as_str())
             .context("currencybeacon parse base currency")
             .as_internal_err()?;
+
+        // check solana price if exist, else use twelvedata price
+        let solana_price = match value.response.rates.sol {
+            Some(currencybeacon_solana_price) => {
+                if currencybeacon_solana_price.is_zero() {
+                    twelvedata_solana_price
+                } else {
+                    currencybeacon_solana_price
+                }
+            }
+            None => twelvedata_solana_price,
+        };
 
         let historical_rates = HistoricalRates {
             date,
@@ -141,7 +315,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
                 xpt: value.response.rates.xpt.unwrap_or_default(),
                 btc: value.response.rates.btc.unwrap_or_default(),
                 eth: value.response.rates.eth.unwrap_or_default(),
-                sol: value.response.rates.sol.unwrap_or_default(),
+                sol: solana_price,
                 xrp: value.response.rates.xrp.unwrap_or_default(),
                 ada: value.response.rates.ada.unwrap_or_default(),
             },
@@ -428,6 +602,10 @@ impl ForexRates for Api {
             })
             .as_internal_err()?;
 
+        // solana price
+        let solana_price = self.latest_solana(base).await.unwrap_or_default();
+        let resp = (resp, solana_price);
+
         Ok(resp.try_into()?)
     }
 }
@@ -470,6 +648,10 @@ impl ForexHistoricalRates for Api {
                 )
             })
             .as_internal_err()?;
+
+        // solana price
+        let solana_price = self.historical_solana(base, date).await.unwrap_or_default();
+        let resp = (resp, solana_price);
 
         Ok(resp.try_into()?)
     }
