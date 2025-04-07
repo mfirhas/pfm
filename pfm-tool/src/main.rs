@@ -351,7 +351,7 @@ fn read_csv(
             .format("%Y-%m-%dT%H:%M:%SZ")
             .to_string()
             .parse()?;
-        let usd_crypto_rate = dec!(1) / record.close;
+        let usd_crypto_rate = dec!(1).checked_div(record.close).unwrap_or_default();
         let data = ((currency, date), usd_crypto_rate);
         ret.push(data);
     }
