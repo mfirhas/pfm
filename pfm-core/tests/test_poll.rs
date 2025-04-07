@@ -130,7 +130,7 @@ pub async fn test_currencybeacon_historical_rates() {
         global::http_client(),
     );
     let storage = forex_storage::ForexStorageImpl::new(global::storage_fs());
-    let date = Utc.with_ymd_and_hms(2007, 6, 6, 0, 0, 0).unwrap();
+    let date = Utc.with_ymd_and_hms(2022, 6, 6, 0, 0, 0).unwrap();
     let ret = poll_historical_rates(&api, &storage, date, global::BASE_CURRENCY).await;
     dbg!(&ret);
 
