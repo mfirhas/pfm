@@ -28,6 +28,9 @@ async fn main() {
 
     // calculate checksum for files inside pfm/pfm-data/historical/historical-...json and store the checksums into pfm/checksums/...
     // do_calculate_and_store_checksum();
+
+    // check checksum
+    // do_compare_checksums();
 }
 
 async fn do_fetch_historical_data() {
@@ -533,4 +536,67 @@ fn generate_checksum(path: impl AsRef<Path>) -> Result<String, std::io::Error> {
     hasher.update(&data);
     let hash = hasher.finalize();
     Ok(format!("{:x}", hash))
+}
+
+fn do_compare_checksums() {
+    let new_checksum_path = PathBuf::from("/Users/mfirhas/pfm/checksums/historical");
+    let prev_checksum_path = PathBuf::from("/Users/mfirhas/pfm_backup/pfm/checksums/historical");
+    let ret = compare_checksums(&new_checksum_path, &prev_checksum_path);
+    println!("Result: {:?}", &ret);
+    if ret.is_empty() {
+        println!(
+            "All new checksums in {:?} are equal to previous checksums in {:?}",
+            &new_checksum_path.as_path(),
+            &prev_checksum_path.as_path()
+        );
+    }
+}
+
+fn compare_checksums(new_checksums: &PathBuf, prev_checksums: &PathBuf) -> Vec<String> {
+    // contains path of different checksums
+    let mut results: Vec<String> = vec![];
+    let mut new_checksums_entries = std::fs::read_dir(new_checksums).unwrap();
+    let mut index = 0;
+    while let Some(year_dir) = new_checksums_entries.next() {
+        let year_dir_path = year_dir.unwrap().path();
+        if !year_dir_path.is_dir() {
+            panic!("{:?} is not a directory", &year_dir_path.as_path());
+        }
+        let mut year_dir_entries = std::fs::read_dir(&year_dir_path).unwrap();
+        while let Some(file) = year_dir_entries.next() {
+            let file_path = file.unwrap().path();
+            if !file_path.is_file() {
+                panic!("not a file");
+            }
+            let content = std::fs::read_to_string(&file_path).unwrap();
+            let checksum_data: ChecksumData = serde_json::from_str(&content).unwrap();
+
+            let prev_checksum_file_path = prev_checksums
+                .join(&year_dir_path.file_stem().unwrap().to_str().unwrap())
+                .join(&file_path.file_name().unwrap().to_str().unwrap());
+            // println!("-->{:?}", &prev_checksum_file_path.as_path());
+            let prev_content = std::fs::read_to_string(&prev_checksum_file_path).unwrap();
+            let prev_checksum_data: ChecksumData = serde_json::from_str(&prev_content).unwrap();
+
+            println!(
+                "Comparing {:?} \nwith \n{:?}",
+                &file_path.as_path(),
+                &prev_checksum_file_path.as_path()
+            );
+
+            println!(
+                "New checksum: {:?} \nPrev checksum: {:?}",
+                &checksum_data, &prev_checksum_data
+            );
+            if checksum_data.checksum != prev_checksum_data.checksum {
+                results.push(file_path.to_string_lossy().to_string());
+            }
+
+            index += 1;
+        }
+    }
+
+    println!("Total checked: {}", index);
+
+    results
 }
