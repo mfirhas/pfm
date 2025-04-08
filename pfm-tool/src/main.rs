@@ -1,4 +1,4 @@
-use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Utc, Weekday};
+use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Timelike, Utc, Weekday};
 use pfm_core::forex::interface::{ForexHistoricalRates, ForexStorage, ForexTimeseriesRates};
 use pfm_core::forex::{service, Currency, ForexError, Money};
 use pfm_core::forex_impl::forex_storage::ForexStorageImpl;
@@ -10,8 +10,9 @@ use pfm_core::{
     forex_impl::open_exchange_api::Api as OpenExchangeRatesAPI,
 };
 use rust_decimal_macros::dec;
+use sha2::Digest;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 #[tokio::main]
@@ -24,6 +25,9 @@ async fn main() {
 
     // read csv data of crypto prices
     // do_update_crypto_data().await;
+
+    // calculate checksum for files inside pfm/pfm-data/historical/historical-...json and store the checksums into pfm/checksums/...
+    // do_calculate_and_store_checksum();
 }
 
 async fn do_fetch_historical_data() {
@@ -308,10 +312,10 @@ fn split_date_range_yearly(
 // Parsing data from coinmarketcap.com
 // This will parse the rates data from csv and convert into (date, Vec<Money>)
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::{self, File};
-use std::io::BufReader;
+use std::io::{BufReader, Write};
 
 #[derive(Debug, Deserialize)]
 struct CryptoRecord {
@@ -457,4 +461,76 @@ async fn do_update_crypto_data() {
             .await
             .unwrap();
     }
+}
+
+fn do_calculate_and_store_checksum() {
+    let pfm_data_historical_path = "/Users/mfirhas/pfm/pfm-data/historical";
+    let historical_dir = PathBuf::from(pfm_data_historical_path);
+    let pfm_data_checksums_path = "/Users/mfirhas/pfm/checksums/historical";
+    let checksums_dir = PathBuf::from(pfm_data_checksums_path);
+    let mut entries = std::fs::read_dir(historical_dir).unwrap();
+    let mut index = 0;
+    // loop the historical dir
+    while let Some(entry) = entries.next() {
+        let year_dir = entry.unwrap().path();
+        if !year_dir.is_dir() {
+            panic!("{:?} is not a directory", &year_dir.as_path());
+        }
+
+        // loop the year dir
+        let mut year_dir_entries = std::fs::read_dir(&year_dir).unwrap();
+        while let Some(files) = year_dir_entries.next() {
+            let file = files.unwrap().path();
+            if !file.is_file() {
+                panic!("{:?} is not a file", &file.as_path());
+            }
+            // generate checksum
+            let checksum = generate_checksum(&file).unwrap();
+            let checksum_filename = format!(
+                "{}_checksum.json",
+                &file.file_stem().unwrap().to_string_lossy().to_string()
+            );
+            let checksum_file_dir_path =
+                checksums_dir.join(&year_dir.file_stem().unwrap().to_string_lossy().to_string());
+            std::fs::create_dir_all(&checksum_file_dir_path).unwrap();
+            let checksum_file_path = checksum_file_dir_path.join(checksum_filename);
+            let checksum_data = ChecksumData {
+                checksum_date: Utc::now().with_nanosecond(0).unwrap(),
+                file: file.file_name().unwrap().to_string_lossy().to_string(),
+                checksum,
+            };
+
+            println!(
+                "{}. Checksum Data: {:?}, \nChecksum filepath: {:?}",
+                index,
+                &checksum_data,
+                &checksum_file_path.as_path()
+            );
+
+            // store the checksum data
+            let string_data = serde_json::to_string_pretty(&checksum_data).unwrap();
+            std::fs::File::create(&checksum_file_path)
+                .unwrap()
+                .write_all(string_data.as_bytes())
+                .unwrap();
+
+            index += 1;
+        }
+    }
+    println!("Total files processed: {}", index);
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ChecksumData {
+    checksum_date: DateTime<Utc>,
+    file: String,
+    checksum: String,
+}
+
+fn generate_checksum(path: impl AsRef<Path>) -> Result<String, std::io::Error> {
+    let data = fs::read(path)?;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(&data);
+    let hash = hasher.finalize();
+    Ok(format!("{:x}", hash))
 }
