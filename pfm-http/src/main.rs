@@ -55,12 +55,14 @@ impl<T> HttpResponse<T> {
 async fn processing_time(req: Request<Body>, next: Next) -> Response {
     let start = tokio::time::Instant::now();
     let mut response = next.run(req).await;
-    let end = start.elapsed().as_millis();
+    let duration_ms = start.elapsed().as_millis();
 
-    if let Ok(server_processing_time) = HeaderValue::from_str(&end.to_string()) {
+    let value = format!("pfm-be;dur={}", duration_ms);
+
+    if let Ok(server_timing_value) = HeaderValue::from_str(&value) {
         response
             .headers_mut()
-            .insert("Server-Timing", server_processing_time);
+            .insert("Server-Timing", server_timing_value);
     }
 
     response
@@ -89,8 +91,8 @@ async fn main() {
 
     let forex_routes = Router::new()
         .route("/convert", get(handler::convert_handler))
-        .route("/rates", get(handler::get_rates))
-        .route("/timeseries", get(handler::get_timeseries));
+        .route("/rates", get(handler::get_rates_handler))
+        .route("/timeseries", get(handler::get_timeseries_handler));
 
     let routes_group = Router::new()
         .nest("/", root)

@@ -168,7 +168,7 @@ impl From<RatesResponse<HistoricalRates>> for RatesDTO {
 /// GET /forex/rates
 /// get latest and historical rates
 /// query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
-pub(crate) async fn get_rates(
+pub(crate) async fn get_rates_handler(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
     CustomQuery(params): CustomQuery<RatesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -216,7 +216,7 @@ fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
     None
 }
 
-pub(crate) async fn get_timeseries(
+pub(crate) async fn get_timeseries_handler(
     State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
     CustomQuery(params): CustomQuery<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
