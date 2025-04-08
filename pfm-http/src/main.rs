@@ -89,8 +89,8 @@ async fn main() {
 
     let forex_routes = Router::new()
         .route("/convert", get(handler::convert_handler))
-        .route("/rates", get(handler::get_rates))
-        .route("/timeseries", get(handler::get_timeseries));
+        .route("/rates", get(handler::get_rates_handler))
+        .route("/timeseries", get(handler::get_timeseries_handler));
 
     let routes_group = Router::new()
         .nest("/", root)
