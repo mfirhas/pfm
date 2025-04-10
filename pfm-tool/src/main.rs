@@ -476,16 +476,22 @@ fn do_calculate_and_store_checksum() {
     // loop the historical dir
     while let Some(entry) = entries.next() {
         let year_dir = entry.unwrap().path();
-        if !year_dir.is_dir() {
+        if !year_dir.is_dir() && !is_ds_store(&year_dir) {
             panic!("{:?} is not a directory", &year_dir.as_path());
+        }
+        if is_ds_store(&year_dir) {
+            continue;
         }
 
         // loop the year dir
         let mut year_dir_entries = std::fs::read_dir(&year_dir).unwrap();
         while let Some(files) = year_dir_entries.next() {
             let file = files.unwrap().path();
-            if !file.is_file() {
+            if !file.is_file() && !is_ds_store(&file) {
                 panic!("{:?} is not a file", &file.as_path());
+            }
+            if is_ds_store(&file) {
+                continue;
             }
             // generate checksum
             let checksum = generate_checksum(&file).unwrap();
@@ -521,6 +527,12 @@ fn do_calculate_and_store_checksum() {
         }
     }
     println!("Total files processed: {}", index);
+}
+
+fn is_ds_store(path: &PathBuf) -> bool {
+    path.file_name()
+        .map(|name| name == ".DS_Store")
+        .unwrap_or(false)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
