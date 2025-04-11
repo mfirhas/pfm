@@ -122,7 +122,12 @@ impl FromStr for Currency {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let quoted_curr = format!("\"{}\"", s);
         let curr = serde_json::from_str(&quoted_curr)
-            .context("currency parsing from str")
+            .with_context(|| {
+                format!(
+                    "currency parsing from str invalid, currently supported currencies: {}",
+                    Currency::to_comma_separated_list_str()
+                )
+            })
             .as_client_err()?;
 
         Ok(curr)

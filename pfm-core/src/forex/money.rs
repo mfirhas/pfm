@@ -85,7 +85,12 @@ impl Money {
     pub fn new(currency: &str, amount: &str) -> ForexResult<Self> {
         let quoted_curr = format!("\"{}\"", currency);
         let curr = serde_json::from_str(&quoted_curr)
-            .context("creating new Money with invalid currency")
+            .with_context(|| {
+                format!(
+                    "creating new Money with invalid currency, currently supported currencies: {}",
+                    Currency::to_comma_separated_list_str()
+                )
+            })
             .as_client_err()?;
         let val = Decimal::from_str(amount)
             .context("Money convert str to Decimal")

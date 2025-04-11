@@ -85,7 +85,7 @@ pub struct ConvertQuery {
     pub from: String,
 
     #[serde(rename = "to")]
-    pub to: Currency,
+    pub to: String,
 
     /// optional date for historical conversion
     #[serde(
@@ -108,7 +108,7 @@ pub(crate) async fn convert_handler(
     match params.date {
         Some(date) => {
             let from_money = Money::from_str(&params.from)?;
-            let to_currency = params.to;
+            let to_currency = params.to.parse()?;
             let ret =
                 service::convert_historical(&ctx.forex_storage, from_money, to_currency, date)
                     .await?;
@@ -117,7 +117,7 @@ pub(crate) async fn convert_handler(
         }
         None => {
             let from_money = Money::from_str(&params.from)?;
-            let to_currency = params.to;
+            let to_currency = params.to.parse()?;
             let ret = service::convert(&ctx.forex_storage, from_money, to_currency).await?;
 
             Ok(HttpResponse::ok(ret, None))
