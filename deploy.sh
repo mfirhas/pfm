@@ -8,8 +8,12 @@ USERNAME="$1"
 REMOTE_PORT="$2"
 # local path to release binary
 LOCAL_BINARY_PATH="$3"
+# the name of binary produced by compilation
 BINARY_NAME=$(basename "$LOCAL_BINARY_PATH")
+# path to .env file
 LOCAL_ENV_FILE="$4"
+# path to api_keys.json file containing api keys for client
+LOCAL_API_KEYS_FILE="$5"
 # remote path for root pfm
 PFM_PATH="/home/$USERNAME/pfm"
 # remote path to be executed from systemd
@@ -26,6 +30,7 @@ echo "-------------------------------------------------------------"
 echo "Copying $LOCAL_BINARY_PATH to remote $NEW_BINARY_PATH..."
 scp -P $REMOTE_PORT $LOCAL_BINARY_PATH $USERNAME@contabo-vps:$NEW_PATH
 scp -P $REMOTE_PORT $LOCAL_ENV_FILE $USERNAME@contabo-vps:$PFM_PATH
+scp -P $REMOTE_PORT $LOCAL_API_KEYS_FILE $USERNAME@contabo-vps:$PFM_PATH
 
 echo "Updating binary on remote..."
 ssh "$USERNAME@contabo-vps" USERNAME="$USERNAME" BINARY_NAME="$BINARY_NAME" BINARY_PATH="$BINARY_PATH" NEW_BINARY_PATH="$NEW_BINARY_PATH" ROLLBACK_BINARY_PATH="$ROLLBACK_BINARY_PATH" 'bash -s' << 'EOF'

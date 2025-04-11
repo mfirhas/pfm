@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs,
     marker::PhantomData,
     sync::{Arc, LazyLock},
@@ -102,18 +102,10 @@ async fn api_key_middleware(req: Request<Body>, next: Next) -> Result<Response, 
 async fn main() {
     let cfg = get_config::<Config>("HTTP_").expect("failed getting config");
 
-    let core_cfg = pfm_core::global::config();
-    let http_client = pfm_core::global::http_client();
     let storage_fs = pfm_core::global::storage_fs();
-    let forex = pfm_core::forex_impl::open_exchange_api::Api::new(
-        &core_cfg.forex_open_exchange_api_key,
-        http_client,
-    );
     let storage = pfm_core::forex_impl::forex_storage::ForexStorageImpl::new(storage_fs);
 
     let app_ctx = AppContext {
-        forex_rates: forex.clone(),
-        forex_historical_rates: forex.clone(),
         forex_storage: storage.clone(),
     };
 
@@ -154,9 +146,7 @@ pub(crate) struct Config {
 }
 
 #[derive(Clone)]
-pub(crate) struct AppContext<FX, FHX, FS> {
-    forex_rates: FX,
-    forex_historical_rates: FHX,
+pub(crate) struct AppContext<FS> {
     forex_storage: FS,
 }
 
