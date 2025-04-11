@@ -30,7 +30,7 @@ async fn main() {
     // do_calculate_and_store_checksum();
 
     // check checksum
-    // do_compare_checksums();
+    do_compare_checksums();
 }
 
 async fn do_fetch_historical_data() {
@@ -391,7 +391,7 @@ fn iterate_and_parse(
 async fn do_update_crypto_data() {
     let forex_storage = ForexStorageImpl::new(global::storage_fs());
     let start_date = Utc.with_ymd_and_hms(2010, 1, 1, 0, 0, 0).unwrap();
-    let end_date = Utc.with_ymd_and_hms(2025, 4, 2, 23, 59, 59).unwrap();
+    let end_date = Utc.with_ymd_and_hms(2025, 4, 10, 23, 59, 59).unwrap();
 
     let csv_btc = (
         Currency::BTC,
@@ -561,6 +561,13 @@ fn do_compare_checksums() {
             &new_checksum_path.as_path(),
             &prev_checksum_path.as_path()
         );
+    } else {
+        println!(
+            "inequals: {} \nStarts from: {}, \nEnded at: {}",
+            &ret.len(),
+            &ret[0],
+            &ret[&ret.len() - 1]
+        );
     }
 }
 
@@ -607,6 +614,8 @@ fn compare_checksums(new_checksums: &PathBuf, prev_checksums: &PathBuf) -> Vec<S
             index += 1;
         }
     }
+
+    results.sort();
 
     println!("Total checked: {}", index);
 
