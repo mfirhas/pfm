@@ -22,10 +22,10 @@ mod handler;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HttpResponse<T> {
-    #[serde(rename = "data")]
+    #[serde(rename = "data", skip_serializing_if = "Option::is_none")]
     pub data: Option<T>,
 
-    #[serde(rename = "error")]
+    #[serde(rename = "error", skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 
     #[serde(skip)]
