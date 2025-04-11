@@ -30,7 +30,7 @@ async fn main() {
     // do_calculate_and_store_checksum();
 
     // check checksum
-    do_compare_checksums();
+    // do_compare_checksums();
 }
 
 async fn do_fetch_historical_data() {
