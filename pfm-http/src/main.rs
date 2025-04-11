@@ -1,4 +1,9 @@
-use std::marker::PhantomData;
+use std::{
+    collections::HashMap,
+    fs,
+    marker::PhantomData,
+    sync::{Arc, LazyLock},
+};
 
 use axum::{
     body::Body,
@@ -52,7 +57,7 @@ impl<T> HttpResponse<T> {
     }
 }
 
-async fn processing_time(req: Request<Body>, next: Next) -> Response {
+async fn processing_time_middleware(req: Request<Body>, next: Next) -> Response {
     let start = tokio::time::Instant::now();
     let mut response = next.run(req).await;
     let duration_ms = start.elapsed().as_millis();
@@ -68,22 +73,39 @@ async fn processing_time(req: Request<Body>, next: Next) -> Response {
     response
 }
 
+// contains api keys for client to access these apis
+static API_KEYS: LazyLock<Arc<HashMap<String, String>>> = LazyLock::new(|| {
+    let content = fs::read_to_string("api_keys.json")
+        .expect("Loading api_keys.json: Failed to read api_keys.json");
+    let parsed: HashMap<String, String> =
+        serde_json::from_str(&content).expect("Loading api_keys.json: Invalid JSON format");
+    Arc::new(parsed)
+});
+
+async fn api_key_middleware(req: Request<Body>, next: Next) -> Result<Response, AppError> {
+    let Some(header_val) = req.headers().get("x-api-key").and_then(|v| v.to_str().ok()) else {
+        return Err(AppError::Unauthorized(
+            "request requires api key set in header in x-api-key".to_string(),
+        ));
+    };
+
+    if !API_KEYS.values().any(|v| v == header_val) {
+        return Err(AppError::Unauthorized(
+            "request's api key is invalid".to_string(),
+        ));
+    }
+
+    Ok(next.run(req).await)
+}
+
 #[tokio::main]
 async fn main() {
     let cfg = get_config::<Config>("HTTP_").expect("failed getting config");
 
-    let core_cfg = pfm_core::global::config();
-    let http_client = pfm_core::global::http_client();
     let storage_fs = pfm_core::global::storage_fs();
-    let forex = pfm_core::forex_impl::open_exchange_api::Api::new(
-        &core_cfg.forex_open_exchange_api_key,
-        http_client,
-    );
     let storage = pfm_core::forex_impl::forex_storage::ForexStorageImpl::new(storage_fs);
 
     let app_ctx = AppContext {
-        forex_rates: forex.clone(),
-        forex_historical_rates: forex.clone(),
         forex_storage: storage.clone(),
     };
 
@@ -92,13 +114,14 @@ async fn main() {
     let forex_routes = Router::new()
         .route("/convert", get(handler::convert_handler))
         .route("/rates", get(handler::get_rates_handler))
-        .route("/timeseries", get(handler::get_timeseries_handler));
+        .route("/timeseries", get(handler::get_timeseries_handler))
+        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(api_key_middleware)));
 
     let routes_group = Router::new()
         .nest("/", root)
         .nest("/forex", forex_routes)
         .with_state(app_ctx)
-        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(processing_time)));
+        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(processing_time_middleware)));
 
     let addr = ("127.0.0.1", cfg.http_port);
 
@@ -123,9 +146,7 @@ pub(crate) struct Config {
 }
 
 #[derive(Clone)]
-pub(crate) struct AppContext<FX, FHX, FS> {
-    forex_rates: FX,
-    forex_historical_rates: FHX,
+pub(crate) struct AppContext<FS> {
     forex_storage: FS,
 }
 
@@ -135,6 +156,9 @@ async fn ping() -> impl IntoResponse {
 
 #[derive(Debug, Error, Serialize)]
 pub enum AppError {
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+
     #[error("Invalid input: {0}")]
     BadRequest(String),
 
@@ -145,6 +169,7 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         let (status_code, err_msg) = match self {
+            Self::Unauthorized(err) => (StatusCode::UNAUTHORIZED, err),
             Self::BadRequest(err) => (StatusCode::BAD_REQUEST, err),
             Self::InternalServerError(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
         };

@@ -102,7 +102,7 @@ pub struct ConvertQuery {
 /// query 2: `to` currency of target conversion: e.g. ?to=USD
 /// query 3(OPTIONAL); `date`(YYYY-MM-DD) for historical convert. e.g. ?date=2020-02-02
 pub(crate) async fn convert_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<ConvertQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
@@ -169,7 +169,7 @@ impl From<RatesResponse<HistoricalRates>> for RatesDTO {
 /// get latest and historical rates
 /// query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
 pub(crate) async fn get_rates_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<RatesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
@@ -217,7 +217,7 @@ fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
 }
 
 pub(crate) async fn get_timeseries_handler(
-    State(ctx): State<AppContext<impl ForexRates, impl ForexHistoricalRates, impl ForexStorage>>,
+    State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     if let Some(err) = validate_timeseries_params(&params) {
