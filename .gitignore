@@ -8,5 +8,6 @@ target/
 .DS_Store
 
 *.env
+api_keys.json
 test_dir/
 test_dir_client/

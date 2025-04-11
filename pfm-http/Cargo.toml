@@ -11,6 +11,7 @@ axum = { workspace = true }
 tower = {workspace = true}
 chrono = { workspace = true }
 serde = { workspace = true }
+serde_json = {workspace = true}
 lazy_static = { workspace = true }
 configrs = { workspace = true }
 anyhow = { workspace = true }
