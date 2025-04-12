@@ -25,7 +25,7 @@ fn root_handlers<FS>() -> Router<AppContext<FS>>
 where
     FS: ForexStorage + Clone + Send + Sync + 'static,
 {
-    Router::new().route("/ping", get(root_handlers::healthcheck::ping_handler))
+    Router::new().route("/ping", get(root_handlers::ping::ping_handler))
 }
 
 fn forex_handlers<FS>() -> Router<AppContext<FS>>
