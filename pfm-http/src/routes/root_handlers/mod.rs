@@ -1,1 +1,1 @@
-pub(super) mod healthcheck;
+pub(super) mod ping;
