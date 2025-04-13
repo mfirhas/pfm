@@ -11,7 +11,7 @@ use pfm_core::{
         forex_storage::{self, ForexStorageImpl},
         tradermade,
     },
-    global::{self, BASE_CURRENCY},
+    global::{self, constants::BASE_CURRENCY},
 };
 use rust_decimal_macros::dec;
 
@@ -115,7 +115,7 @@ pub async fn test_currencybeacon_latest_rates() {
         global::http_client(),
     );
     let storage = forex_storage::ForexStorageImpl::new(global::storage_fs());
-    let ret = poll_rates(&api, &storage, global::BASE_CURRENCY).await;
+    let ret = poll_rates(&api, &storage, global::constants::BASE_CURRENCY).await;
     dbg!(&ret);
 
     assert!(&ret.is_ok());
@@ -131,7 +131,7 @@ pub async fn test_currencybeacon_historical_rates() {
     );
     let storage = forex_storage::ForexStorageImpl::new(global::storage_fs());
     let date = Utc.with_ymd_and_hms(2022, 6, 6, 0, 0, 0).unwrap();
-    let ret = poll_historical_rates(&api, &storage, date, global::BASE_CURRENCY).await;
+    let ret = poll_historical_rates(&api, &storage, date, global::constants::BASE_CURRENCY).await;
     dbg!(&ret);
 
     assert!(&ret.is_ok());
@@ -151,7 +151,7 @@ pub async fn test_currencybeacon_timeseries_rates() {
     let end_date = Utc.with_ymd_and_hms(2017, 1, 5, 0, 0, 0).unwrap();
 
     let ret = api
-        .timeseries_rates(start_date, end_date, global::BASE_CURRENCY)
+        .timeseries_rates(start_date, end_date, global::constants::BASE_CURRENCY)
         .await;
     dbg!(&ret);
 
@@ -168,7 +168,7 @@ pub async fn test_tradermade_latest_api() {
         global::http_client(),
     );
 
-    let ret = forex::interface::ForexRates::rates(&api, global::BASE_CURRENCY).await;
+    let ret = forex::interface::ForexRates::rates(&api, global::constants::BASE_CURRENCY).await;
 
     dbg!(&ret);
 
@@ -185,7 +185,9 @@ pub async fn test_tradermade_historical_api() {
 
     let date = Utc.with_ymd_and_hms(2022, 2, 4, 0, 0, 0).unwrap();
 
-    let ret = api.historical_rates(date, global::BASE_CURRENCY).await;
+    let ret = api
+        .historical_rates(date, global::constants::BASE_CURRENCY)
+        .await;
 
     dbg!(&ret);
     assert!(ret.as_ref().is_ok());

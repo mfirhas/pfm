@@ -222,7 +222,7 @@ where
                     &api_clone,
                     &storage_clone,
                     date,
-                    global::BASE_CURRENCY,
+                    global::constants::BASE_CURRENCY,
                 )
                 .await;
                 println!("{}. Result date {}: {:?}", index, date, ret);
@@ -275,7 +275,7 @@ async fn fetch_timeseries_and_store(start_date: DateTime<Utc>, end_date: DateTim
         global::http_client(),
     );
     let ret = forex_api
-        .timeseries_rates(start_date, end_date, global::BASE_CURRENCY)
+        .timeseries_rates(start_date, end_date, global::constants::BASE_CURRENCY)
         .await;
     let rates = ret.unwrap();
     let stored = ForexStorage::insert_historical_batch(&storage_impl, rates).await;

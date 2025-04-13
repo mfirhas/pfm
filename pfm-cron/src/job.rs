@@ -27,7 +27,7 @@ where
         Box::pin(poll_latest_rates_handler(
             forex_api.clone(),
             forex_storage.clone(),
-            global::BASE_CURRENCY,
+            global::constants::BASE_CURRENCY,
         ))
     })
     .context("cron creating poll_latest_rates_job")?;
@@ -79,7 +79,7 @@ where
                 forex_storage.clone(),
                 forex_storage_deletion.clone(),
                 date,
-                global::BASE_CURRENCY,
+                global::constants::BASE_CURRENCY,
             ))
         },
     )

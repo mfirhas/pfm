@@ -2,9 +2,10 @@ test:
 	@echo "Running pfm-core unit test..."
 	@cargo test -p pfm-core --lib
 
-test-all:
-	@echo "Running pfm-core unit test..."
-	@cargo test 
+test-integ:
+	@echo "Running pfm-core integration test..."
+	@cargo test --test '*' -- --test-threads=1
+	@cargo test --release -p pfm-core --test test_storage -- test_storage_get_historical_range --exact --show-output --ignored
 
 P ?= pfm-http
 
