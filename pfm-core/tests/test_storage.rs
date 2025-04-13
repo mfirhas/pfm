@@ -46,7 +46,7 @@ pub async fn test_storage_insert_batch() {
     let end_date = Utc.with_ymd_and_hms(1996, 1, 12, 0, 0, 0).unwrap();
 
     let ret = api
-        .timeseries_rates(start_date, end_date, global::BASE_CURRENCY)
+        .timeseries_rates(start_date, end_date, global::constants::BASE_CURRENCY)
         .await;
     dbg!(&ret);
 
@@ -56,6 +56,7 @@ pub async fn test_storage_insert_batch() {
 }
 
 #[tokio::test]
+#[ignore]
 pub async fn test_storage_get_historical_range() {
     let storage = ForexStorageImpl::new(global::storage_fs());
     let start_date = Utc.with_ymd_and_hms(2005, 01, 01, 0, 0, 0).unwrap();

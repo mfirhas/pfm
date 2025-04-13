@@ -11,7 +11,7 @@ use crate::{
         interface::{AsInternalError, ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
         Currency, ForexError, ForexResult, Money,
     },
-    global::{self, BASE_CURRENCY},
+    global::{self, constants::BASE_CURRENCY},
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
