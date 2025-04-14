@@ -27,11 +27,7 @@ pub struct ConvertQuery {
 
 impl BadRequestErrMsg for ConvertQuery {
     fn bad_request_err_msg() -> &'static str {
-        r#"
-        Invalid from, to, or date. 
-        `from` must be in form: <CODE> <AMOUNT>, CODE is ISO 4217 standard. AMOUNT may be separated by comma for thousands, and dot for fractions. 
-        `to` must be in form: <CODE>, CODE is ISO 4217 standard.
-        `date` is optional denoting historical convert. Must be in form YYYY-MM-DD.
+        r#"Invalid from, to, or date. `from` must be in form: <CODE> <AMOUNT>, CODE is ISO 4217 standard. AMOUNT may be separated by comma for thousands, and dot for fractions. `to` must be in form: <CODE>, CODE is ISO 4217 standard. `date` is optional denoting historical convert. Must be in form YYYY-MM-DD.
         "#
     }
 }

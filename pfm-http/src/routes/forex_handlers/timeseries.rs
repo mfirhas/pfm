@@ -36,11 +36,7 @@ pub(crate) struct TimeseriesQuery {
 
 impl BadRequestErrMsg for TimeseriesQuery {
     fn bad_request_err_msg() -> &'static str {
-        r#"
-        Invalid input of `start` or `end`. 
-        `start` must be in form of YYYY-MM-DD.
-        `end` must be in form of YYYY-MM-DD.
-        "#
+        "Invalid input of `start` or `end`. `start` must be in form of YYYY-MM-DD. `end` must be in form of YYYY-MM-DD."
     }
 }
 
