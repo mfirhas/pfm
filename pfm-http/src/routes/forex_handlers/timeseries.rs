@@ -34,6 +34,16 @@ pub(crate) struct TimeseriesQuery {
     end: DateTime<Utc>,
 }
 
+impl BadRequestErrMsg for TimeseriesQuery {
+    fn bad_request_err_msg() -> &'static str {
+        r#"
+        Invalid input of `start` or `end`. 
+        `start` must be in form of YYYY-MM-DD.
+        `end` must be in form of YYYY-MM-DD.
+        "#
+    }
+}
+
 fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
     if params.start > params.end {
         return Some(AppError::BadRequest(
