@@ -5,10 +5,8 @@ use iso_currency::Currency as CurrencyLib;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
-use super::{
-    interface::{AsClientError, ForexError},
-    money::Money,
-};
+use super::{interface::ForexError, money::Money};
+use crate::error::AsClientError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIter)]
 pub enum Currency {

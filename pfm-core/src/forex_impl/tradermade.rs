@@ -5,9 +5,10 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
+use crate::error::AsInternalError;
 use crate::forex::{
     entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-    interface::{AsInternalError, ForexHistoricalRates, ForexRates},
+    interface::{ForexHistoricalRates, ForexRates},
     Currency, ForexError, ForexResult,
 };
 

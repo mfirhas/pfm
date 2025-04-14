@@ -10,9 +10,10 @@
 use anyhow::anyhow;
 use std::str::FromStr;
 
+use crate::error::AsInternalError;
 use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
-    interface::{AsInternalError, ForexHistoricalRates, ForexRates},
+    interface::{ForexHistoricalRates, ForexRates},
     Currency, ForexError, ForexResult,
 };
 use anyhow::Context;

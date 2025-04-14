@@ -32,4 +32,4 @@ accounting = { workspace = true }
 iso_currency = { workspace = true }
 rusty-money = { workspace = true }
 
-
+uom = {workspace = true}

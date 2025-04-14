@@ -3,8 +3,9 @@ use std::{fmt::Display, str::FromStr};
 use super::{
     currency::Currency,
     entity::RatesData,
-    interface::{AsClientError, ForexError, ForexResult},
+    interface::{ForexError, ForexResult},
 };
+use crate::error::AsClientError;
 use accounting::Accounting;
 use anyhow::Context;
 use iso_currency::Currency as CurrencyLib;

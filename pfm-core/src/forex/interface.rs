@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,6 +12,8 @@ use super::entity::Rates;
 use super::entity::RatesList;
 use super::entity::RatesResponse;
 use super::money::Money;
+use crate::error::Error;
+use crate::error::{BaseError, ClientError, InternalError};
 use thiserror::Error;
 
 pub(super) const ERROR_PREFIX: &str = "[FOREX]";
@@ -21,79 +22,32 @@ pub type ForexResult<T> = Result<T, ForexError>;
 
 #[derive(Debug, Error)]
 pub enum ForexError {
-    #[error("{ERROR_PREFIX} forex client error: {0}")]
+    #[error("{ERROR_PREFIX} generic error: {0}")]
+    Error(#[from] Error),
+
+    #[error("{ERROR_PREFIX} client error: {0}")]
     ClientError(#[from] ClientError),
 
-    #[error("{ERROR_PREFIX} forex internal error: {0}")]
+    #[error("{ERROR_PREFIX} internal error: {0}")]
     InternalError(#[from] InternalError),
 }
 
 impl ForexError {
+    pub fn error(err_msg: &str) -> Self {
+        Self::new(Error::from_msg(err_msg))
+    }
     pub fn client_error(err_msg: &str) -> Self {
-        ForexError::ClientError(ClientError(anyhow!(err_msg.to_owned())))
+        ForexError::ClientError(ClientError::from_msg(err_msg))
     }
 
     pub fn internal_error(err_msg: &str) -> Self {
-        ForexError::InternalError(InternalError(anyhow!(err_msg.to_owned())))
-    }
-
-    pub fn cause(&self) -> String {
-        match self {
-            ForexError::ClientError(err) => {
-                let source = err.0.source();
-                if let Some(err) = source {
-                    return format!("client error caused by: {}", err);
-                }
-                format!("client error caused by: null")
-            }
-            ForexError::InternalError(err) => {
-                let source = err.0.source();
-                if let Some(err) = source {
-                    return format!("internal error caused by: {}", err);
-                }
-                format!("internal error caused by: null")
-            }
-        }
-    }
-
-    pub fn detail(&self) -> String {
-        let error = self.to_string();
-        let cause = self.cause();
-        format!("{} \n  Caused by: {}", error, cause)
+        ForexError::InternalError(InternalError::from_msg(err_msg))
     }
 }
 
-#[derive(Debug, Error)]
-#[error("{0}")]
-pub struct ClientError(#[from] anyhow::Error);
-
-#[derive(Debug, Error)]
-#[error("{0}")]
-pub struct InternalError(#[from] anyhow::Error);
-
-pub trait AsClientError<T> {
-    fn as_client_err(self) -> Result<T, ClientError>;
-}
-
-pub trait AsInternalError<T> {
-    fn as_internal_err(self) -> Result<T, InternalError>;
-}
-
-impl<T, E> AsClientError<T> for Result<T, E>
-where
-    E: Into<anyhow::Error>,
-{
-    fn as_client_err(self) -> Result<T, ClientError> {
-        self.map_err(|e| ClientError(e.into()))
-    }
-}
-
-impl<T, E> AsInternalError<T> for Result<T, E>
-where
-    E: Into<anyhow::Error>,
-{
-    fn as_internal_err(self) -> Result<T, InternalError> {
-        self.map_err(|e| InternalError(e.into()))
+impl BaseError for ForexError {
+    fn new(err: impl Into<anyhow::Error>) -> Self {
+        Self::Error(Error::new(err))
     }
 }
 
