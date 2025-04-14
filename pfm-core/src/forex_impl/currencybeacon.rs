@@ -2,16 +2,17 @@ use std::{collections::HashMap, str::FromStr};
 
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use rust_decimal_macros::dec;
 
+use crate::error::AsInternalError;
 use crate::{
     forex::{
         entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-        interface::{AsInternalError, ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
-        Currency, ForexError, ForexResult, Money,
+        interface::{ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
+        Currency, ForexError, ForexResult,
     },
-    global::{self, constants::BASE_CURRENCY},
+    global::{self},
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

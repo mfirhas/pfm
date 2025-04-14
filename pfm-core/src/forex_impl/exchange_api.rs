@@ -10,9 +10,10 @@
 // - DAILY updates at 00.00 UTC, but slower to update on time.
 // - very limited historical rates.
 
+use crate::error::AsInternalError;
 use crate::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
-    interface::{AsInternalError, ForexHistoricalRates, ForexRates},
+    interface::{ForexHistoricalRates, ForexRates},
     Currency, ForexError, ForexResult,
 };
 use anyhow::Context;

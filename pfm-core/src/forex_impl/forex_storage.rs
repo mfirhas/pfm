@@ -6,9 +6,10 @@ use std::fmt::Debug;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+use crate::error::AsInternalError;
 use crate::forex::entity::{HistoricalRates, Order, Rates, RatesList, RatesResponse};
-use crate::forex::interface::{AsInternalError, ForexStorage, ForexStorageDeletion};
-use crate::forex::{Currency, ForexResult};
+use crate::forex::interface::{ForexStorage, ForexStorageDeletion};
+use crate::forex::ForexResult;
 use crate::forex::{ForexError, Money};
 use crate::global::StorageFS;
 use anyhow::Context;

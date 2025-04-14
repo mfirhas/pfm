@@ -54,6 +54,9 @@ impl<T> HttpResponse<T> {
 
 #[derive(Debug, Error, Serialize)]
 pub enum AppError {
+    #[error("Not found: {0}")]
+    NoContent(String),
+
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
@@ -67,6 +70,7 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         let (status_code, err_msg) = match self {
+            Self::NoContent(err) => (StatusCode::NO_CONTENT, err),
             Self::Unauthorized(err) => (StatusCode::UNAUTHORIZED, err),
             Self::BadRequest(err) => (StatusCode::BAD_REQUEST, err),
             Self::InternalServerError(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
@@ -81,6 +85,7 @@ impl IntoResponse for AppError {
 impl From<ForexError> for AppError {
     fn from(value: ForexError) -> Self {
         match value {
+            ForexError::Error(v) => Self::NoContent(v.to_string()),
             ForexError::ClientError(v) => Self::BadRequest(v.to_string()),
             ForexError::InternalError(v) => Self::InternalServerError(v.to_string()),
         }

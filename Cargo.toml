@@ -36,3 +36,5 @@ rusty-money = { version = "0.4", features = ["iso"] }
 
 # pfm-cron
 tokio-cron-scheduler = { version = "0.13", features = ["english", "signal"]}
+
+uom = "0.36"

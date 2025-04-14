@@ -13,14 +13,14 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use crate::error::AsInternalError;
 use crate::forex::entity::RatesData;
-use crate::forex::interface::{AsInternalError, ForexHistoricalRates};
+use crate::forex::interface::ForexHistoricalRates;
 use crate::forex::ForexResult;
 use crate::forex::{
     entity::{HistoricalRates, RatesResponse},
     Currency, ForexError,
 };
-use crate::global;
 
 const SOURCE: &str = "currencyapi.com";
 

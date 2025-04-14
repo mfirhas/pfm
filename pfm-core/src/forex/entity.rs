@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use uuid::Uuid;
 
 use super::{currency::Currency, interface::ForexError, money::Money};
+use crate::error::BaseError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RatesResponse<T> {
