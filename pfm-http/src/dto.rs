@@ -87,13 +87,20 @@ impl From<ForexError> for AppError {
     }
 }
 
+/// trait to give error massage to inputs(query params, path params,or request body)
+pub trait BadRequestErrMsg {
+    fn bad_request_err_msg() -> &'static str {
+        "Missing or invalid input"
+    }
+}
+
 /// custom query to handle if query params are missing.
 pub struct CustomQuery<T>(pub T);
 
 #[async_trait]
 impl<S, T> FromRequestParts<S> for CustomQuery<T>
 where
-    T: DeserializeOwned + Send + Sync,
+    T: BadRequestErrMsg + DeserializeOwned + Send + Sync,
     S: Send + Sync,
 {
     type Rejection = AppError;
@@ -102,7 +109,7 @@ where
         Query::<T>::from_request_parts(parts, _state)
             .await
             .map(|Query(params)| CustomQuery(params))
-            .map_err(|_| AppError::BadRequest(format!("Missing or invalid query parameters")))
+            .map_err(|_| AppError::BadRequest(T::bad_request_err_msg().to_string()))
     }
 }
 

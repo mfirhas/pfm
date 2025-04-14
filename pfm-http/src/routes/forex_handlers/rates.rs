@@ -20,6 +20,12 @@ pub(crate) struct RatesQuery {
     pub date: Option<DateTime<Utc>>,
 }
 
+impl BadRequestErrMsg for RatesQuery {
+    fn bad_request_err_msg() -> &'static str {
+        "`date` is optional denoting historical rates, must be in form of YYYY-MM-DD."
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct RatesDTO {
     pub message: String,

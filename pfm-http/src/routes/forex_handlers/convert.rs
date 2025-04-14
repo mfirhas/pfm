@@ -25,6 +25,13 @@ pub struct ConvertQuery {
     pub date: Option<DateTime<Utc>>,
 }
 
+impl BadRequestErrMsg for ConvertQuery {
+    fn bad_request_err_msg() -> &'static str {
+        r#"Invalid from, to, or date. `from` must be in form: <CODE> <AMOUNT>, CODE is ISO 4217 standard. AMOUNT may be separated by comma for thousands, and dot for fractions. `to` must be in form: <CODE>, CODE is ISO 4217 standard. `date` is optional denoting historical convert. Must be in form YYYY-MM-DD.
+        "#
+    }
+}
+
 /// GET /forex/convert
 /// convert using latest or historical rates.
 /// query 1: `from` money format ISO 4217 <CURRENCY_CODE> <AMOUNT>, amount may be separated by comma for thousands and dot for fractionals, e.g. ?from=USD 1,000
