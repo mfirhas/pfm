@@ -1,9 +1,9 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use async_trait::async_trait;
 use axum::{
     extract::{FromRequestParts, Query},
-    http::request::Parts,
+    http::{request::Parts, HeaderValue},
 };
 use axum::{
     http::{HeaderMap, StatusCode},
@@ -14,6 +14,7 @@ use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use pfm_core::forex::ForexError;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HttpResponse<T> {
@@ -115,6 +116,51 @@ where
             .await
             .map(|Query(params)| CustomQuery(params))
             .map_err(|_| AppError::BadRequest(T::bad_request_err_msg().to_string()))
+    }
+}
+
+#[derive(Clone)]
+pub struct RequestId(pub Uuid);
+
+impl fmt::Display for RequestId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for RequestId
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // Try to get from header
+        if let Some(val) = parts.headers.get("x-request-id") {
+            let request_id = val
+                .to_str()
+                .map_err(|err| AppError::BadRequest(err.to_string()))?
+                .parse::<Uuid>()
+                .map_err(|err| AppError::BadRequest(err.to_string()))?;
+
+            return Ok(RequestId(request_id));
+        }
+
+        // Fallback to extensions
+        if let Some(val) = parts.extensions.get::<HeaderValue>() {
+            let request_id = val
+                .to_str()
+                .map_err(|err| AppError::BadRequest(err.to_string()))?
+                .parse::<Uuid>()
+                .map_err(|err| AppError::BadRequest(err.to_string()))?;
+
+            return Ok(RequestId(request_id));
+        }
+
+        Err(AppError::BadRequest(
+            "request doesn't contain request id".to_string(),
+        ))
     }
 }
 
