@@ -67,8 +67,8 @@ impl BaseError for InternalError {
     }
 }
 
-pub trait AsGenericError<T> {
-    fn as_generic_err(self) -> Result<T, Error>;
+pub trait AsError<T> {
+    fn as_err(self) -> Result<T, Error>;
 }
 
 pub trait AsClientError<T> {
@@ -79,11 +79,11 @@ pub trait AsInternalError<T> {
     fn as_internal_err(self) -> Result<T, InternalError>;
 }
 
-impl<T, E> AsGenericError<T> for Result<T, E>
+impl<T, E> AsError<T> for Result<T, E>
 where
     E: Into<anyhow::Error>,
 {
-    fn as_generic_err(self) -> Result<T, Error> {
+    fn as_err(self) -> Result<T, Error> {
         self.map_err(|e| Error(e.into()))
     }
 }
