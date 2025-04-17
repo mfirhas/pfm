@@ -5,14 +5,14 @@ use tower::ServiceBuilder;
 use crate::global::{self, AppContext};
 use crate::middlewares;
 
-mod forex_handlers;
-mod root_handlers;
+mod forex_routes;
+mod root_routes;
 
 pub fn register_routes() -> Router {
     let app_ctx = global::context();
     let routes = Router::new()
-        .nest("/", root_handlers())
-        .nest("/forex", forex_handlers())
+        .nest("/", root_routes())
+        .nest("/forex", forex_routes())
         .with_state(app_ctx)
         .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(
             middlewares::processing_time_middleware,
@@ -21,25 +21,28 @@ pub fn register_routes() -> Router {
     routes
 }
 
-fn root_handlers<FS>() -> Router<AppContext<FS>>
+fn root_routes<FS>() -> Router<AppContext<FS>>
 where
     FS: ForexStorage + Clone + Send + Sync + 'static,
 {
-    Router::new().route("/ping", get(root_handlers::ping::ping_handler))
+    Router::new().route("/ping", get(root_routes::ping::ping_handler))
 }
 
-fn forex_handlers<FS>() -> Router<AppContext<FS>>
+fn forex_routes<FS>() -> Router<AppContext<FS>>
 where
     FS: ForexStorage + Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/convert", get(forex_handlers::convert::convert_handler))
-        .route("/rates", get(forex_handlers::rates::get_rates_handler))
+        .route("/convert", get(forex_routes::convert::convert_handler))
+        .route("/rates", get(forex_routes::rates::get_rates_handler))
         .route(
             "/timeseries",
-            get(forex_handlers::timeseries::get_timeseries_handler),
+            get(forex_routes::timeseries::get_timeseries_handler),
         )
         .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(
-            crate::middlewares::api_key_middleware,
+            middlewares::request_id_middleware,
         )))
+        .layer(
+            ServiceBuilder::new().layer(axum::middleware::from_fn(middlewares::api_key_middleware)),
+        )
 }

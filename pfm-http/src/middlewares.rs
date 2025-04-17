@@ -4,7 +4,14 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use axum::{body::Body, extract::Request, http::HeaderValue, middleware::Next, response::Response};
+use axum::{
+    body::Body,
+    extract::Request,
+    http::{HeaderName, HeaderValue},
+    middleware::Next,
+    response::Response,
+};
+use uuid::Uuid;
 
 use crate::dto::*;
 
@@ -50,4 +57,28 @@ pub(crate) async fn api_key_middleware(
     }
 
     Ok(next.run(req).await)
+}
+
+const REQUEST_ID_HEADER_NAME: &str = "x-request-id";
+
+pub async fn request_id_middleware(mut req: Request<Body>, next: Next) -> Response {
+    // Check for existing request ID or generate one
+    let request_id = req
+        .headers()
+        .get(REQUEST_ID_HEADER_NAME)
+        .cloned()
+        .unwrap_or_else(|| HeaderValue::from_str(&Uuid::new_v4().to_string()).unwrap());
+
+    // Insert it into request extensions so it's accessible in handlers
+    req.extensions_mut().insert(request_id.clone());
+
+    // Continue down the stack
+    let mut response = next.run(req).await;
+
+    // Insert it into response headers
+    response
+        .headers_mut()
+        .insert(REQUEST_ID_HEADER_NAME, request_id);
+
+    response
 }
