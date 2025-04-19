@@ -1461,11 +1461,18 @@ dependencies = [
  "anyhow",
  "chrono",
  "configrs",
+ "opentelemetry 0.22.0",
+ "opentelemetry-otlp",
  "pfm-core",
+ "pfm-utils",
  "quinn-proto",
  "serde",
  "tokio",
  "tokio-cron-scheduler",
+ "tracing",
+ "tracing-error",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
  "uuid",
 ]
 

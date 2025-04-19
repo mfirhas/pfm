@@ -650,13 +650,7 @@ impl ForexStorageImpl {
         // Sort files by filename (ascending order)
         files.sort_by(|a, b| a.0.cmp(&b.0));
 
-        // Keep only the latest (last in sorted order), delete the rest
-        if let Some((latest_filename, _)) = files.last() {
-            println!("Keeping: {}", latest_filename);
-        }
-
-        for (filename, entry) in files.iter().take(files.len().saturating_sub(1)) {
-            println!("Deleting: {}", filename);
+        for (_filename, entry) in files.iter().take(files.len().saturating_sub(1)) {
             fs::remove_file(entry.path())
                 .await
                 .context("storage clear latest read dir")

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use pfm_core::{forex_impl, global};
+use pfm_utils::tracing_util;
 use serde::Deserialize;
 use tokio::signal;
 use tokio_cron_scheduler::JobScheduler;
@@ -10,6 +11,8 @@ const ENV_PREFIX: &str = "CRON_";
 
 #[tokio::main]
 async fn main() {
+    tracing_util::init_tracing("pfm-cron");
+
     let core_cfg = global::config();
     let cron_config = init_config().expect("cron initializing config");
 
@@ -52,7 +55,7 @@ async fn main() {
         .await
         .expect("failed reading interrupting signal");
 
-    println!("cron Shutting down gracefully...");
+    tracing::info!("cron Shutting down gracefully...");
 }
 
 fn init_config() -> Result<Config, anyhow::Error> {
