@@ -7,6 +7,7 @@ use pfm_core::forex::{
     interface::ForexStorage,
 };
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct TimeseriesRatesDTO {
@@ -59,6 +60,7 @@ fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
     None
 }
 
+#[instrument(skip(ctx), ret)]
 pub(crate) async fn get_timeseries_handler(
     State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<TimeseriesQuery>,

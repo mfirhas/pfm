@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 pfm-core ={ path = "../pfm-core" }
+pfm-utils = { path = "../pfm-utils" }
 
 tokio = { workspace = true }
 axum = { workspace = true }
@@ -20,3 +21,13 @@ ring = { workspace = true }
 quinn-proto ={ workspace = true}
 async-trait = {workspace = true}
 uuid = {workspace = true}
+
+# tracing
+tracing = {workspace = true}
+tracing-subscriber = {workspace = true}
+tracing-error = {workspace = true}
+tracing-opentelemetry = {workspace = true}
+opentelemetry = {workspace = true}
+opentelemetry-otlp = {workspace = true}
+
+

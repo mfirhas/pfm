@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use rust_decimal_macros::dec;
+use tracing::instrument;
 
 use crate::global;
 
@@ -10,6 +11,7 @@ use super::{
     money::Money,
 };
 
+#[instrument(skip(storage), ret)]
 pub async fn convert<FS>(storage: &FS, from: Money, to: Currency) -> ForexResult<ConversionResponse>
 where
     FS: ForexStorage,
@@ -40,6 +42,7 @@ where
     Ok(ret)
 }
 
+#[instrument(skip(storage), ret)]
 pub async fn convert_historical(
     storage: &impl ForexStorage,
     from: Money,
