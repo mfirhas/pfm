@@ -70,8 +70,6 @@ pub async fn tracing_middleware(mut req: Request, next: Next) -> Response {
         });
     let request_id = request_id_header_val.to_str().ok().unwrap_or_default();
 
-    req.extensions_mut().insert(request_id_header_val.clone());
-
     // generate correlation id for tracing
     let correlation_id = Uuid::new_v4();
     let correlation_id_header_val = HeaderValue::from_str(&correlation_id.to_string())
@@ -86,6 +84,10 @@ pub async fn tracing_middleware(mut req: Request, next: Next) -> Response {
         method = %method,
         uri = %uri
     );
+
+    req.extensions_mut().insert(request_id_header_val.clone());
+    req.extensions_mut()
+        .insert(correlation_id_header_val.clone());
 
     let _enter = span.enter();
 
