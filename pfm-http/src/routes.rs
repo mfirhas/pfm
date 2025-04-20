@@ -1,6 +1,6 @@
 use axum::{routing::get, Router};
 use pfm_core::forex::interface::ForexStorage;
-use tower::ServiceBuilder;
+// use tower::ServiceBuilder;
 
 use crate::global::{self, AppContext};
 use crate::middlewares;
@@ -13,9 +13,9 @@ pub fn register_routes() -> Router {
         .nest("/", root_routes())
         .nest("/forex", forex_routes())
         .with_state(global::context())
-        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(
+        .layer(axum::middleware::from_fn(
             middlewares::processing_time_middleware,
-        )))
+        ))
         .layer(axum::middleware::from_fn(middlewares::tracing_middleware))
 }
 
@@ -37,10 +37,5 @@ where
             "/timeseries",
             get(forex_routes::timeseries::get_timeseries_handler),
         )
-        .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(
-            middlewares::request_id_middleware,
-        )))
-        .layer(
-            ServiceBuilder::new().layer(axum::middleware::from_fn(middlewares::api_key_middleware)),
-        )
+        .layer(axum::middleware::from_fn(middlewares::api_key_middleware))
 }

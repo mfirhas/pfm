@@ -56,45 +56,49 @@ pub(crate) async fn api_key_middleware(
 
 const REQUEST_ID_HEADER_NAME: &str = "x-request-id";
 
-pub async fn request_id_middleware(mut req: Request<Body>, next: Next) -> Response {
-    // Check for existing request ID or generate one
-    let request_id = req
+const CORRELATION_ID_HEADER_NAME: &str = "x-correlation-id";
+
+pub async fn tracing_middleware(mut req: Request, next: Next) -> Response {
+    // get request id from header, or generate one
+    let request_id_header_val = req
         .headers()
         .get(REQUEST_ID_HEADER_NAME)
         .cloned()
-        .unwrap_or_else(|| HeaderValue::from_str(&Uuid::new_v4().to_string()).unwrap());
+        .unwrap_or_else(|| {
+            HeaderValue::from_str(&Uuid::new_v4().to_string())
+                .unwrap_or_else(|_| HeaderValue::from_static(""))
+        });
+    let request_id = request_id_header_val.to_str().ok().unwrap_or_default();
 
-    // Insert it into request extensions so it's accessible in handlers
-    req.extensions_mut().insert(request_id.clone());
+    req.extensions_mut().insert(request_id_header_val.clone());
 
-    // Continue down the stack
-    let mut response = next.run(req).await;
-
-    // Insert it into response headers
-    response
-        .headers_mut()
-        .insert(REQUEST_ID_HEADER_NAME, request_id);
-
-    response
-}
-
-pub async fn tracing_middleware(req: Request, next: Next) -> Response {
+    // generate correlation id for tracing
     let correlation_id = Uuid::new_v4();
+    let correlation_id_header_val = HeaderValue::from_str(&correlation_id.to_string())
+        .unwrap_or_else(|_| HeaderValue::from_static(""));
     let method = req.method().clone();
     let uri = req.uri().clone();
 
     let span = info_span!(
         "tracing_middleware",
         %correlation_id,
+        %request_id,
         method = %method,
         uri = %uri
     );
 
     let _enter = span.enter();
 
-    tracing::info!("Request received");
+    tracing::info!("--------------------Request received--------------------");
 
-    let response = next.run(req).await;
+    let mut response = next.run(req).await;
+
+    response
+        .headers_mut()
+        .insert(REQUEST_ID_HEADER_NAME, request_id_header_val);
+    response
+        .headers_mut()
+        .insert(CORRELATION_ID_HEADER_NAME, correlation_id_header_val);
 
     response
 }
