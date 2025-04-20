@@ -9,16 +9,14 @@ mod forex_routes;
 mod root_routes;
 
 pub fn register_routes() -> Router {
-    let app_ctx = global::context();
-    let routes = Router::new()
+    Router::new()
         .nest("/", root_routes())
         .nest("/forex", forex_routes())
-        .with_state(app_ctx)
+        .with_state(global::context())
         .layer(ServiceBuilder::new().layer(axum::middleware::from_fn(
             middlewares::processing_time_middleware,
-        )));
-
-    routes
+        )))
+        .layer(axum::middleware::from_fn(middlewares::tracing_middleware))
 }
 
 fn root_routes<FS>() -> Router<AppContext<FS>>

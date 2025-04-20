@@ -5,6 +5,7 @@ use pfm_core::forex::{
     interface::ForexStorage,
 };
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::dto::*;
 use crate::global::AppContext;
@@ -53,9 +54,10 @@ impl From<RatesResponse<HistoricalRates>> for RatesDTO {
     }
 }
 
-/// GET /forex/rates
-/// get latest and historical rates
-/// query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
+// GET /forex/rates
+// get latest and historical rates
+// query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
+#[instrument(skip(ctx), ret)]
 pub(crate) async fn get_rates_handler(
     State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<RatesQuery>,

@@ -4,13 +4,8 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use axum::{
-    body::Body,
-    extract::Request,
-    http::{HeaderName, HeaderValue},
-    middleware::Next,
-    response::Response,
-};
+use axum::{body::Body, extract::Request, http::HeaderValue, middleware::Next, response::Response};
+use tracing::info_span;
 use uuid::Uuid;
 
 use crate::dto::*;
@@ -79,6 +74,27 @@ pub async fn request_id_middleware(mut req: Request<Body>, next: Next) -> Respon
     response
         .headers_mut()
         .insert(REQUEST_ID_HEADER_NAME, request_id);
+
+    response
+}
+
+pub async fn tracing_middleware(req: Request, next: Next) -> Response {
+    let correlation_id = Uuid::new_v4();
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+
+    let span = info_span!(
+        "tracing_middleware",
+        %correlation_id,
+        method = %method,
+        uri = %uri
+    );
+
+    let _enter = span.enter();
+
+    tracing::info!("Request received");
+
+    let response = next.run(req).await;
 
     response
 }

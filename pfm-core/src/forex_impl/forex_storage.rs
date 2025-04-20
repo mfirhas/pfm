@@ -18,6 +18,7 @@ use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::fs::{self, read_dir, File};
 use tokio::io::AsyncWriteExt;
+use tracing::instrument;
 
 const ERROR_PREFIX: &str = "[FOREX][storage_impl]";
 
@@ -87,6 +88,7 @@ impl ForexStorageImpl {
         Ok(())
     }
 
+    #[instrument(skip(self), ret)]
     async fn get_latest(&self) -> ForexResult<RatesResponse<Rates>> {
         let latest_read = self.fs.read().await;
         let latest_read = latest_read.latest();
@@ -376,6 +378,7 @@ impl ForexStorageImpl {
         Ok(updated_historical_rates)
     }
 
+    #[instrument(skip(self), ret)]
     async fn get_historical(
         &self,
         date: DateTime<Utc>,
@@ -396,6 +399,7 @@ impl ForexStorageImpl {
         Ok(rates)
     }
 
+    #[instrument(skip(self), ret)]
     async fn get_historical_range(
         &self,
         start_date: DateTime<Utc>,
@@ -646,13 +650,7 @@ impl ForexStorageImpl {
         // Sort files by filename (ascending order)
         files.sort_by(|a, b| a.0.cmp(&b.0));
 
-        // Keep only the latest (last in sorted order), delete the rest
-        if let Some((latest_filename, _)) = files.last() {
-            println!("Keeping: {}", latest_filename);
-        }
-
-        for (filename, entry) in files.iter().take(files.len().saturating_sub(1)) {
-            println!("Deleting: {}", filename);
+        for (_filename, entry) in files.iter().take(files.len().saturating_sub(1)) {
             fs::remove_file(entry.path())
                 .await
                 .context("storage clear latest read dir")

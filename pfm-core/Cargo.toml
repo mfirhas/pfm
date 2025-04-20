@@ -33,3 +33,12 @@ iso_currency = { workspace = true }
 rusty-money = { workspace = true }
 
 uom = {workspace = true}
+
+# tracing
+tracing = {workspace = true}
+tracing-subscriber = {workspace = true}
+tracing-error = {workspace = true}
+tracing-opentelemetry = {workspace = true}
+opentelemetry = {workspace = true}
+opentelemetry-otlp = {workspace = true}
+
