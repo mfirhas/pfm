@@ -41,9 +41,9 @@ impl BadRequestErrMsg for TimeseriesQuery {
     }
 }
 
-fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
+fn validate_timeseries_params(params: &TimeseriesQuery) -> Result<(), AppError> {
     if params.start > params.end {
-        return Some(AppError::BadRequest(
+        return Err(AppError::BadRequest(
             "start must not bigger than end".to_string(),
         ));
     }
@@ -51,13 +51,13 @@ fn validate_timeseries_params(params: &TimeseriesQuery) -> Option<AppError> {
     const MAX_RANGE: i64 = 5;
     const ONE_YEAR: i64 = 366;
     if params.end - params.start > Duration::days(MAX_RANGE * ONE_YEAR) {
-        return Some(AppError::BadRequest(format!(
+        return Err(AppError::BadRequest(format!(
             "Max timeseries range is {} years",
             MAX_RANGE
         )));
     }
 
-    None
+    Ok(())
 }
 
 #[instrument(skip(ctx), ret)]
@@ -65,9 +65,7 @@ pub(crate) async fn get_timeseries_handler(
     State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    if let Some(err) = validate_timeseries_params(&params) {
-        return Err(err);
-    }
+    validate_timeseries_params(&params)?;
     Ok(HttpResponse::ok(
         ctx.forex_storage
             .get_historical_range(params.start, params.end)
