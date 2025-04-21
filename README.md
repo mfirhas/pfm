@@ -10,7 +10,7 @@ Project layout:
 - pfm-http: serve pfm APIs. Currently endpoints supported:
   - forex(LIVE): conversion, rates and timeseries APIs between above supported currencies.
   - ...
-- pfm-cron: periodic update of core data(e.g. prices)
+- pfm-cron(LIVE): periodic update of core data(e.g. prices)
 - pfm-zakat: manage zakat such nishab calculation, payment due date, using updated price data.
 - pfm-cli: cli app for managing portfolio data. (TODO)
 - pfm-web: web interface for managing portfolio data. (TODO)
