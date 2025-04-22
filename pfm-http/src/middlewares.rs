@@ -39,13 +39,26 @@ pub(crate) async fn api_key_middleware(
     req: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    let Some(header_val) = req.headers().get("x-api-key").and_then(|v| v.to_str().ok()) else {
-        return Err(AppError::Unauthorized(
-            "request requires api key set in header in x-api-key".to_string(),
-        ));
+    let header_api_key = req.headers().get("x-api-key").and_then(|v| v.to_str().ok());
+
+    let api_key_val = if let Some(header_api_key_val) = header_api_key {
+        header_api_key_val.to_string()
+    } else {
+        // check from query param if header not set
+        let Some(query_param_api_key_val) = req.uri().query().and_then(|query| {
+            url::form_urlencoded::parse(query.as_bytes())
+                .find(|(k, _)| k == "api_key")
+                .map(|(_, v)| v.to_string())
+        }) else {
+            return Err(AppError::Unauthorized(
+                "request requires api key set in header as x-api-key OR in query param as api_key"
+                    .to_string(),
+            ));
+        };
+        query_param_api_key_val
     };
 
-    if !API_KEYS.values().any(|v| v == header_val) {
+    if !API_KEYS.values().any(|v| v == &api_key_val) {
         return Err(AppError::Unauthorized(
             "request's api key is invalid".to_string(),
         ));
