@@ -100,22 +100,29 @@ pub trait BadRequestErrMsg {
     }
 }
 
+pub trait Validate {
+    fn validate(&self) -> Result<(), AppError>;
+}
+
 /// custom query to handle if query params are missing.
 pub struct CustomQuery<T>(pub T);
 
 #[async_trait]
 impl<S, T> FromRequestParts<S> for CustomQuery<T>
 where
-    T: BadRequestErrMsg + DeserializeOwned + Send + Sync,
+    T: Validate + BadRequestErrMsg + DeserializeOwned + Send + Sync,
     S: Send + Sync,
 {
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        Query::<T>::from_request_parts(parts, _state)
+        let Query(params) = Query::<T>::from_request_parts(parts, _state)
             .await
-            .map(|Query(params)| CustomQuery(params))
-            .map_err(|_| AppError::BadRequest(T::bad_request_err_msg().to_string()))
+            .map_err(|_| AppError::BadRequest(T::bad_request_err_msg().to_string()))?;
+
+        params.validate()?;
+
+        Ok(CustomQuery(params))
     }
 }
 
