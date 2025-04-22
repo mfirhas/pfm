@@ -35,29 +35,31 @@ pub(crate) struct TimeseriesQuery {
     end: DateTime<Utc>,
 }
 
+impl Validate for TimeseriesQuery {
+    fn validate(&self) -> Result<(), AppError> {
+        if self.start > self.end {
+            return Err(AppError::BadRequest(
+                "start must not bigger than end".to_string(),
+            ));
+        }
+
+        const MAX_RANGE: i64 = 5;
+        const ONE_YEAR: i64 = 366;
+        if self.end - self.start > Duration::days(MAX_RANGE * ONE_YEAR) {
+            return Err(AppError::BadRequest(format!(
+                "Max timeseries date range is {} years",
+                MAX_RANGE
+            )));
+        }
+
+        Ok(())
+    }
+}
+
 impl BadRequestErrMsg for TimeseriesQuery {
     fn bad_request_err_msg() -> &'static str {
         "Invalid input of `start` or `end`. `start` must be in form of YYYY-MM-DD. `end` must be in form of YYYY-MM-DD."
     }
-}
-
-fn validate_timeseries_params(params: &TimeseriesQuery) -> Result<(), AppError> {
-    if params.start > params.end {
-        return Err(AppError::BadRequest(
-            "start must not bigger than end".to_string(),
-        ));
-    }
-
-    const MAX_RANGE: i64 = 5;
-    const ONE_YEAR: i64 = 366;
-    if params.end - params.start > Duration::days(MAX_RANGE * ONE_YEAR) {
-        return Err(AppError::BadRequest(format!(
-            "Max timeseries range is {} years",
-            MAX_RANGE
-        )));
-    }
-
-    Ok(())
 }
 
 #[instrument(skip(ctx), ret)]
@@ -65,7 +67,6 @@ pub(crate) async fn get_timeseries_handler(
     State(ctx): State<AppContext<impl ForexStorage>>,
     CustomQuery(params): CustomQuery<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    validate_timeseries_params(&params)?;
     Ok(HttpResponse::ok(
         ctx.forex_storage
             .get_historical_range(params.start, params.end)
