@@ -5,7 +5,7 @@ use std::{
 };
 
 use axum::{body::Body, extract::Request, http::HeaderValue, middleware::Next, response::Response};
-use tracing::info_span;
+use tracing::{info_span, Instrument};
 use uuid::Uuid;
 
 use crate::dto::*;
@@ -102,11 +102,11 @@ pub async fn tracing_middleware(mut req: Request, next: Next) -> Response {
     req.extensions_mut()
         .insert(correlation_id_header_val.clone());
 
-    let _enter = span.enter();
+    // let _span = span.enter();
 
     tracing::info!("--------------------Request received--------------------");
 
-    let mut response = next.run(req).await;
+    let mut response = async move { next.run(req).await }.instrument(span).await;
 
     response
         .headers_mut()
