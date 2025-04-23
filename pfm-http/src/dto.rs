@@ -85,6 +85,7 @@ impl IntoResponse for AppError {
 
 impl From<ForexError> for AppError {
     fn from(value: ForexError) -> Self {
+        tracing::error!("ForexError: {}", value);
         match value {
             ForexError::Error(v) => Self::NoContent(v.to_string()),
             ForexError::ClientError(v) => Self::BadRequest(v.to_string()),
