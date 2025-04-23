@@ -30,12 +30,17 @@ fn forex_routes<FS>() -> Router<AppContext<FS>>
 where
     FS: ForexStorage + Clone + Send + Sync + 'static,
 {
-    Router::new()
+    let routes = Router::new()
         .route("/convert", get(forex_routes::convert::convert_handler))
         .route("/rates", get(forex_routes::rates::get_rates_handler))
         .route(
             "/timeseries",
             get(forex_routes::timeseries::get_timeseries_handler),
-        )
-        .layer(axum::middleware::from_fn(middlewares::api_key_middleware))
+        );
+
+    if global::config().enable_api_key {
+        return routes.layer(axum::middleware::from_fn(middlewares::api_key_middleware));
+    }
+
+    routes
 }

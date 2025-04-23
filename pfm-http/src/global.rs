@@ -11,6 +11,10 @@ use serde::Deserialize;
 pub(crate) struct AppConfig {
     #[serde(alias = "HTTP_PORT")]
     pub http_port: u16,
+
+    /// if enabled, accessing APIs must provide valid api key
+    #[serde(alias = "HTTP_ENABLE_API_KEY")]
+    pub enable_api_key: bool,
 }
 
 static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| {
