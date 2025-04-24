@@ -3,8 +3,8 @@ use std::sync::LazyLock;
 use pfm_core::{
     forex_impl::forex_storage::{self, ForexStorageImpl},
     global,
-    utils::get_config,
 };
+use pfm_utils::config_util;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -18,7 +18,8 @@ pub(crate) struct AppConfig {
 }
 
 static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| {
-    let cfg = get_config::<AppConfig>("HTTP_").expect("pfm-http failed reading config");
+    let cfg =
+        config_util::get_config::<AppConfig>("HTTP_").expect("pfm-http failed reading config");
     cfg
 });
 

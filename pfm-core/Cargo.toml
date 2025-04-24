@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+pfm-utils = { path = "../pfm-utils" }
+
 tokio = { workspace = true }
 reqwest = { workspace = true }
 chrono = { workspace = true }

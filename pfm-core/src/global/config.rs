@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::{fmt::Debug, sync::LazyLock};
 
-use crate::utils;
+use pfm_utils::config_util;
 
 /// Get instantiated global config object.
 pub fn config() -> &'static Config {
@@ -17,7 +17,7 @@ fn init_config<CFG>() -> Result<CFG, anyhow::Error>
 where
     CFG: for<'de> Deserialize<'de> + Debug + Clone,
 {
-    let cfg = utils::get_config(ENV_PREFIX);
+    let cfg = config_util::get_config(ENV_PREFIX);
 
     cfg
 }

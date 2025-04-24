@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
 
-use crate::utils;
+use pfm_utils::config_util;
 
 /// Get instantiated global storage filesystem object for SERVER.
 pub fn storage_fs() -> StorageFS {
@@ -24,7 +24,8 @@ const STORAGE_FS_HISTORICAL_DIR_NAME: &str = "historical";
 static STORAGE_FS_DIR_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     if cfg!(debug_assertions) {
         let local_dev_path = "test_dir";
-        let workspace_dir = utils::find_workspace_root().expect("init storage dir path error");
+        let workspace_dir =
+            config_util::find_workspace_root().expect("init storage dir path error");
         let path = workspace_dir.join(local_dev_path);
         return path;
     }
@@ -83,14 +84,14 @@ impl ServerFS {
 fn init_storage_fs() -> Result<StorageFS, anyhow::Error> {
     let root_pb = STORAGE_FS_DIR_PATH.clone();
 
-    let root = utils::set_root(root_pb, STORAGE_FS_PERMISSION)
+    let root = config_util::set_root(root_pb, STORAGE_FS_PERMISSION)
         .context("global: failed initializing storage fs")?;
 
-    let latest = utils::set_sub_dir(&root, STORAGE_FS_LATEST_DIR_NAME, STORAGE_FS_PERMISSION)
+    let latest = config_util::set_sub_dir(&root, STORAGE_FS_LATEST_DIR_NAME, STORAGE_FS_PERMISSION)
         .context("global: failed initializing latest storage fs")?;
 
     let historical =
-        utils::set_sub_dir(&root, STORAGE_FS_HISTORICAL_DIR_NAME, STORAGE_FS_PERMISSION)
+        config_util::set_sub_dir(&root, STORAGE_FS_HISTORICAL_DIR_NAME, STORAGE_FS_PERMISSION)
             .context("global: failed initializing historical storage fs")?;
 
     let storage_fs = Arc::new(RwLock::new(ServerFS {

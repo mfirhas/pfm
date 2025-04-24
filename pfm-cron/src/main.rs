@@ -59,7 +59,7 @@ async fn main() {
 }
 
 fn init_config() -> Result<Config, anyhow::Error> {
-    let cfg = pfm_core::utils::get_config::<Config>(ENV_PREFIX);
+    let cfg = pfm_utils::config_util::get_config::<Config>(ENV_PREFIX);
 
     cfg
 }

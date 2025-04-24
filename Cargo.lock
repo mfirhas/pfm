@@ -1433,6 +1433,7 @@ dependencies = [
  "lazy_static",
  "opentelemetry 0.22.0",
  "opentelemetry-otlp",
+ "pfm-utils",
  "quinn-proto",
  "regex",
  "reqwest",
@@ -1532,8 +1533,12 @@ dependencies = [
 name = "pfm-utils"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "configrs",
  "opentelemetry 0.22.0",
  "opentelemetry-otlp",
+ "serde",
+ "serde_json",
  "tower-http",
  "tracing",
  "tracing-error",
