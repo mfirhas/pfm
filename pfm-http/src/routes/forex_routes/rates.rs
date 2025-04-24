@@ -1,5 +1,5 @@
 use axum::{extract::State, response::IntoResponse};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use pfm_core::forex::{
     entity::{HistoricalRates, Rates, RatesData, RatesResponse},
     interface::ForexStorage,
@@ -70,10 +70,19 @@ pub(crate) async fn get_rates_handler(
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
         // get historical rates
-        Some(date) => Ok(HttpResponse::ok(
-            RatesDTO::from(ctx.forex_storage.get_historical(date).await?),
-            None,
-        )),
+        Some(date) => {
+            let now = Utc::now();
+            if date.year() == now.year() && date.month() == now.month() && date.day() == now.day() {
+                return Ok(HttpResponse::ok(
+                    RatesDTO::from(ctx.forex_storage.get_latest().await?),
+                    None,
+                ));
+            }
+            Ok(HttpResponse::ok(
+                RatesDTO::from(ctx.forex_storage.get_historical(date).await?),
+                None,
+            ))
+        }
         // get latest rates
         None => Ok(HttpResponse::ok(
             RatesDTO::from(ctx.forex_storage.get_latest().await?),
