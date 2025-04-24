@@ -10,10 +10,20 @@ test-integ:
 P ?= pfm-http
 
 build-linux-gnu:
-	@echo "Building $(p) for linux gnu..."
+	@echo "Building $(P) for linux gnu..."
 	@cargo build -p $(P) --release --target x86_64-unknown-linux-gnu
 
 build-linux-musl:
-	@echo "Building $(p) for linux musl..."
+	@echo "Building $(P) for linux musl..."
 	@cargo build -p $(P) --release --target x86_64-unknown-linux-musl
 
+build-deploy-linux-gnu-all:
+	@echo "Building all binary packages..."
+	@echo "Building pfm-http..."
+	@make build-linux-gnu P=pfm-http 
+	@echo "Building pfm-cron..."
+	@make build-linux-gnu P=pfm-cron
+	@echo "Deploying pfm-http..."
+	@./deploy.sh mfirhas 2345 target/x86_64-unknown-linux-gnu/release/pfm-http .env api_keys.json
+	@echo "Deploying pfm-cron..."
+	@./deploy.sh mfirhas 2345 target/x86_64-unknown-linux-gnu/release/pfm-cron .env api_keys.json
