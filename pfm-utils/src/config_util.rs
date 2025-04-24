@@ -42,35 +42,6 @@ where
     ret
 }
 
-pub fn find_file_in_workspace(filename: &str) -> Option<PathBuf> {
-    let mut current_dir = std::env::current_dir().ok()?;
-
-    let mut workspace_root = None;
-
-    loop {
-        if is_workspace_root(&current_dir) {
-            workspace_root = Some(current_dir.clone());
-        }
-
-        let file_path = current_dir.join(filename);
-        if file_path.is_file() {
-            if let Some(root) = &workspace_root {
-                if file_path.starts_with(root) {
-                    return Some(file_path);
-                }
-            } else {
-                return Some(file_path);
-            }
-        }
-
-        if !current_dir.pop() {
-            break;
-        }
-    }
-
-    None
-}
-
 pub fn find_workspace_root() -> Result<PathBuf, anyhow::Error> {
     let mut current_dir = std::env::current_dir()?;
 

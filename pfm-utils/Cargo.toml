@@ -5,6 +5,13 @@ edition = "2021"
 
 [dependencies]
 tower-http = {workspace = true}
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+configrs = { workspace = true }
+anyhow = { workspace = true }
+
+## tracing
 tracing = {workspace = true}
 tracing-subscriber = {workspace = true}
 tracing-error = {workspace = true}
