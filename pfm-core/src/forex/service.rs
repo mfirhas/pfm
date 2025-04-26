@@ -31,11 +31,15 @@ where
             ));
         }
         let date = latest_rates.data.latest_update;
+        let result_code = res.format(false);
+        let result_symbol = res.format(true);
 
         ConversionResponse {
             date,
             from,
             result: res,
+            result_code,
+            result_symbol,
         }
     };
 
@@ -59,11 +63,15 @@ pub async fn convert_historical(
     if converted_money.amount() == dec!(0) {
         return Err(ForexError::internal_error("service convert historical rate not available for this date, try again or another date, or contact web master"));
     }
+    let result_code = converted_money.format(false);
+    let result_symbol = converted_money.format(true);
 
     Ok(ConversionResponse {
         date: historical_rates.data.date,
         from,
         result: converted_money,
+        result_code,
+        result_symbol,
     })
 }
 
