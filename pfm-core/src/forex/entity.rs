@@ -193,6 +193,12 @@ pub struct ConversionResponse {
 
     /// conversion result.
     pub result: Money,
+
+    /// result in form of USD 1,000.00
+    pub result_code: String,
+
+    /// result in form of $1,000.00
+    pub result_symbol: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

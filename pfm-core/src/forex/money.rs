@@ -321,7 +321,7 @@ impl Money {
         Ok(Money::new_money(currency, amount))
     }
 
-    fn to_string(&self, use_symbol: bool) -> String {
+    pub fn format(&self, use_symbol: bool) -> String {
         let currency_code: String = if use_symbol {
             self.symbol()
         } else {
@@ -427,7 +427,7 @@ impl FromStr for Money {
 
 impl Display for Money {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ret = self.to_string(global::config().forex_use_symbol);
+        let ret = self.format(global::config().forex_use_symbol);
         write!(f, "{}", ret)
     }
 }
