@@ -1539,6 +1539,7 @@ dependencies = [
  "opentelemetry-otlp",
  "serde",
  "serde_json",
+ "tokio",
  "tower-http",
  "tracing",
  "tracing-error",
