@@ -5,10 +5,13 @@ use std::{
 };
 
 use axum::{body::Body, extract::Request, http::HeaderValue, middleware::Next, response::Response};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 use tracing::{info_span, Instrument};
 use uuid::Uuid;
 
-use crate::dto::*;
+use crate::{dto::*, global};
 
 pub(crate) async fn processing_time_middleware(req: Request<Body>, next: Next) -> Response {
     let start = tokio::time::Instant::now();
@@ -24,6 +27,28 @@ pub(crate) async fn processing_time_middleware(req: Request<Body>, next: Next) -
     }
 
     response
+}
+
+pub(crate) async fn admin_password_middleware(
+    req: Request<Body>,
+    next: Next,
+) -> Result<Response, AppError> {
+    let admin_pass_header = req
+        .headers()
+        .get("x-admin-password")
+        .and_then(|v| v.to_str().ok());
+
+    if let Some(pass) = admin_pass_header {
+        if pass != global::config().admin_password.as_str() {
+            return Err(AppError::Unauthorized("admin unauthorized".to_string()));
+        }
+    } else {
+        return Err(AppError::BadRequest(
+            "admin password not provided".to_string(),
+        ));
+    }
+
+    Ok(next.run(req).await)
 }
 
 // contains api keys for client to access these apis

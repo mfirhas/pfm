@@ -15,6 +15,10 @@ pub(crate) struct AppConfig {
     /// if enabled, accessing APIs must provide valid api key
     #[serde(alias = "HTTP_ENABLE_API_KEY")]
     pub enable_api_key: bool,
+
+    /// provided from env var, NOT file
+    #[serde(alias = "HTTP_ADMIN_PASSWORD")]
+    pub admin_password: String,
 }
 
 static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| {
