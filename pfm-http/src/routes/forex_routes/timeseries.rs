@@ -4,7 +4,7 @@ use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Duration, Utc};
 use pfm_core::forex::{
     entity::{HistoricalRates, RatesData, RatesResponse},
-    interface::ForexStorage,
+    interface::{ForexHistoricalRates, ForexStorage},
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -64,7 +64,7 @@ impl BadRequestErrMsg for TimeseriesQuery {
 
 #[instrument(skip(ctx), ret)]
 pub(crate) async fn get_timeseries_handler(
-    State(ctx): State<AppContext<impl ForexStorage>>,
+    State(ctx): State<AppContext<impl ForexStorage, impl ForexHistoricalRates>>,
     CustomQuery(params): CustomQuery<TimeseriesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     Ok(HttpResponse::ok(
