@@ -44,6 +44,9 @@ where
         .layer(axum::middleware::from_fn(
             middlewares::admin_password_middleware,
         ))
+        .layer(axum::middleware::from_fn(
+            middlewares::forex_admin_rate_limit_middleware,
+        ))
 }
 
 fn forex_routes<FS, FH>() -> Router<AppContext<FS, FH>>
