@@ -1,7 +1,11 @@
 use std::sync::LazyLock;
 
 use pfm_core::{
-    forex_impl::forex_storage::{self, ForexStorageImpl},
+    forex_impl::currencybeacon::Api as CurrencyBeaconApi,
+    forex_impl::{
+        self,
+        forex_storage::{self, ForexStorageImpl},
+    },
     global,
 };
 use pfm_utils::config_util;
@@ -33,18 +37,26 @@ pub(crate) fn config() -> &'static AppConfig {
 }
 
 #[derive(Clone)]
-pub(crate) struct AppContext<FS> {
+pub(crate) struct AppContext<FS, FH> {
     pub forex_storage: FS,
+    pub forex_historical: FH,
 }
 
-static CONTEXT: LazyLock<AppContext<ForexStorageImpl>> = LazyLock::new(|| {
+static CONTEXT: LazyLock<AppContext<ForexStorageImpl, CurrencyBeaconApi>> = LazyLock::new(|| {
     let forex_storage = forex_storage::ForexStorageImpl::new(global::storage_fs());
-    let ctx = AppContext { forex_storage };
+    let forex_historical = forex_impl::currencybeacon::Api::new(
+        &global::config().forex_currencybeacon_api_key,
+        global::http_client(),
+    );
+    let ctx = AppContext {
+        forex_storage,
+        forex_historical,
+    };
 
     ctx
 });
 
 /// get dependencies of pfm-http
-pub(crate) fn context() -> AppContext<ForexStorageImpl> {
+pub(crate) fn context() -> AppContext<ForexStorageImpl, CurrencyBeaconApi> {
     CONTEXT.clone()
 }

@@ -9,5 +9,6 @@ target/
 
 *.env
 api_keys.json
+admin_rate_limit.json
 test_dir/
 test_dir_client/

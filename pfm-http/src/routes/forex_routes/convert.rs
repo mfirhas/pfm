@@ -2,7 +2,10 @@ use std::str::FromStr;
 
 use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Utc};
-use pfm_core::forex::{interface::ForexStorage, service, Money};
+use pfm_core::forex::{
+    interface::{ForexHistoricalRates, ForexStorage},
+    service, Money,
+};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -46,7 +49,7 @@ impl BadRequestErrMsg for ConvertQuery {
 // query 3(OPTIONAL); `date`(YYYY-MM-DD) for historical convert. e.g. ?date=2020-02-02
 #[instrument(skip(ctx), ret)]
 pub(crate) async fn convert_handler(
-    State(ctx): State<AppContext<impl ForexStorage>>,
+    State(ctx): State<AppContext<impl ForexStorage, impl ForexHistoricalRates>>,
     CustomQuery(params): CustomQuery<ConvertQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
