@@ -3,11 +3,18 @@ mod global;
 mod middlewares;
 mod routes;
 
-use pfm_utils::tracing_util;
+use std::sync::Arc;
+
+use pfm_utils::{graceful_util, tracing_util};
+use tokio::sync::Notify;
 
 #[tokio::main]
 async fn main() {
     tracing_util::init_tracing("pfm-http");
+
+    // graceful shutdown
+    let notify_signal = Arc::new(Notify::new());
+    graceful_util::graceful_shutdown(notify_signal.clone(), Some(do_cleanup())).await;
 
     let routes = routes::register_routes();
 
@@ -23,6 +30,14 @@ async fn main() {
     );
 
     axum::serve(listener, routes)
+        .with_graceful_shutdown(graceful_util::wait_for_shutdown(notify_signal))
         .await
         .expect("httpserver failed");
+}
+
+/// cleanup routine to run before shutdown
+async fn do_cleanup() {
+    tracing::info!("cleanup start...");
+    // code here...
+    tracing::info!("cleanup done!")
 }
