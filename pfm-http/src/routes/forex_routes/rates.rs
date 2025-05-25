@@ -3,6 +3,7 @@ use chrono::{DateTime, Datelike, Utc};
 use pfm_core::forex::{
     entity::{HistoricalRates, Rates, RatesData, RatesResponse},
     interface::ForexStorage,
+    Currency,
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -37,6 +38,7 @@ impl BadRequestErrMsg for RatesQuery {
 pub(crate) struct RatesDTO {
     pub message: String,
     pub rates_date: DateTime<Utc>,
+    pub base: Currency,
     pub rates: RatesData,
 }
 
@@ -45,6 +47,7 @@ impl From<RatesResponse<Rates>> for RatesDTO {
         RatesDTO {
             message: "Latest rates".to_string(),
             rates_date: value.data.latest_update,
+            base: value.data.base,
             rates: value.data.rates,
         }
     }
@@ -55,6 +58,7 @@ impl From<RatesResponse<HistoricalRates>> for RatesDTO {
         RatesDTO {
             message: "Historical rates".to_string(),
             rates_date: value.data.date,
+            base: value.data.base,
             rates: value.data.rates,
         }
     }

@@ -71,6 +71,8 @@ async fn test_batch_convert() {
                 .with_timezone(&Utc),
             from: from_gbp,
             result: Money::SAR(dec!(4762.0152292578498482026199809)),
+            result_code: Money::SAR(dec!(4762.0152292578498482026199809)).format(false),
+            result_symbol: Money::SAR(dec!(4762.0152292578498482026199809)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
@@ -78,6 +80,8 @@ async fn test_batch_convert() {
                 .with_timezone(&Utc),
             from: from_usd,
             result: Money::SAR(dec!(15001.548000)),
+            result_code: Money::SAR(dec!(15001.548000)).format(false),
+            result_symbol: Money::SAR(dec!(15001.548000)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
@@ -85,6 +89,8 @@ async fn test_batch_convert() {
                 .with_timezone(&Utc),
             from: from_idr,
             result: Money::SAR(dec!(5.2401981046108984873336978311)),
+            result_code: Money::SAR(dec!(5.2401981046108984873336978311)).format(false),
+            result_symbol: Money::SAR(dec!(5.2401981046108984873336978311)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
@@ -92,6 +98,8 @@ async fn test_batch_convert() {
                 .with_timezone(&Utc),
             from: from_chf,
             result: Money::SAR(dec!(4186.4940892803322058872777200)),
+            result_code: Money::SAR(dec!(4186.4940892803322058872777200)).format(false),
+            result_symbol: Money::SAR(dec!(4186.4940892803322058872777200)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
@@ -99,6 +107,8 @@ async fn test_batch_convert() {
                 .with_timezone(&Utc),
             from: from_sgd,
             result: Money::SAR(dec!(3625.2651561342823236183774170)),
+            result_code: Money::SAR(dec!(3625.2651561342823236183774170)).format(false),
+            result_symbol: Money::SAR(dec!(3625.2651561342823236183774170)).format(true),
         },
     ];
 
