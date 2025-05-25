@@ -51,6 +51,82 @@ pub(crate) async fn admin_password_middleware(
     Ok(next.run(req).await)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct RateLimitData {
+    date_time: Option<DateTime<Utc>>,
+    /// current count
+    count: u32,
+    /// the limit in each unit, e.g. 2 per day, 2 is the max
+    max: u32,
+    /// unit in seconds, limit per unit, e.g. 2 per day, day is the unit in seconds(86400secs)
+    unit: u64,
+}
+
+type RateLimitMap = HashMap<String, RateLimitData>;
+
+// contains admin api rate limit counts data
+static RATE_LIMIT: LazyLock<RwLock<RateLimitMap>> = LazyLock::new(|| {
+    let content = fs::read_to_string("admin_rate_limit.json")
+        .expect("Loading admin_rate_limit.json: failed reading the file");
+    let parsed: RateLimitMap =
+        serde_json::from_str(&content).expect("Loading admin_rate_limit.json: Invalid json format");
+    tracing::info!("admin rate limit data: {:?}", &parsed);
+    RwLock::new(parsed)
+});
+
+pub(crate) async fn forex_admin_rate_limit_middleware(
+    req: Request<Body>,
+    next: Next,
+) -> Result<Response, AppError> {
+    let mut rate_limit_guard = RATE_LIMIT.write().await;
+    let rate_limit_data = rate_limit_guard.get_mut("forex_admin");
+    if let Some(rate_limit) = rate_limit_data {
+        if !check_rate_limit(rate_limit) {
+            return Err(AppError::Unauthorized(
+                "forex admin rate limit exceeded".to_string(),
+            ));
+        }
+        drop(rate_limit_guard);
+        Ok(next.run(req).await)
+    } else {
+        drop(rate_limit_guard);
+        Err(AppError::Unauthorized(
+            "forex admin rate limit data not found".to_string(),
+        ))
+    }
+}
+
+fn check_rate_limit(data: &mut RateLimitData) -> bool {
+    let now = Utc::now();
+
+    // If this is the first request
+    if data.date_time.is_none() {
+        data.date_time = Some(now);
+        data.count = 1;
+        return true;
+    }
+
+    let last_time = data.date_time.unwrap();
+    let elapsed = (now - last_time).num_seconds() as u64;
+
+    // If the time window has passed, reset the counter
+    if elapsed >= data.unit {
+        data.date_time = Some(now);
+        data.count = 1;
+        return true;
+    }
+
+    // If we're still within the time window
+    if data.count < data.max {
+        // Increment the counter and allow the action
+        data.count += 1;
+        return true;
+    }
+
+    // Rate limit hit
+    false
+}
+
 // contains api keys for client to access these apis
 static API_KEYS: LazyLock<Arc<HashMap<String, String>>> = LazyLock::new(|| {
     let content = fs::read_to_string("api_keys.json")
