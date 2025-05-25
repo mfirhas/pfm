@@ -2,7 +2,7 @@ use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Datelike, Utc};
 use pfm_core::forex::{
     entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-    interface::ForexStorage,
+    interface::{ForexHistoricalRates, ForexStorage},
     Currency,
 };
 use serde::{Deserialize, Serialize};
@@ -69,7 +69,7 @@ impl From<RatesResponse<HistoricalRates>> for RatesDTO {
 // query 1: `date`(YYYY-MM-DD) date for historical rates, e.g. ?date=2020-02-02
 #[instrument(skip(ctx), ret)]
 pub(crate) async fn get_rates_handler(
-    State(ctx): State<AppContext<impl ForexStorage>>,
+    State(ctx): State<AppContext<impl ForexStorage, impl ForexHistoricalRates>>,
     CustomQuery(params): CustomQuery<RatesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     match params.date {
