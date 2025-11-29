@@ -18,8 +18,9 @@ where
 {
     let cfg = configrs::new().with_env_prefix(prefix);
     if cfg!(debug_assertions) {
+        let dev_env_filename = "dev.env";
         let workspace_dir = find_workspace_root()?;
-        let dev_config_file = workspace_dir.join(".env");
+        let dev_config_file = workspace_dir.join(dev_env_filename);
         let config_builder = if dev_config_file.exists() {
             cfg.with_overwrite().with_env(&dev_config_file)
         } else {
