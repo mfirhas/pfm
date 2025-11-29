@@ -20,18 +20,19 @@ where
     if cfg!(debug_assertions) {
         let workspace_dir = find_workspace_root()?;
         let dev_config_file = workspace_dir.join(".env");
-        let ret = cfg
-            .with_overwrite()
-            .with_env(&dev_config_file)
-            .build::<CFG>()
-            .map_err(|err| {
-                anyhow!(
-                    "{} failed reading local config at {:?}: {}",
-                    ERROR_PREFIX,
-                    dev_config_file.as_path(),
-                    err
-                )
-            });
+        let config_builder = if dev_config_file.exists() {
+            cfg.with_overwrite().with_env(&dev_config_file)
+        } else {
+            cfg
+        };
+        let ret = config_builder.build::<CFG>().map_err(|err| {
+            anyhow!(
+                "{} failed reading local config at {:?}: {}",
+                ERROR_PREFIX,
+                dev_config_file.as_path(),
+                err
+            )
+        });
         return ret;
     }
 
