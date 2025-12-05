@@ -3,9 +3,8 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, TimeDelta, Utc};
 use pfm_core::{
     forex::{
-        self,
+        self, Currency,
         interface::{ForexHistoricalRates, ForexRates, ForexStorage, ForexStorageDeletion},
-        Currency,
     },
     global,
 };
@@ -14,6 +13,7 @@ use tracing::instrument;
 
 /// ----------------------------- JOBS AND HANDLERS -----------------------------
 // run at every hour
+// 0 0 * * * *
 #[instrument(skip_all)]
 pub(crate) async fn poll_latest_rates_job<'a, API, STORAGE>(
     scheduler: &'a JobScheduler,
@@ -59,6 +59,7 @@ async fn poll_latest_rates_handler(fx: impl ForexRates, fs: impl ForexStorage, b
 }
 
 // run at every 01:10 AM UTC
+// 0 10 1 * * *
 #[instrument(skip_all)]
 pub(crate) async fn poll_historical_rates_job<'a, API, STORAGE, STORAGE_DELETION>(
     scheduler: &'a JobScheduler,
