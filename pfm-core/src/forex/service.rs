@@ -2,8 +2,6 @@ use chrono::{DateTime, Utc};
 use rust_decimal_macros::dec;
 use tracing::instrument;
 
-use crate::global;
-
 use super::{
     currency::Currency,
     entity::{ConversionResponse, HistoricalRates, Rates, RatesResponse},
@@ -31,15 +29,15 @@ where
             ));
         }
         let date = latest_rates.data.latest_update;
-        let result_code = res.format(false);
-        let result_symbol = res.format(true);
+        let code = res.format(false);
+        let symbol = res.format(true);
 
         ConversionResponse {
             date,
             from,
-            result: res,
-            result_code,
-            result_symbol,
+            to: res,
+            code,
+            symbol,
         }
     };
 
@@ -61,17 +59,19 @@ pub async fn convert_historical(
     }
     let converted_money = Money::convert(&historical_rates.data.rates, from, to)?;
     if converted_money.amount() == dec!(0) {
-        return Err(ForexError::internal_error("service convert historical rate not available for this date, try again or another date, or contact web master"));
+        return Err(ForexError::internal_error(
+            "service convert historical rate not available for this date, try again or another date, or contact web master",
+        ));
     }
-    let result_code = converted_money.format(false);
-    let result_symbol = converted_money.format(true);
+    let code = converted_money.format(false);
+    let symbol = converted_money.format(true);
 
     Ok(ConversionResponse {
         date: historical_rates.data.date,
         from,
-        result: converted_money,
-        result_code,
-        result_symbol,
+        to: converted_money,
+        code,
+        symbol,
     })
 }
 
@@ -87,7 +87,7 @@ where
 
     for x in from {
         let ret = convert(storage, x, to).await?;
-        if ret.result.amount() == dec!(0) {
+        if ret.to.amount() == dec!(0) {
             return Err(ForexError::internal_error(
                 format!(
                     "service batch_convert rate for {} is not available at the moment",

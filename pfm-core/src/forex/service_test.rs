@@ -3,10 +3,10 @@ use rust_decimal_macros::dec;
 
 use crate::{
     forex::{
+        Currency, Money,
         entity::ConversionResponse,
         interface::ForexStorage,
         service::{batch_convert, convert, convert_historical, poll_historical_rates, poll_rates},
-        Currency, Money,
     },
     global,
 };
@@ -26,7 +26,7 @@ async fn test_convert() {
     let ret = ret.unwrap();
     // expected data come from forex_mock
     let expected = Money::new_money(Currency::SAR, dec!(4762.0152292578498482026199809));
-    assert_eq!(ret.result, expected);
+    assert_eq!(ret.to, expected);
 }
 
 #[tokio::test]
@@ -45,7 +45,7 @@ async fn test_convert_historical() {
     let ret = ret.unwrap();
     // expected data come from forex_mock
     let expected = Money::new_money(Currency::SAR, dec!(4533.0433702899590250394500024));
-    assert_eq!(ret.result, expected);
+    assert_eq!(ret.to, expected);
 }
 
 #[tokio::test]
@@ -70,45 +70,45 @@ async fn test_batch_convert() {
                 .unwrap()
                 .with_timezone(&Utc),
             from: from_gbp,
-            result: Money::SAR(dec!(4762.0152292578498482026199809)),
-            result_code: Money::SAR(dec!(4762.0152292578498482026199809)).format(false),
-            result_symbol: Money::SAR(dec!(4762.0152292578498482026199809)).format(true),
+            to: Money::SAR(dec!(4762.0152292578498482026199809)),
+            code: Money::SAR(dec!(4762.0152292578498482026199809)).format(false),
+            symbol: Money::SAR(dec!(4762.0152292578498482026199809)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
             from: from_usd,
-            result: Money::SAR(dec!(15001.548000)),
-            result_code: Money::SAR(dec!(15001.548000)).format(false),
-            result_symbol: Money::SAR(dec!(15001.548000)).format(true),
+            to: Money::SAR(dec!(15001.548000)),
+            code: Money::SAR(dec!(15001.548000)).format(false),
+            symbol: Money::SAR(dec!(15001.548000)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
             from: from_idr,
-            result: Money::SAR(dec!(5.2401981046108984873336978311)),
-            result_code: Money::SAR(dec!(5.2401981046108984873336978311)).format(false),
-            result_symbol: Money::SAR(dec!(5.2401981046108984873336978311)).format(true),
+            to: Money::SAR(dec!(5.2401981046108984873336978311)),
+            code: Money::SAR(dec!(5.2401981046108984873336978311)).format(false),
+            symbol: Money::SAR(dec!(5.2401981046108984873336978311)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
             from: from_chf,
-            result: Money::SAR(dec!(4186.4940892803322058872777200)),
-            result_code: Money::SAR(dec!(4186.4940892803322058872777200)).format(false),
-            result_symbol: Money::SAR(dec!(4186.4940892803322058872777200)).format(true),
+            to: Money::SAR(dec!(4186.4940892803322058872777200)),
+            code: Money::SAR(dec!(4186.4940892803322058872777200)).format(false),
+            symbol: Money::SAR(dec!(4186.4940892803322058872777200)).format(true),
         },
         ConversionResponse {
             date: DateTime::parse_from_rfc3339("2025-03-04T02:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),
             from: from_sgd,
-            result: Money::SAR(dec!(3625.2651561342823236183774170)),
-            result_code: Money::SAR(dec!(3625.2651561342823236183774170)).format(false),
-            result_symbol: Money::SAR(dec!(3625.2651561342823236183774170)).format(true),
+            to: Money::SAR(dec!(3625.2651561342823236183774170)),
+            code: Money::SAR(dec!(3625.2651561342823236183774170)).format(false),
+            symbol: Money::SAR(dec!(3625.2651561342823236183774170)).format(true),
         },
     ];
 
@@ -116,7 +116,7 @@ async fn test_batch_convert() {
     assert_eq!(ret.as_ref().unwrap().len(), 5);
     let ret = ret.unwrap();
     for (i, v) in expected_conversions.iter().enumerate() {
-        assert_eq!(ret[i].result, v.result);
+        assert_eq!(ret[i].to, v.to);
     }
 }
 
