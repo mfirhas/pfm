@@ -1,0 +1,16 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm manual deploy on master'
+        required: true
+        default: 'no'
+
+jobs:
+  build:
+    name: Build the apps (TODO)
+
+  deploy:
+    name: Deploy the apps (TODO)
