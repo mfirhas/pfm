@@ -25,7 +25,7 @@ test:
 	RUSTFLAGS="-C instrument-coverage -Zpanic_abort_tests -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort" \
 	RUSTDOCFLAGS="-Cpanic=abort" \
 	LLVM_PROFILE_FILE="$(PROFILE_PATTERN)" \
-	cargo $(RUST_TOOLCHAIN) test --tests -- --test-threads=1
+	cargo $(RUST_TOOLCHAIN) test -p pfm-core --lib -- --test-threads=1
 
 cover:
 	@echo "merging profraw -> profdata..."
@@ -33,19 +33,6 @@ cover:
 	@echo "generating lcov with grcov..."
 	@grcov $(OUT_DIR) -s . --binary-path ./$(OUT_DIR) -t lcov --branch --ignore-not-existing -o $(LCOV) --ignore '/*' --ignore 'examples/*' --ignore 'tests/*' --ignore 'target/*'
 	@echo "lcov saved to $(LCOV)"
-
-build-linux-gnu:
-	@echo "Building kartel for linux gnu..."
-	@cargo build -p kartel --release --target x86_64-unknown-linux-gnu
-
-# test:
-# 	@echo "Running pfm-core unit test..."
-# 	@cargo test -p pfm-core --lib
-
-# test-integ:
-# 	@echo "Running pfm-core integration test..."
-# 	@cargo test --test '*' -- --test-threads=1
-# 	@cargo test --release -p pfm-core --test test_storage -- test_storage_get_historical_range --exact --show-output --ignored
 
 P ?= pfm-http
 
