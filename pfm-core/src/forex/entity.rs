@@ -47,22 +47,6 @@ impl RatesResponse<Rates> {
             source: String::default(),
             poll_date: Utc::now(),
             data: Rates {
-                latest_update: date,
-                base: Currency::default(),
-                rates: RatesData::default(),
-            },
-            error: Some(err.detail()),
-        }
-    }
-}
-
-impl RatesResponse<HistoricalRates> {
-    pub(crate) fn err(date: DateTime<Utc>, err: ForexError) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            source: String::default(),
-            poll_date: Utc::now(),
-            data: HistoricalRates {
                 date,
                 base: Currency::default(),
                 rates: RatesData::default(),
@@ -74,18 +58,6 @@ impl RatesResponse<HistoricalRates> {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Rates {
-    #[serde(alias = "latest_update")]
-    pub latest_update: DateTime<Utc>,
-
-    #[serde(alias = "base")]
-    pub base: Currency,
-
-    #[serde(alias = "rates")]
-    pub rates: RatesData,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct HistoricalRates {
     #[serde(alias = "date")]
     pub date: DateTime<Utc>,
 

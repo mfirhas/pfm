@@ -4,7 +4,7 @@ use tracing::instrument;
 
 use super::{
     currency::Currency,
-    entity::{ConversionResponse, HistoricalRates, Rates, RatesResponse},
+    entity::{ConversionResponse, Rates, RatesResponse},
     interface::{ForexError, ForexHistoricalRates, ForexRates, ForexResult, ForexStorage},
     money::Money,
 };
@@ -28,7 +28,7 @@ where
                 "service convert rate not available at the moment",
             ));
         }
-        let date = latest_rates.data.latest_update;
+        let date = latest_rates.data.date;
         let code = res.format(false);
         let symbol = res.format(true);
 
@@ -108,7 +108,7 @@ pub async fn update_historical_rates_data<FX, FS>(
     storage: &FS,
     date: DateTime<Utc>,
     currencies_to_update: Vec<Currency>,
-) -> ForexResult<RatesResponse<HistoricalRates>>
+) -> ForexResult<RatesResponse<Rates>>
 where
     FX: ForexHistoricalRates,
     FS: ForexStorage,
@@ -248,7 +248,7 @@ where
         Err(error) => RatesResponse::<Rates>::err(Utc::now(), error),
     };
 
-    storage.insert_latest(ret.data.latest_update, &ret).await?;
+    storage.insert_latest(ret.data.date, &ret).await?;
 
     Ok(ret)
 }
@@ -260,7 +260,7 @@ pub async fn poll_historical_rates<FX, FS>(
     storage: &FS,
     date: DateTime<Utc>,
     base: Currency,
-) -> ForexResult<RatesResponse<HistoricalRates>>
+) -> ForexResult<RatesResponse<Rates>>
 where
     FX: ForexHistoricalRates,
     FS: ForexStorage,
@@ -271,7 +271,7 @@ where
             val
         }
         Err(error) => {
-            let err = RatesResponse::<HistoricalRates>::err(date, error);
+            let err = RatesResponse::<Rates>::err(date, error);
             storage.insert_historical(date, &err).await?;
             err
         }

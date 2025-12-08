@@ -3,7 +3,7 @@ use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use pfm_core::{
     forex::{
-        entity::{HistoricalRates, RatesData, RatesResponse},
+        entity::{Rates, RatesData, RatesResponse},
         interface::{ForexHistoricalRates, ForexStorage},
         Currency,
     },
@@ -38,8 +38,8 @@ pub(crate) struct HistoricalRatesDTO {
     pub rates: RatesData,
 }
 
-impl From<RatesResponse<HistoricalRates>> for HistoricalRatesDTO {
-    fn from(value: RatesResponse<HistoricalRates>) -> Self {
+impl From<RatesResponse<Rates>> for HistoricalRatesDTO {
+    fn from(value: RatesResponse<Rates>) -> Self {
         HistoricalRatesDTO {
             message: "Historical rates".to_string(),
             rates_date: value.data.date,

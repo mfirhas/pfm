@@ -18,7 +18,7 @@ use crate::forex::entity::RatesData;
 use crate::forex::interface::ForexHistoricalRates;
 use crate::forex::ForexResult;
 use crate::forex::{
-    entity::{HistoricalRates, RatesResponse},
+    entity::{Rates, RatesResponse},
     Currency, ForexError,
 };
 
@@ -195,7 +195,7 @@ pub struct RateData {
     pub value: Decimal,
 }
 
-impl TryFrom<Response> for RatesResponse<HistoricalRates> {
+impl TryFrom<Response> for RatesResponse<Rates> {
     type Error = ForexError;
 
     fn try_from(value: Response) -> Result<Self, Self::Error> {
@@ -207,7 +207,7 @@ impl TryFrom<Response> for RatesResponse<HistoricalRates> {
             .context("currency_api parsing datetime")
             .as_internal_err()?;
 
-        let historical_rates = HistoricalRates {
+        let historical_rates = Rates {
             date,
             base: value.base,
             rates: RatesData {
@@ -252,7 +252,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: chrono::DateTime<chrono::Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
 
         let currencies = Currency::to_comma_separated_list_str();

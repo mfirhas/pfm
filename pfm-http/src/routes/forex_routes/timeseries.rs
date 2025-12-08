@@ -3,7 +3,7 @@ use crate::global::AppContext;
 use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Duration, Utc};
 use pfm_core::forex::{
-    entity::{HistoricalRates, RatesData, RatesResponse},
+    entity::{Rates, RatesData, RatesResponse},
     interface::{ForexHistoricalRates, ForexStorage},
 };
 use serde::{Deserialize, Serialize};
@@ -16,8 +16,8 @@ pub(crate) struct TimeseriesRatesDTO {
     pub rates: RatesData,
 }
 
-impl From<RatesResponse<HistoricalRates>> for TimeseriesRatesDTO {
-    fn from(value: RatesResponse<HistoricalRates>) -> Self {
+impl From<RatesResponse<Rates>> for TimeseriesRatesDTO {
+    fn from(value: RatesResponse<Rates>) -> Self {
         TimeseriesRatesDTO {
             message: "Timeseries rates".to_string(),
             rates_date: value.data.date,

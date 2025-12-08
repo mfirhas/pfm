@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use rust_decimal::Decimal;
@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AsInternalError;
 use crate::forex::{
-    entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-    interface::{ForexHistoricalRates, ForexRates},
     Currency, ForexError, ForexResult,
+    entity::{Rates, RatesData, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates},
 };
 
 const LATEST_ENDPOINT: &str = "https://marketdata.tradermade.com/api/v1/live";
@@ -143,7 +143,7 @@ impl TryFrom<(Currency, LatestResponse)> for RatesResponse<Rates> {
             ))?;
 
         let mut rates = Rates {
-            latest_update: date,
+            date,
             base: value.0,
             rates: RatesData::set_base(value.0),
         };
@@ -208,7 +208,7 @@ impl TryFrom<(Currency, LatestResponse)> for RatesResponse<Rates> {
     }
 }
 
-impl TryFrom<(Currency, HistoricalResponse)> for RatesResponse<HistoricalRates> {
+impl TryFrom<(Currency, HistoricalResponse)> for RatesResponse<Rates> {
     type Error = ForexError;
 
     fn try_from(value: (Currency, HistoricalResponse)) -> Result<Self, Self::Error> {
@@ -223,7 +223,7 @@ impl TryFrom<(Currency, HistoricalResponse)> for RatesResponse<HistoricalRates> 
             .context("tradermade historical parse date to rates response")
             .as_internal_err()?;
 
-        let mut historical_rates = HistoricalRates {
+        let mut historical_rates = Rates {
             date,
             base: value.0,
             rates: RatesData::set_base(value.0),
@@ -348,7 +348,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         let currencies = Currency::to_comma_separated_pair_list_str(base);
         let date = date.format("%Y-%m-%d").to_string();
 

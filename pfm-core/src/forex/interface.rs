@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use super::currency::Currency;
 use super::entity::ConversionResponse;
-use super::entity::HistoricalRates;
 use super::entity::Order;
 use super::entity::Rates;
 use super::entity::RatesList;
@@ -72,7 +71,7 @@ pub trait ForexHistoricalRates {
         &self,
         date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<HistoricalRates>>;
+    ) -> ForexResult<RatesResponse<Rates>>;
 }
 
 #[async_trait]
@@ -83,7 +82,7 @@ pub trait ForexTimeseriesRates {
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>>;
+    ) -> ForexResult<Vec<RatesResponse<Rates>>>;
 }
 ///////////////
 
@@ -117,10 +116,7 @@ pub trait ForexStorage {
         T: Debug + Serialize + for<'de> Deserialize<'de> + Send + Sync;
 
     //// insert historical in batch
-    async fn insert_historical_batch(
-        &self,
-        rates: Vec<RatesResponse<HistoricalRates>>,
-    ) -> ForexResult<()>;
+    async fn insert_historical_batch(&self, rates: Vec<RatesResponse<Rates>>) -> ForexResult<()>;
 
     /// update some existing rates data with new ones
     /// new_data contains money, the currency and the values.
@@ -128,20 +124,17 @@ pub trait ForexStorage {
         &self,
         date: DateTime<Utc>,
         new_data: Vec<Money>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>>;
+    ) -> ForexResult<RatesResponse<Rates>>;
 
     /// get historical rates
-    async fn get_historical(
-        &self,
-        date: DateTime<Utc>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>>;
+    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<RatesResponse<Rates>>;
 
     /// get historical rates in range of dates
     async fn get_historical_range(
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>>;
+    ) -> ForexResult<Vec<RatesResponse<Rates>>>;
 
     /// get list of latest rates returning list and has next or not
     async fn get_latest_list(
@@ -157,7 +150,7 @@ pub trait ForexStorage {
         page: u32,
         size: u32,
         order: Order,
-    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>>;
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>>;
 }
 
 #[async_trait]
