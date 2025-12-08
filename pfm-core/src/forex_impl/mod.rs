@@ -1,8 +1,3 @@
-/// https://github.com/fawazahmed0/exchange-api
-pub mod exchange_api;
-// #[cfg(test)]
-// mod exchange_api_test;
-
 /// https://currencyapi.com
 pub mod currency_api;
 // #[cfg(test)]

@@ -1,12 +1,12 @@
-use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Timelike, Utc, Weekday};
+use chrono::Months;
+use chrono::{DateTime, TimeDelta, TimeZone, Timelike, Utc};
 use pfm_core::forex::interface::{ForexHistoricalRates, ForexStorage, ForexTimeseriesRates};
-use pfm_core::forex::{service, Currency, ForexError, Money};
+use pfm_core::forex::{Currency, ForexError, service};
 use pfm_core::forex_impl::forex_storage::ForexStorageImpl;
 use pfm_core::global;
 use pfm_core::{
     forex::ForexResult, forex_impl::currency_api::Api as CurrencyAPI,
     forex_impl::currencybeacon::Api as CurrencyBeaconAPI,
-    forex_impl::exchange_api::Api as ExchangeAPI,
     forex_impl::open_exchange_api::Api as OpenExchangeRatesAPI,
 };
 use rust_decimal_macros::dec;
@@ -97,7 +97,6 @@ pub enum ApisName {
 
 #[derive(Clone)]
 pub enum Apis {
-    ExchangeAPI(ExchangeAPI),
     CurrencyAPI(CurrencyAPI),
     OpenExchangeRatesAPI(OpenExchangeRatesAPI),
     CurrencyBeacon(CurrencyBeaconAPI),

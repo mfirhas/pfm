@@ -1,9 +1,9 @@
 use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Datelike, Utc};
 use pfm_core::forex::{
-    entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-    interface::{ForexHistoricalRates, ForexStorage},
     Currency,
+    entity::{Rates, RatesData, RatesResponse},
+    interface::{ForexHistoricalRates, ForexStorage},
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -45,18 +45,7 @@ pub(crate) struct RatesDTO {
 impl From<RatesResponse<Rates>> for RatesDTO {
     fn from(value: RatesResponse<Rates>) -> Self {
         RatesDTO {
-            message: "Latest rates".to_string(),
-            rates_date: value.data.latest_update,
-            base: value.data.base,
-            rates: value.data.rates,
-        }
-    }
-}
-
-impl From<RatesResponse<HistoricalRates>> for RatesDTO {
-    fn from(value: RatesResponse<HistoricalRates>) -> Self {
-        RatesDTO {
-            message: "Historical rates".to_string(),
+            message: "Successfully get rates".to_string(),
             rates_date: value.data.date,
             base: value.data.base,
             rates: value.data.rates,

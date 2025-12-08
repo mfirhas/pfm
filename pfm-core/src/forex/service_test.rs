@@ -168,7 +168,7 @@ async fn test_get_rates_list() {
     assert!(ret.rates_list.len().eq(&5));
     assert_eq!(ret.has_prev, false);
     assert_eq!(ret.has_next, true);
-    assert!(ret.rates_list[0].data.latest_update > ret.rates_list[1].data.latest_update);
+    assert!(ret.rates_list[0].data.date > ret.rates_list[1].data.date);
 }
 
 #[tokio::test]

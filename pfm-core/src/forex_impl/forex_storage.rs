@@ -7,16 +7,16 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use crate::error::AsInternalError;
-use crate::forex::entity::{HistoricalRates, Order, Rates, RatesList, RatesResponse};
-use crate::forex::interface::{ForexStorage, ForexStorageDeletion};
 use crate::forex::ForexResult;
+use crate::forex::entity::{Order, Rates, RatesList, RatesResponse};
+use crate::forex::interface::{ForexStorage, ForexStorageDeletion};
 use crate::forex::{ForexError, Money};
 use crate::global::StorageFS;
 use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
-use tokio::fs::{self, read_dir, File};
+use tokio::fs::{self, File, read_dir};
 use tokio::io::AsyncWriteExt;
 use tracing::instrument;
 
@@ -176,10 +176,7 @@ impl ForexStorageImpl {
         Ok(())
     }
 
-    async fn insert_historical_batch(
-        &self,
-        rates: Vec<RatesResponse<HistoricalRates>>,
-    ) -> ForexResult<()> {
+    async fn insert_historical_batch(&self, rates: Vec<RatesResponse<Rates>>) -> ForexResult<()> {
         let historical_write = self.fs.write().await;
         let historical_write = historical_write.historical();
 
@@ -229,7 +226,7 @@ impl ForexStorageImpl {
         &self,
         date: DateTime<Utc>,
         new_rates: Vec<Money>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         let mut historical_rates = {
             let before_historical_rates = self
                 .get_historical(date)
@@ -379,10 +376,7 @@ impl ForexStorageImpl {
     }
 
     #[instrument(skip(self), ret)]
-    async fn get_historical(
-        &self,
-        date: DateTime<Utc>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<RatesResponse<Rates>> {
         let historical_read = self.fs.read().await;
         let historical_read = historical_read.historical();
         let filepath = historical_read.join(&generate_historical_file_path(date));
@@ -392,7 +386,7 @@ impl ForexStorageImpl {
             .context("storage get historical read file")
             .as_internal_err()?;
 
-        let rates: RatesResponse<HistoricalRates> = serde_json::from_str(&content)
+        let rates: RatesResponse<Rates> = serde_json::from_str(&content)
             .context("storage get historical parse to json")
             .as_internal_err()?;
 
@@ -404,7 +398,7 @@ impl ForexStorageImpl {
         &self,
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
-    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<Vec<RatesResponse<Rates>>> {
         let start_year = start_date.year();
         let end_year = end_date.year();
 
@@ -481,7 +475,7 @@ impl ForexStorageImpl {
                     .await
                     .context("get historical range read file content")
                     .as_internal_err()?;
-                let rates: RatesResponse<HistoricalRates> = serde_json::from_str(&content)
+                let rates: RatesResponse<Rates> = serde_json::from_str(&content)
                     .context("get historical range parse content to json")
                     .as_internal_err()?;
 
@@ -535,8 +529,8 @@ impl ForexStorageImpl {
         }
 
         match order {
-            Order::ASC => files.sort_by_key(|rate| rate.data.latest_update),
-            Order::DESC => files.sort_by(|a, b| b.data.latest_update.cmp(&a.data.latest_update)),
+            Order::ASC => files.sort_by_key(|rate| rate.data.date),
+            Order::DESC => files.sort_by(|a, b| b.data.date.cmp(&a.data.date)),
         }
 
         let paginated = Self::paginate_rates_list(&files, page, size);
@@ -555,7 +549,7 @@ impl ForexStorageImpl {
         page: u32,
         size: u32,
         order: Order,
-    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>> {
         let historical_read = self.fs.read().await;
         let historical_read = historical_read.historical();
 
@@ -564,7 +558,7 @@ impl ForexStorageImpl {
             .context("storage get historical list read dir")
             .as_internal_err()?;
 
-        let mut files: Vec<RatesResponse<HistoricalRates>> = Vec::new();
+        let mut files: Vec<RatesResponse<Rates>> = Vec::new();
         while let Some(entry) = entries
             .next_entry()
             .await
@@ -587,7 +581,7 @@ impl ForexStorageImpl {
                     .await
                     .context("storage get historical list read subentry content")
                     .as_internal_err()?;
-                let resp: RatesResponse<HistoricalRates> = serde_json::from_str(&content)
+                let resp: RatesResponse<Rates> = serde_json::from_str(&content)
                     .context("storage get historical list parse subentry to json")
                     .as_internal_err()?;
                 files.push(resp);
@@ -829,10 +823,7 @@ impl ForexStorage for ForexStorageImpl {
         self.insert_historical(date, rates).await
     }
 
-    async fn insert_historical_batch(
-        &self,
-        rates: Vec<RatesResponse<HistoricalRates>>,
-    ) -> ForexResult<()> {
+    async fn insert_historical_batch(&self, rates: Vec<RatesResponse<Rates>>) -> ForexResult<()> {
         self.insert_historical_batch(rates).await
     }
 
@@ -840,14 +831,11 @@ impl ForexStorage for ForexStorageImpl {
         &self,
         date: DateTime<Utc>,
         new_data: Vec<Money>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         self.update_historical_rates_data(date, new_data).await
     }
 
-    async fn get_historical(
-        &self,
-        date: DateTime<Utc>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    async fn get_historical(&self, date: DateTime<Utc>) -> ForexResult<RatesResponse<Rates>> {
         self.get_historical(date).await
     }
 
@@ -855,7 +843,7 @@ impl ForexStorage for ForexStorageImpl {
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<Vec<RatesResponse<Rates>>> {
         self.get_historical_range(start, end).await
     }
 
@@ -873,7 +861,7 @@ impl ForexStorage for ForexStorageImpl {
         page: u32,
         size: u32,
         order: Order,
-    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>> {
         self.get_historical_list(page, size, order).await
     }
 }

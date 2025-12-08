@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::forex::{
-    entity::{HistoricalRates, Order, Rates, RatesData, RatesList, RatesResponse},
-    interface::{ForexHistoricalRates, ForexRates, ForexStorage},
     Currency, ForexResult,
+    entity::{Order, Rates, RatesData, RatesList, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates, ForexStorage},
 };
 
 use super::Money;
@@ -51,13 +51,13 @@ fn latest_rate() -> Rates {
     };
 
     Rates {
-        latest_update,
+        date: latest_update,
         base,
         rates,
     }
 }
 
-fn historical_rate() -> HistoricalRates {
+fn historical_rate() -> Rates {
     let date = Utc.with_ymd_and_hms(2022, 12, 25, 0, 0, 0).unwrap();
     let base = Currency::USD;
     let rates = RatesData {
@@ -93,7 +93,7 @@ fn historical_rate() -> HistoricalRates {
         ada: dec!(3.76),
     };
 
-    HistoricalRates { date, base, rates }
+    Rates { date, base, rates }
 }
 
 fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesResponse<Rates>> {
@@ -105,7 +105,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-03-04T01:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-03-04T01:00:00Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -149,7 +149,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-03-04T02:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-03-04T02:00:00Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -193,7 +193,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-03-03T11:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-03-03T11:00:00Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -237,7 +237,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-03-03T10:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-03-03T10:00:00Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -281,7 +281,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-02-28T23:00:04Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-02-28T23:00:04Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -325,7 +325,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-02-24T05:00:00Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-02-24T05:00:00Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -369,7 +369,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-02-23T10:00:04Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-02-23T10:00:04Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -413,7 +413,7 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
             data: Rates {
-                latest_update: "2025-02-23T06:00:23Z".parse::<DateTime<Utc>>().unwrap(),
+                date: "2025-02-23T06:00:23Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
                     usd: dec!(1.0),
@@ -453,8 +453,8 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
     ];
 
     match order {
-        Order::DESC => rates_list.sort_by(|a, b| b.data.latest_update.cmp(&a.data.latest_update)),
-        Order::ASC => rates_list.sort_by(|a, b| a.data.latest_update.cmp(&b.data.latest_update)),
+        Order::DESC => rates_list.sort_by(|a, b| b.data.date.cmp(&a.data.date)),
+        Order::ASC => rates_list.sort_by(|a, b| a.data.date.cmp(&b.data.date)),
     }
 
     let start = (page.saturating_sub(1) * size) as usize;
@@ -471,19 +471,15 @@ fn latest_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesRespon
     }
 }
 
-fn historical_rate_list(
-    page: u32,
-    size: u32,
-    order: Order,
-) -> RatesList<RatesResponse<HistoricalRates>> {
-    let mut historical_rates_list: Vec<RatesResponse<HistoricalRates>> = vec![
+fn historical_rate_list(page: u32, size: u32, order: Order) -> RatesList<RatesResponse<Rates>> {
+    let mut historical_rates_list: Vec<RatesResponse<Rates>> = vec![
         RatesResponse {
             id: Uuid::parse_str("d06e8e1c-6d64-4bd4-98d6-2758bcbf2d5f").unwrap(),
             source: "openexchangerates.org".to_string(),
             poll_date: "2025-03-04T06:31:27.111458Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2022-12-25T23:59:39Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -527,7 +523,7 @@ fn historical_rate_list(
             poll_date: "2025-03-04T06:31:00.874617Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2021-12-20T23:59:59Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -571,7 +567,7 @@ fn historical_rate_list(
             poll_date: "2025-03-04T06:30:08.520417Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2021-07-07T23:59:59Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -615,7 +611,7 @@ fn historical_rate_list(
             poll_date: "2025-03-04T01:35:06.452147Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2020-01-01T23:59:58Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -674,15 +670,15 @@ fn historical_rate_list(
     }
 }
 
-fn historical_range() -> Vec<RatesResponse<HistoricalRates>> {
-    let mut historical_rates_list: Vec<RatesResponse<HistoricalRates>> = vec![
+fn historical_range() -> Vec<RatesResponse<Rates>> {
+    let mut historical_rates_list: Vec<RatesResponse<Rates>> = vec![
         RatesResponse {
             id: Uuid::parse_str("d06e8e1c-6d64-4bd4-98d6-2758bcbf2d5f").unwrap(),
             source: "openexchangerates.org".to_string(),
             poll_date: "2025-03-04T06:31:27.111458Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2022-12-25T23:59:39Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -726,7 +722,7 @@ fn historical_range() -> Vec<RatesResponse<HistoricalRates>> {
             poll_date: "2025-03-04T06:31:00.874617Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2021-12-20T23:59:59Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -770,7 +766,7 @@ fn historical_range() -> Vec<RatesResponse<HistoricalRates>> {
             poll_date: "2025-03-04T06:30:08.520417Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2021-07-07T23:59:59Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -814,7 +810,7 @@ fn historical_range() -> Vec<RatesResponse<HistoricalRates>> {
             poll_date: "2025-03-04T01:35:06.452147Z"
                 .parse::<DateTime<Utc>>()
                 .unwrap(),
-            data: HistoricalRates {
+            data: Rates {
                 date: "2020-01-01T23:59:58Z".parse::<DateTime<Utc>>().unwrap(),
                 base: Currency::USD,
                 rates: RatesData {
@@ -875,7 +871,7 @@ impl ForexHistoricalRates for ForexApiSuccessMock {
         &self,
         date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         Ok(RatesResponse::new(
             "success_historical_mock".to_string(),
             historical_rate(),
@@ -916,10 +912,7 @@ impl ForexStorage for ForexStorageSuccessMock {
         Ok(())
     }
 
-    async fn insert_historical_batch(
-        &self,
-        rates: Vec<RatesResponse<HistoricalRates>>,
-    ) -> ForexResult<()> {
+    async fn insert_historical_batch(&self, rates: Vec<RatesResponse<Rates>>) -> ForexResult<()> {
         Ok(())
     }
 
@@ -927,17 +920,14 @@ impl ForexStorage for ForexStorageSuccessMock {
         &self,
         date: DateTime<Utc>,
         new_data: Vec<Money>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         Ok(RatesResponse::new(
             "storage_get_historical_success".to_string(),
             historical_rate(),
         ))
     }
 
-    async fn get_historical(
-        &self,
-        _date: DateTime<Utc>,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    async fn get_historical(&self, _date: DateTime<Utc>) -> ForexResult<RatesResponse<Rates>> {
         Ok(RatesResponse::new(
             "storage_get_historical_success".to_string(),
             historical_rate(),
@@ -948,7 +938,7 @@ impl ForexStorage for ForexStorageSuccessMock {
         &self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<Vec<RatesResponse<Rates>>> {
         Ok(historical_range())
     }
 
@@ -966,7 +956,7 @@ impl ForexStorage for ForexStorageSuccessMock {
         page: u32,
         size: u32,
         order: Order,
-    ) -> ForexResult<RatesList<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<RatesList<RatesResponse<Rates>>> {
         Ok(historical_rate_list(page, size, order))
     }
 }

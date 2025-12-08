@@ -40,9 +40,6 @@ pub struct Config {
     #[serde(alias = "CORE_FOREX_CURRENCYBEACON_API_KEY")]
     pub forex_currencybeacon_api_key: String,
 
-    #[serde(alias = "CORE_FOREX_TRADERMADE_API_KEY")]
-    pub forex_tradermade_api_key: String,
-
     #[serde(alias = "CORE_FOREX_TWELVEDATA_API_KEY")]
     pub forex_twelvedata_api_key: String,
 }

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use rust_decimal_macros::dec;
@@ -8,9 +8,9 @@ use rust_decimal_macros::dec;
 use crate::error::AsInternalError;
 use crate::{
     forex::{
-        entity::{HistoricalRates, Rates, RatesData, RatesResponse},
-        interface::{ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
         Currency, ForexError, ForexResult,
+        entity::{Rates, RatesData, RatesResponse},
+        interface::{ForexHistoricalRates, ForexRates, ForexTimeseriesRates},
     },
     global::{self},
 };
@@ -146,7 +146,10 @@ impl Api {
         } else {
             let price_data = &ret.values[0];
             if &price_data.datetime != &date {
-                return Err(ForexError::internal_error(&format!("currencybeacon twelvedata historical returned mismatch date, expected: {}, got: {}", &date, &price_data.datetime)));
+                return Err(ForexError::internal_error(&format!(
+                    "currencybeacon twelvedata historical returned mismatch date, expected: {}, got: {}",
+                    &date, &price_data.datetime
+                )));
             }
 
             // rate is for SOL/base, so to get 1 base = X SOL, divide 1 with SOL price
@@ -197,12 +200,14 @@ impl TryFrom<(Response, Decimal)> for RatesResponse<Rates> {
     fn try_from(
         (value, twelvedata_solana_price): (Response, Decimal),
     ) -> Result<Self, Self::Error> {
-        let date = value
-            .response
-            .date
-            .parse::<DateTime<Utc>>()
-            .context("currencybeacon parse latest rates datetime")
-            .as_internal_err()?;
+        let date = if let Ok(date_time) = value.response.date.parse::<DateTime<Utc>>() {
+            date_time
+        } else {
+            format!("{}{}", value.response.date, END_OF_DAY_HOUR)
+                .parse::<DateTime<Utc>>()
+                .context("currencybeacon parse historical rates datetime")
+                .as_internal_err()?
+        };
 
         let base = Currency::from_str(&value.response.base.as_str())
             .context("currencybeacon parse base currency")
@@ -221,7 +226,7 @@ impl TryFrom<(Response, Decimal)> for RatesResponse<Rates> {
         };
 
         let rates = Rates {
-            latest_update: date,
+            date,
             base,
             rates: RatesData {
                 usd: value.response.rates.usd.unwrap_or_default(),
@@ -259,88 +264,21 @@ impl TryFrom<(Response, Decimal)> for RatesResponse<Rates> {
     }
 }
 
-impl TryFrom<(Response, Decimal)> for RatesResponse<HistoricalRates> {
-    type Error = ForexError;
-
-    fn try_from(
-        (value, twelvedata_solana_price): (Response, Decimal),
-    ) -> Result<Self, Self::Error> {
-        let date_time_str = format!("{}{}", value.response.date, END_OF_DAY_HOUR);
-        let date = date_time_str
-            .parse::<DateTime<Utc>>()
-            .context("currencybeacon parse historical rates datetime")
-            .as_internal_err()?;
-
-        let base = Currency::from_str(&value.response.base.as_str())
-            .context("currencybeacon parse base currency")
-            .as_internal_err()?;
-
-        // check solana price if exist, else use twelvedata price
-        let solana_price = match value.response.rates.sol {
-            Some(currencybeacon_solana_price) => {
-                if currencybeacon_solana_price.is_zero() {
-                    twelvedata_solana_price
-                } else {
-                    currencybeacon_solana_price
-                }
-            }
-            None => twelvedata_solana_price,
-        };
-
-        let historical_rates = HistoricalRates {
-            date,
-            base,
-            rates: RatesData {
-                usd: value.response.rates.usd.unwrap_or_default(),
-                cad: value.response.rates.cad.unwrap_or_default(),
-                eur: value.response.rates.eur.unwrap_or_default(),
-                gbp: value.response.rates.gbp.unwrap_or_default(),
-                chf: value.response.rates.chf.unwrap_or_default(),
-                rub: value.response.rates.rub.unwrap_or_default(),
-                cny: value.response.rates.cny.unwrap_or_default(),
-                jpy: value.response.rates.jpy.unwrap_or_default(),
-                krw: value.response.rates.krw.unwrap_or_default(),
-                hkd: value.response.rates.hkd.unwrap_or_default(),
-                idr: value.response.rates.idr.unwrap_or_default(),
-                myr: value.response.rates.myr.unwrap_or_default(),
-                sgd: value.response.rates.sgd.unwrap_or_default(),
-                thb: value.response.rates.thb.unwrap_or_default(),
-                sar: value.response.rates.sar.unwrap_or_default(),
-                aed: value.response.rates.aed.unwrap_or_default(),
-                kwd: value.response.rates.kwd.unwrap_or_default(),
-                inr: value.response.rates.inr.unwrap_or_default(),
-                aud: value.response.rates.aud.unwrap_or_default(),
-                nzd: value.response.rates.nzd.unwrap_or_default(),
-                xau: value.response.rates.xau.unwrap_or_default(),
-                xag: value.response.rates.xag.unwrap_or_default(),
-                xpt: value.response.rates.xpt.unwrap_or_default(),
-                btc: value.response.rates.btc.unwrap_or_default(),
-                eth: value.response.rates.eth.unwrap_or_default(),
-                sol: solana_price,
-                xrp: value.response.rates.xrp.unwrap_or_default(),
-                ada: value.response.rates.ada.unwrap_or_default(),
-            },
-        };
-
-        Ok(RatesResponse::new(SOURCE.into(), historical_rates))
-    }
-}
-
-struct RatesResponseList(Vec<RatesResponse<HistoricalRates>>);
+struct RatesResponseList(Vec<RatesResponse<Rates>>);
 
 // (Currency, ...), Currency is base currency
 impl TryFrom<(Currency, TimeseriesResponse)> for RatesResponseList {
     type Error = ForexError;
 
     fn try_from(value: (Currency, TimeseriesResponse)) -> Result<Self, Self::Error> {
-        let mut rates_response_list: Vec<RatesResponse<HistoricalRates>> = vec![];
+        let mut rates_response_list: Vec<RatesResponse<Rates>> = vec![];
         for (date_str, r) in value.1.response {
             let date_time_str = format!("{}{}", date_str, END_OF_DAY_HOUR);
             let date = date_time_str
                 .parse::<DateTime<Utc>>()
                 .context("currencybeacon parse historical rates datetime")
                 .as_internal_err()?;
-            let historical_rates = HistoricalRates {
+            let historical_rates = Rates {
                 date,
                 base: value.0,
                 rates: RatesData {
@@ -617,7 +555,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<RatesResponse<HistoricalRates>> {
+    ) -> ForexResult<RatesResponse<Rates>> {
         let symbols = Currency::to_comma_separated_list_str();
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let params = [
@@ -665,7 +603,7 @@ impl ForexTimeseriesRates for Api {
         start_date: DateTime<Utc>,
         end_date: DateTime<Utc>,
         base: Currency,
-    ) -> ForexResult<Vec<RatesResponse<HistoricalRates>>> {
+    ) -> ForexResult<Vec<RatesResponse<Rates>>> {
         if start_date > end_date {
             return Err(ForexError::client_error(
                 "start date cannot be bigger than end date",

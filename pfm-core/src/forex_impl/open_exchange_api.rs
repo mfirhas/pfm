@@ -12,9 +12,9 @@ use std::str::FromStr;
 
 use crate::error::AsInternalError;
 use crate::forex::{
-    entity::{HistoricalRates, RatesData, RatesResponse},
-    interface::{ForexHistoricalRates, ForexRates},
     Currency, ForexError, ForexResult,
+    entity::{Rates, RatesData, RatesResponse},
+    interface::{ForexHistoricalRates, ForexRates},
 };
 use anyhow::Context;
 use async_trait::async_trait;
@@ -46,11 +46,11 @@ pub struct Response {
     pub base_currency: String,
 
     #[serde(rename = "rates")]
-    pub rates: Rates,
+    pub rates: RatesResp,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Rates {
+pub struct RatesResp {
     #[serde(rename = "USD", default)]
     pub usd: Decimal,
 
@@ -144,7 +144,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
             Utc.timestamp_opt(value.timestamp, 0)
                 .single()
                 .ok_or(ForexError::internal_error(
-                    "openexchangerates converting latest rates unix epoch to utc",
+                    "openexchangerates converting rates unix epoch to utc",
                 ))?;
 
         let rates = RatesData {
@@ -182,63 +182,7 @@ impl TryFrom<Response> for RatesResponse<crate::forex::entity::Rates> {
             .context("openexchangerates parse base currency")
             .as_internal_err()?;
 
-        let ret = crate::forex::entity::Rates {
-            latest_update: date,
-            base,
-            rates,
-        };
-
-        Ok(RatesResponse::new(SOURCE.into(), ret))
-    }
-}
-
-impl TryFrom<Response> for RatesResponse<HistoricalRates> {
-    type Error = ForexError;
-
-    fn try_from(value: Response) -> Result<Self, Self::Error> {
-        let date =
-            Utc.timestamp_opt(value.timestamp, 0)
-                .single()
-                .ok_or(ForexError::internal_error(
-                    "openexchangerates converting historical rates unix epoch to utc",
-                ))?;
-
-        let rates = RatesData {
-            usd: value.rates.usd,
-            cad: value.rates.cad,
-            eur: value.rates.eur,
-            gbp: value.rates.gbp,
-            chf: value.rates.chf,
-            rub: value.rates.rub,
-            cny: value.rates.cny,
-            jpy: value.rates.jpy,
-            krw: value.rates.krw,
-            hkd: value.rates.hkd,
-            idr: value.rates.idr,
-            myr: value.rates.myr,
-            sgd: value.rates.sgd,
-            thb: value.rates.thb,
-            sar: value.rates.sar,
-            aed: value.rates.aed,
-            kwd: value.rates.kwd,
-            inr: value.rates.inr,
-            aud: value.rates.aud,
-            nzd: value.rates.nzd,
-            xau: value.rates.xau,
-            xag: value.rates.xag,
-            xpt: value.rates.xpt,
-            btc: value.rates.btc,
-            eth: value.rates.eth,
-            sol: value.rates.sol,
-            xrp: value.rates.xrp,
-            ada: value.rates.ada,
-        };
-
-        let base = Currency::from_str(&value.base_currency)
-            .context("openexchangerates parse base currency")
-            .as_internal_err()?;
-
-        let ret = crate::forex::entity::HistoricalRates { base, date, rates };
+        let ret = crate::forex::entity::Rates { date, base, rates };
 
         Ok(RatesResponse::new(SOURCE.into(), ret))
     }
@@ -344,7 +288,7 @@ impl ForexHistoricalRates for Api {
         &self,
         date: chrono::DateTime<chrono::Utc>,
         base: Currency,
-    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::entity::HistoricalRates>> {
+    ) -> crate::forex::ForexResult<RatesResponse<crate::forex::entity::Rates>> {
         let yyyymmdd = date.format("%Y-%m-%d").to_string();
         let endpoint = HISTORICAL_ENDPOINT.replace(":date", yyyymmdd.as_str());
 
