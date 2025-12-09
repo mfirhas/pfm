@@ -66,19 +66,28 @@ pub(crate) async fn get_rates_handler(
         Some(date) => {
             let now = Utc::now();
             if date.year() == now.year() && date.month() == now.month() && date.day() == now.day() {
-                return Ok(HttpResponse::ok(
-                    RatesDTO::from(ctx.forex_storage.get_latest().await?),
-                    None,
-                ));
+                let ret = ctx.forex_storage.get_latest().await?;
+                if let Some(err) = ret.error {
+                    return Err(AppError::InternalServerError(err));
+                }
+                return Ok(HttpResponse::ok(RatesDTO::from(ret), None));
             }
-            Ok(HttpResponse::ok(
-                RatesDTO::from(ctx.forex_storage.get_historical(date).await?),
-                None,
-            ))
+
+            let ret = ctx.forex_storage.get_historical(date).await?;
+            if let Some(err) = ret.error {
+                return Err(AppError::InternalServerError(err));
+            }
+            Ok(HttpResponse::ok(RatesDTO::from(ret), None))
         }
         // get latest rates
         None => Ok(HttpResponse::ok(
-            RatesDTO::from(ctx.forex_storage.get_latest().await?),
+            RatesDTO::from({
+                let ret = ctx.forex_storage.get_latest().await?;
+                if let Some(err) = ret.error {
+                    return Err(AppError::InternalServerError(err));
+                }
+                ret
+            }),
             None,
         )),
     }
