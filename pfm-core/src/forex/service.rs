@@ -1,6 +1,10 @@
-use chrono::{DateTime, Utc};
+use anyhow::Context;
+use chrono::{DateTime, Datelike, Utc};
 use rust_decimal_macros::dec;
+use strum::IntoEnumIterator;
 use tracing::instrument;
+
+use crate::{error::AsInternalError, forex::entity::RatesData, global::constants};
 
 use super::{
     currency::Currency,
@@ -8,6 +12,144 @@ use super::{
     interface::{ForexError, ForexHistoricalRates, ForexRates, ForexResult, ForexStorage},
     money::Money,
 };
+
+#[instrument(skip(storage), ret)]
+pub async fn get_rates(
+    storage: &impl ForexStorage,
+    base: Currency,
+    date: Option<DateTime<Utc>>,
+) -> ForexResult<RatesResponse<Rates>> {
+    match (base, date) {
+        (constants::BASE_CURRENCY, None) => get_rates_usd_latest(storage).await,
+        (constants::BASE_CURRENCY, Some(date)) => get_rates_usd_historical(storage, date).await,
+        (base, None) => get_rates_base_latest(storage, base).await,
+        (base, Some(date)) => get_rates_base_historical(storage, base, date).await,
+    }
+}
+
+#[instrument(skip(storage), ret)]
+async fn get_rates_usd_latest(storage: &impl ForexStorage) -> ForexResult<RatesResponse<Rates>> {
+    let latest_ret = storage
+        .get_latest()
+        .await
+        .context("get latest usd based rates")
+        .as_internal_err()?;
+
+    if let Some(err) = latest_ret.error {
+        return Err(ForexError::internal_error(err.as_str()));
+    }
+
+    Ok(latest_ret)
+}
+
+#[instrument(skip(storage), ret)]
+async fn get_rates_usd_historical(
+    storage: &impl ForexStorage,
+    date: DateTime<Utc>,
+) -> ForexResult<RatesResponse<Rates>> {
+    let now = Utc::now();
+    if date.year() == now.year() && date.month() == now.month() && date.day() == now.day() {
+        return get_rates_usd_latest(storage).await;
+    }
+
+    let historical_rates = storage
+        .get_historical(date)
+        .await
+        .context("get historical usd based rates")
+        .as_internal_err()?;
+
+    if let Some(err) = historical_rates.error {
+        return Err(ForexError::internal_error(err.as_str()));
+    }
+
+    Ok(historical_rates)
+}
+
+#[instrument(skip(storage), ret)]
+async fn get_rates_base_latest(
+    storage: &impl ForexStorage,
+    base: Currency,
+) -> ForexResult<RatesResponse<Rates>> {
+    let usd_based_latest_rates = get_rates_usd_latest(storage).await?;
+    let date = usd_based_latest_rates.data.date;
+    let mut rates_result: Vec<Money> = vec![];
+    for target_curr in Currency::iter() {
+        if target_curr != base {
+            let ret = Money::convert(
+                &usd_based_latest_rates.data.rates,
+                Money::new_money(base, dec!(1)),
+                target_curr,
+            )
+            .context("get rates base latest conversion")
+            .as_internal_err()?;
+
+            rates_result.push(ret);
+        } else {
+            rates_result.push(Money::new_money(base, dec!(1)));
+        }
+    }
+    let rates_data: RatesData = rates_result.into();
+    let rates = Rates {
+        date,
+        base,
+        rates: rates_data,
+    };
+    let rates_response = RatesResponse {
+        id: usd_based_latest_rates.id,
+        source: usd_based_latest_rates.source,
+        poll_date: usd_based_latest_rates.poll_date,
+        data: rates,
+        error: usd_based_latest_rates.error,
+    };
+
+    Ok(rates_response)
+}
+
+#[instrument(skip(storage), ret)]
+async fn get_rates_base_historical(
+    storage: &impl ForexStorage,
+    base: Currency,
+    date: DateTime<Utc>,
+) -> ForexResult<RatesResponse<Rates>> {
+    let now = Utc::now();
+    if date.year() == now.year() && date.month() == now.month() && date.day() == now.day() {
+        return get_rates_base_latest(storage, base).await;
+    }
+
+    let usd_based_historical_rates = get_rates_usd_historical(storage, date).await?;
+    let date = usd_based_historical_rates.data.date;
+    let mut rates_result: Vec<Money> = vec![];
+    for target_curr in Currency::iter() {
+        if target_curr != base {
+            let ret = Money::convert(
+                &usd_based_historical_rates.data.rates,
+                Money::new_money(base, dec!(1)),
+                target_curr,
+            )
+            .context("get rates base latest conversion")
+            .as_internal_err()?;
+
+            rates_result.push(ret);
+        } else {
+            rates_result.push(Money::new_money(base, dec!(1)));
+        }
+    }
+    let rates_data: RatesData = rates_result.into();
+    let rates = Rates {
+        date,
+        base,
+        rates: rates_data,
+    };
+    let rates_response = RatesResponse {
+        id: usd_based_historical_rates.id,
+        source: usd_based_historical_rates.source,
+        poll_date: usd_based_historical_rates.poll_date,
+        data: rates,
+        error: usd_based_historical_rates.error,
+    };
+
+    Ok(rates_response)
+}
 
 #[instrument(skip(storage), ret)]
 pub async fn convert<FS>(storage: &FS, from: Money, to: Currency) -> ForexResult<ConversionResponse>

@@ -1,9 +1,15 @@
+use std::str::FromStr;
+
 use axum::{extract::State, response::IntoResponse};
 use chrono::{DateTime, Datelike, Utc};
-use pfm_core::forex::{
-    Currency,
-    entity::{Rates, RatesData, RatesResponse},
-    interface::{ForexHistoricalRates, ForexStorage},
+use pfm_core::{
+    forex::{
+        Currency,
+        entity::{Rates, RatesData, RatesResponse},
+        interface::{ForexHistoricalRates, ForexStorage},
+        service,
+    },
+    global::constants,
 };
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -13,6 +19,9 @@ use crate::global::AppContext;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct RatesQuery {
+    #[serde(rename = "base", default)]
+    pub base: Option<String>,
+
     /// optional date for historical rates
     #[serde(
         rename = "date",
@@ -61,34 +70,13 @@ pub(crate) async fn get_rates_handler(
     State(ctx): State<AppContext<impl ForexStorage, impl ForexHistoricalRates>>,
     CustomQuery(params): CustomQuery<RatesQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    match params.date {
-        // get historical rates
-        Some(date) => {
-            let now = Utc::now();
-            if date.year() == now.year() && date.month() == now.month() && date.day() == now.day() {
-                let ret = ctx.forex_storage.get_latest().await?;
-                if let Some(err) = ret.error {
-                    return Err(AppError::InternalServerError(err));
-                }
-                return Ok(HttpResponse::ok(RatesDTO::from(ret), None));
-            }
+    let base = if let Some(base) = params.base {
+        Currency::from_str(base.as_str())?
+    } else {
+        constants::BASE_CURRENCY
+    };
 
-            let ret = ctx.forex_storage.get_historical(date).await?;
-            if let Some(err) = ret.error {
-                return Err(AppError::InternalServerError(err));
-            }
-            Ok(HttpResponse::ok(RatesDTO::from(ret), None))
-        }
-        // get latest rates
-        None => Ok(HttpResponse::ok(
-            RatesDTO::from({
-                let ret = ctx.forex_storage.get_latest().await?;
-                if let Some(err) = ret.error {
-                    return Err(AppError::InternalServerError(err));
-                }
-                ret
-            }),
-            None,
-        )),
-    }
+    let ret = service::get_rates(&ctx.forex_storage, base, params.date).await?;
+
+    Ok(HttpResponse::ok(RatesDTO::from(ret), None))
 }

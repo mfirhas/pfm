@@ -155,6 +155,54 @@ pub struct RatesData {
     pub ada: Decimal,
 }
 
+impl From<Vec<Money>> for RatesData {
+    fn from(list: Vec<Money>) -> Self {
+        let mut data = RatesData::default();
+
+        for item in list {
+            match item {
+                Money::USD(v) => data.usd = v,
+                Money::CAD(v) => data.cad = v,
+                Money::EUR(v) => data.eur = v,
+                Money::GBP(v) => data.gbp = v,
+                Money::CHF(v) => data.chf = v,
+                Money::RUB(v) => data.rub = v,
+
+                Money::CNY(v) => data.cny = v,
+                Money::JPY(v) => data.jpy = v,
+                Money::KRW(v) => data.krw = v,
+                Money::HKD(v) => data.hkd = v,
+
+                Money::IDR(v) => data.idr = v,
+                Money::MYR(v) => data.myr = v,
+                Money::SGD(v) => data.sgd = v,
+                Money::THB(v) => data.thb = v,
+
+                Money::SAR(v) => data.sar = v,
+                Money::AED(v) => data.aed = v,
+                Money::KWD(v) => data.kwd = v,
+
+                Money::INR(v) => data.inr = v,
+
+                Money::AUD(v) => data.aud = v,
+                Money::NZD(v) => data.nzd = v,
+
+                Money::XAU(v) => data.xau = v,
+                Money::XAG(v) => data.xag = v,
+                Money::XPT(v) => data.xpt = v,
+
+                Money::BTC(v) => data.btc = v,
+                Money::ETH(v) => data.eth = v,
+                Money::SOL(v) => data.sol = v,
+                Money::XRP(v) => data.xrp = v,
+                Money::ADA(v) => data.ada = v,
+            }
+        }
+
+        data
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConversionResponse {
     /// latest update of the currency of conversion target.
