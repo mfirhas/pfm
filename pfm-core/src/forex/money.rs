@@ -328,7 +328,7 @@ impl Money {
             self.code()
         };
 
-        let mut ac = Accounting::new_from_seperator(currency_code.as_str(), 2, ",", ".");
+        let mut ac = Accounting::new_from_seperator(currency_code.as_str(), 10, ",", ".");
 
         if use_symbol {
             ac.set_format("{s}{v}");
